@@ -25,7 +25,7 @@ jar {
                 'Bundle-Vendor': 'dotCMS',
                 'Bundle-Description': 'dotCMS - AI Endpoint for chatGPT API call',
                 'Bundle-DocURL': 'https://dotcms.com/',
-                'Bundle-Activator': 'com.dotcms.plugin.dotai.Activator',
+                'Bundle-Activator': 'com.dotcms.ai.Activator',
                 'Import-Package': '*;version=0, com.fasterxml.jackson.core.*;version="[2.12,3)"'
         )
     }
