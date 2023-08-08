@@ -1,0 +1,47 @@
+name: "ChatGPT"
+description: "Credentials and options for using ChatGPT with dotCMS"
+iconUrl: "https://www.someurl.com"
+allowExtraParameters: false
+params:
+  apiUrl:
+    value: "https://api.openai.com/v1/chat/completions"
+    hidden: false
+    type: "STRING"
+    label: "API URL"
+    hint: "ChatGPT API URL address"
+    required: true
+  apiKey:
+    value: ""
+    hidden: true
+    type: "STRING"
+    label: "API Key"
+    hint: "Your ChatGPT API key"
+    required: true
+  rolePrompt:
+    value: "You are dotCMSbot, and AI assistant to help content creators generate and rewrite content in their content management system."
+    hidden: false
+    type: "STRING"
+    label: "Role Prompt"
+    hint: "A prompt describing the role (if any) the chatbot will play for the dotCMS user."
+    required: false
+  textPrompt:
+    value: "Use Descriptive writting style."
+    hidden: false
+    type: "STRING"
+    label: "Text Prompt"
+    hint: "A prompt describing writting style."
+    required: false
+  imagePrompt:
+    value: "Use 16:9 aspect ratio."
+    hidden: false
+    type: "STRING"
+    label: "Image Prompt"
+    hint: "Aspect ratio to use for image."
+    required: false
+  model:
+    value: "gpt-3.5-turbo"
+    hidden: false
+    type: "STRING"
+    label: "Model"
+    hint: "Model used to generate ChatGPT API response."
+    required: true
