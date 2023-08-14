@@ -78,6 +78,17 @@ curl --location 'http://localhost:8081/api/ai/text/generate' \
 curl --location 'http://localhost:8081/api/ai/text/generate?prompt=your%20prompt%20text'
 `
 
+---
+## Components
+
+### com.dotcms.ai.viewtool.AIToolInfo
+
+For registering and initialization of our ViewTool implementation
+
+### com.dotcms.ai.viewtool.AIViewTool
+
+ViewTool implementation
+
 ## Authentication
 
 This API supports the same REST auth infrastructure as other 

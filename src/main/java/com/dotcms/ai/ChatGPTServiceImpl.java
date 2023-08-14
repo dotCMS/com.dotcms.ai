@@ -51,9 +51,10 @@ public class ChatGPTServiceImpl implements ChatGPTService {
     }
 
     @Override
-    public AITextResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config) {
+    public AITextResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt) {
 
-        ChatGptRequestDTO chatGptRequestDTO = new ChatGptRequestDTO(CHAT_GPT_MODEL, CHAT_GPT_ROLE, CHAT_GPT_PROMPT_ROLE, CHAT_GPT_PROMPT_TEXT, CHAT_GPT_PROMPT_IMAGE, prompt);
+        ChatGptRequestDTO chatGptRequestDTO = new ChatGptRequestDTO(CHAT_GPT_MODEL, CHAT_GPT_ROLE, CHAT_GPT_PROMPT_ROLE, CHAT_GPT_PROMPT_TEXT, CHAT_GPT_PROMPT_IMAGE, prompt,
+            isRawPrompt);
 
         AITextResponseDTO aiTextResponseDTO = new AITextResponseDTO();
         aiTextResponseDTO.setModel(chatGptRequestDTO.getModel());

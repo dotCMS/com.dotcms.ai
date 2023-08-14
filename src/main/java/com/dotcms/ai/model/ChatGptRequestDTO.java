@@ -8,10 +8,11 @@ public class ChatGptRequestDTO {
     private String model;
     private List<Message> messages;
 
-    public ChatGptRequestDTO(String model, String role, String prompt, String promptTextStyle, String promptImage, String promptInput) {
+    public ChatGptRequestDTO(String model, String role, String prompt, String promptTextStyle, String promptImage, String promptInput, boolean rawPrompt) {
+        String promptText = rawPrompt ? promptInput : (prompt + " " + promptTextStyle + " " + promptImage + " " + promptInput);
         this.model = model;
         this.messages = new ArrayList<>();
-        this.messages.add(new Message(role, prompt + " " + promptTextStyle + " " + promptImage + " " + promptInput));
+        this.messages.add(new Message(role, promptText));
     }
 
     public String getModel() {

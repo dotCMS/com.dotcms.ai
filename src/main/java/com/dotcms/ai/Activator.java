@@ -1,6 +1,7 @@
 package com.dotcms.ai;
 
 import com.dotcms.ai.app.AppKeys;
+import com.dotcms.ai.viewtool.AIToolInfo;
 import com.dotcms.rest.config.RestServiceUtil;
 import com.dotmarketing.business.CacheLocator;
 import com.dotmarketing.loggers.Log4jUtil;
@@ -40,6 +41,9 @@ public class Activator extends GenericBundleActivator {
         Logger.info(this.getClass(), "Adding new Restful Service:" + clazz.getSimpleName());
         RestServiceUtil.addResource(clazz);
 
+        //Registering the ViewTool service
+        registerViewToolService( context, new AIToolInfo() );
+
         // copy the yaml
         copyAppYml();
 
@@ -54,6 +58,8 @@ public class Activator extends GenericBundleActivator {
 
         //Unregister all the bundle services
         unregisterServices(context);
+
+        unregisterViewToolServices();
 
         //Shutting down log4j in order to avoid memory leaks
 		Log4jUtil.shutdown(pluginLoggerContext);

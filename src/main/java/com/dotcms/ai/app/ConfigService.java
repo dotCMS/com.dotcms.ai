@@ -15,11 +15,8 @@ public class ConfigService {
     public static final ConfigService INSTANCE = new ConfigService();
 
     /**
-     * Gets the secrets from the App - this will check the current host then the SYSTEMM_HOST for a
-     * valid configuration. This lookup is low overhead and cached by dotCMS.
-     *
-     * @param host
-     * @return
+     * Gets the secrets from the App - this will check the current host then the SYSTEMM_HOST for a valid configuration. This lookup is low overhead and cached
+     * by dotCMS.
      */
     public Optional<AppConfig> config(final Host host) {
 
@@ -28,7 +25,7 @@ public class ConfigService {
             .getOrElse(Optional.empty());
 
         if (!appSecrets.isPresent()) {
-            Logger.debug(this.getClass().getName(), () -> "App secrets is empty for host: " + host.getHostname());
+            Logger.debug(this.getClass().getName(), () -> "App secrets is empty for host: " + (host != null ? host.getHostname() : "NULL"));
             return Optional.empty();
         }
 
@@ -57,5 +54,4 @@ public class ConfigService {
 
         return Optional.ofNullable(config);
     }
-
 }

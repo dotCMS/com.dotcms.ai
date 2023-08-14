@@ -6,6 +6,6 @@ import java.util.Optional;
 
 public interface ChatGPTService {
 
-    AITextResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config);
+    AITextResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt);
 
 }

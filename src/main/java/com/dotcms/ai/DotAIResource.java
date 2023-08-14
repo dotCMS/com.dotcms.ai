@@ -71,7 +71,7 @@ public class DotAIResource {
         }
 
         ChatGPTService service = new ChatGPTServiceImpl(config.get());
-        AITextResponseDTO resp = service.sendChatGPTRequest(aiTextRequestDTO.getPrompt(), config);
+        AITextResponseDTO resp = service.sendChatGPTRequest(aiTextRequestDTO.getPrompt(), config, false);
 
         return Response.ok(Marshaller.marshal(resp)).type(MediaType.APPLICATION_JSON_TYPE).build();
 
