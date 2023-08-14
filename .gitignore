@@ -1,0 +1,9 @@
+# Ignore .idea directory created by IntelliJ IDEA
+.idea/
+
+# Ignore .gradle directory created by Gradle
+.gradle/
+
+# Ignore build output directories
+build/
+out/
