@@ -17,30 +17,39 @@ public class AIViewTool implements ViewTool {
     public void init(Object initData) {
     }
 
-    public String textGenerate(String prompt) throws IOException {
+    /**
+     * Generate a response from the AI prompt service with adding config data to original prompt (rolePrompt, textPrompt, imagePrompt)
+     * @param prompt
+     * @return AIVelocityTextResponseDTO
+     * @throws IOException
+     */
+    public AIVelocityTextResponseDTO textGenerate(final String prompt) throws IOException {
         return generateTextResponse(prompt, false);
     }
 
-    public String textGenerateRaw(String prompt) throws IOException {
+    /**
+     * Generate a raw response from the AI prompt service w/o adding data from config to prompt
+     * @param prompt
+     * @return AIVelocityTextResponseDTO
+     * @throws IOException
+     */
+    public AIVelocityTextResponseDTO textGenerateRaw(final String prompt) throws IOException {
         return generateTextResponse(prompt, true);
     }
 
-    private String generateTextResponse(String prompt, boolean raw) throws IOException {
+    private AIVelocityTextResponseDTO generateTextResponse(String prompt, boolean raw) throws IOException {
         final Optional<AppConfig> config = ConfigService.INSTANCE.config(null);
 
         if (config.isPresent()) {
             try {
                 ChatGPTService service = new ChatGPTServiceImpl(config.get());
                 AITextResponseDTO resp = service.sendChatGPTRequest(prompt, config, raw);
-                AIVelocityTextResponseDTO velocityResponse = new AIVelocityTextResponseDTO(200, resp.getResponse(), resp.getPrompt());
-                return Marshaller.marshal(velocityResponse);
+                return new AIVelocityTextResponseDTO(200, resp.getResponse(), resp.getPrompt());
             } catch (Exception e) {
-                AIVelocityTextResponseDTO velocityResponse = new AIVelocityTextResponseDTO(500, e.getMessage(), prompt);
-                return Marshaller.marshal(velocityResponse);
+                return new AIVelocityTextResponseDTO(500, e.getMessage(), prompt);
             }
         } else {
-            AIVelocityTextResponseDTO velocityResponse = new AIVelocityTextResponseDTO(500, "Configuration missing", prompt);
-            return Marshaller.marshal(velocityResponse);
+            return new AIVelocityTextResponseDTO(500, "Configuration missing", prompt);
         }
     }
 
@@ -51,5 +60,4 @@ public class AIViewTool implements ViewTool {
     public String imageGenerateRaw(String prompt) {
         return "Not implemented";
     }
-
 }
