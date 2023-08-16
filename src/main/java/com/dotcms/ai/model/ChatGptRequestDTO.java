@@ -8,8 +8,8 @@ public class ChatGptRequestDTO {
     private String model;
     private List<Message> messages;
 
-    public ChatGptRequestDTO(String model, String role, String prompt, String promptTextStyle, String promptImage, String promptInput, boolean rawPrompt) {
-        String promptText = rawPrompt ? promptInput : (prompt + " " + promptTextStyle + " " + promptImage + " " + promptInput);
+    public ChatGptRequestDTO(String model, String role, String prompt, String promptTextStyle, String promptInput, boolean rawPrompt) {
+        String promptText = rawPrompt ? promptInput : (prompt + " " + promptTextStyle + " " + promptInput);
         this.model = model;
         this.messages = new ArrayList<>();
         this.messages.add(new Message(role, promptText));
@@ -30,7 +30,6 @@ public class ChatGptRequestDTO {
     public void setMessages(List<Message> messages) {
         this.messages = messages;
     }
-    // Constructors, getters, and setters (if needed)
 
     public static class Message {
 

@@ -10,6 +10,13 @@ params:
     label: "API URL"
     hint: "ChatGPT API URL address"
     required: true
+  apiImageUrl:
+    value: "https://api.openai.com/v1/images/generations"
+    hidden: false
+    type: "STRING"
+    label: "API IMAGE URL"
+    hint: "ChatGPT IMAGE API URL address"
+    required: true
   apiKey:
     value: ""
     hidden: true
@@ -37,6 +44,13 @@ params:
     type: "STRING"
     label: "Image Prompt"
     hint: "Aspect ratio to use for image."
+    required: false
+  imageSize:
+    value: "1024x1024"
+    hidden: false
+    type: "STRING"
+    label: "Image size"
+    hint: "Image size to generate (eg 1024x1024)"
     required: false
   model:
     value: "gpt-3.5-turbo"

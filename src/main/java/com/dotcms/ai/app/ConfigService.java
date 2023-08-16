@@ -32,6 +32,8 @@ public class ConfigService {
         final Map<String, Secret> secrets = appSecrets.get().getSecrets();
         final String apiUrl = Try.of(() -> secrets
             .get(AppKeys.API_URL.key).getString()).getOrElse(StringPool.BLANK);
+        final String apiImageUrl = Try.of(() -> secrets
+            .get(AppKeys.API_IMAGE_URL.key).getString()).getOrElse(StringPool.BLANK);
         final String apiKey = Try.of(() -> secrets
             .get(AppKeys.API_KEY.key).getString()).getOrElse(StringPool.BLANK);
         final String rolePrompt = Try.of(() -> secrets
@@ -40,17 +42,21 @@ public class ConfigService {
             .get(AppKeys.TEXT_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
         final String imagePrompt = Try.of(() -> secrets
             .get(AppKeys.IMAGE_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+        final String imageSize = Try.of(() -> secrets
+            .get(AppKeys.IMAGE_SIZE.key).getString()).getOrElse(StringPool.BLANK);
         final String model = Try.of(() -> secrets
             .get(AppKeys.MODEL.key).getString()).getOrElse(StringPool.BLANK);
 
         Logger.debug(this.getClass().getName(), () -> "apiUrl: " + apiUrl);
+        Logger.debug(this.getClass().getName(), () -> "apiImageUrl: " + apiImageUrl);
         Logger.debug(this.getClass().getName(), () -> "apiKey: " + apiKey);
         Logger.debug(this.getClass().getName(), () -> "rolePrompt: " + rolePrompt);
         Logger.debug(this.getClass().getName(), () -> "textPrompt: " + textPrompt);
         Logger.debug(this.getClass().getName(), () -> "imagePrompt: " + imagePrompt);
+        Logger.debug(this.getClass().getName(), () -> "imageSize: " + imageSize);
         Logger.debug(this.getClass().getName(), () -> "model: " + model);
 
-        final AppConfig config = new AppConfig(apiUrl, apiKey, rolePrompt, textPrompt, imagePrompt, model);
+        final AppConfig config = new AppConfig(apiUrl, apiImageUrl, apiKey, rolePrompt, textPrompt, imagePrompt, imageSize, model);
 
         return Optional.ofNullable(config);
     }

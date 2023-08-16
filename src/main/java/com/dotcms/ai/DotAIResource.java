@@ -5,6 +5,8 @@ import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.model.AIErrorResponseDTO;
 import com.dotcms.ai.model.AITextResponseDTO;
+import com.dotcms.ai.service.ChatGPTTextService;
+import com.dotcms.ai.service.ChatGPTTextServiceImpl;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.util.Logger;
 import java.io.IOException;
@@ -70,7 +72,7 @@ public class DotAIResource {
             return createErrorResponse("MissingParameter", "The 'prompt' is required.", Status.BAD_REQUEST);
         }
 
-        ChatGPTService service = new ChatGPTServiceImpl(config.get());
+        ChatGPTTextService service = new ChatGPTTextServiceImpl(config.get());
         AITextResponseDTO resp = service.sendChatGPTRequest(aiTextRequestDTO.getPrompt(), config, false);
 
         return Response.ok(Marshaller.marshal(resp)).type(MediaType.APPLICATION_JSON_TYPE).build();

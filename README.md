@@ -89,6 +89,58 @@ For registering and initialization of our ViewTool implementation
 
 ViewTool implementation
 
+## ChatGPT APIs
+
+### Text generator
+
+URL: https://api.openai.com/v1/chat/completions
+
+```
+{
+"model": "gpt-3.5-turbo",
+"messages": [
+{
+"role": "user",
+"content": "You are a chatbot providing travel advice to people who visit a travel website; provide an enticing description of the beaches of Costa Rica"
+}
+]
+}
+```
+
+### Image generator
+
+URL: https://api.openai.com/v1/images/generations
+
+```
+{
+"prompt": "The golden sun sets over the magnificent",
+"n": 1,
+"size": "1024x1024"
+}
+```
+* limitation: max 1000 characters in prompt
+
+
+## Velocity usage
+
+```
+#set( $result = $ai.textGenerate("Some text") )
+<ul>
+<li>$result.httpStatus</li>
+<li>$result.request</li>
+<li>$result.response</li>
+</ul>
+
+
+
+#set( $result = $ai.imageGenerate($result.response) )
+<ul>
+<li>$result.httpStatus</li>
+<li>$result.request</li>
+<li>$result.response</li>
+</ul>
+```
+
 ## Authentication
 
 This API supports the same REST auth infrastructure as other 

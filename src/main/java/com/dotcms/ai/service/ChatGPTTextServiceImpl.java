@@ -1,5 +1,6 @@
-package com.dotcms.ai;
+package com.dotcms.ai.service;
 
+import com.dotcms.ai.Marshaller;
 import com.dotcms.ai.interceptor.RequestLoggingInterceptor;
 import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.model.AITextResponseDTO;
@@ -15,7 +16,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class ChatGPTServiceImpl implements ChatGPTService {
+public class ChatGPTTextServiceImpl implements ChatGPTTextService {
 
     private static String CHAT_GPT_API_URL;
 
@@ -37,7 +38,7 @@ public class ChatGPTServiceImpl implements ChatGPTService {
 
     private OkHttpClient httpClient;
 
-    public ChatGPTServiceImpl(AppConfig appConfig) {
+    public ChatGPTTextServiceImpl(AppConfig appConfig) {
         this.httpClient = new OkHttpClient().newBuilder()
             .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
             .addInterceptor(new RequestLoggingInterceptor())
@@ -53,7 +54,7 @@ public class ChatGPTServiceImpl implements ChatGPTService {
     @Override
     public AITextResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt) {
 
-        ChatGptRequestDTO chatGptRequestDTO = new ChatGptRequestDTO(CHAT_GPT_MODEL, CHAT_GPT_ROLE, CHAT_GPT_PROMPT_ROLE, CHAT_GPT_PROMPT_TEXT, CHAT_GPT_PROMPT_IMAGE, prompt,
+        ChatGptRequestDTO chatGptRequestDTO = new ChatGptRequestDTO(CHAT_GPT_MODEL, CHAT_GPT_ROLE, CHAT_GPT_PROMPT_ROLE, CHAT_GPT_PROMPT_TEXT, prompt,
             isRawPrompt);
 
         AITextResponseDTO aiTextResponseDTO = new AITextResponseDTO();

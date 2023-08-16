@@ -1,8 +1,11 @@
 package com.dotcms.ai.viewtool;
 
-import com.dotcms.ai.ChatGPTService;
-import com.dotcms.ai.ChatGPTServiceImpl;
-import com.dotcms.ai.Marshaller;
+import com.dotcms.ai.model.AIImageResponseDTO;
+import com.dotcms.ai.model.AIVelocityImageResponseDTO;
+import com.dotcms.ai.service.ChatGPTImageService;
+import com.dotcms.ai.service.ChatGPTImageServiceImpl;
+import com.dotcms.ai.service.ChatGPTTextService;
+import com.dotcms.ai.service.ChatGPTTextServiceImpl;
 import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.model.AITextResponseDTO;
@@ -19,9 +22,8 @@ public class AIViewTool implements ViewTool {
 
     /**
      * Generate a response from the AI prompt service with adding config data to original prompt (rolePrompt, textPrompt, imagePrompt)
-     * @param prompt
+     *
      * @return AIVelocityTextResponseDTO
-     * @throws IOException
      */
     public AIVelocityTextResponseDTO textGenerate(final String prompt) throws IOException {
         return generateTextResponse(prompt, false);
@@ -29,9 +31,8 @@ public class AIViewTool implements ViewTool {
 
     /**
      * Generate a raw response from the AI prompt service w/o adding data from config to prompt
-     * @param prompt
+     *
      * @return AIVelocityTextResponseDTO
-     * @throws IOException
      */
     public AIVelocityTextResponseDTO textGenerateRaw(final String prompt) throws IOException {
         return generateTextResponse(prompt, true);
@@ -42,22 +43,42 @@ public class AIViewTool implements ViewTool {
 
         if (config.isPresent()) {
             try {
-                ChatGPTService service = new ChatGPTServiceImpl(config.get());
+                ChatGPTTextService service = new ChatGPTTextServiceImpl(config.get());
                 AITextResponseDTO resp = service.sendChatGPTRequest(prompt, config, raw);
-                return new AIVelocityTextResponseDTO(200, resp.getResponse(), resp.getPrompt());
+                return new AIVelocityTextResponseDTO(200, resp.getPrompt(), resp.getResponse());
             } catch (Exception e) {
-                return new AIVelocityTextResponseDTO(500, e.getMessage(), prompt);
+                return new AIVelocityTextResponseDTO(500, prompt, e.getMessage());
             }
         } else {
-            return new AIVelocityTextResponseDTO(500, "Configuration missing", prompt);
+            return new AIVelocityTextResponseDTO(500, prompt, "Configuration missing");
         }
     }
 
-    public String imageGenerate(String prompt) {
-        return "Not implemented";
+    public AIVelocityImageResponseDTO imageGenerate(String prompt) {
+        return processImageRequest(prompt, false);
     }
 
-    public String imageGenerateRaw(String prompt) {
-        return "Not implemented";
+    public AIVelocityImageResponseDTO imageGenerateRaw(String prompt) {
+        return processImageRequest(prompt, true);
+    }
+
+    private AIVelocityImageResponseDTO processImageRequest(String prompt, boolean isRaw) {
+        final Optional<AppConfig> config = ConfigService.INSTANCE.config(null);
+
+        if (config.isPresent()) {
+            try {
+                ChatGPTImageService service = new ChatGPTImageServiceImpl(config.get());
+                AIImageResponseDTO aiImageResponseDTO = service.sendChatGPTRequest(prompt, config, isRaw);
+                return new AIVelocityImageResponseDTO(Integer.valueOf(aiImageResponseDTO.getChatGPTResponseStatus()), aiImageResponseDTO.getPrompt(),
+                    aiImageResponseDTO.getImageUrl());
+//                final TempFileAPI tempApi = APILocator.getTempFileAPI();
+//                DotTempFile file = tempApi.createTempFileFromUrl("MyImage", null, new URL(aiImageResponseDTO.getImageUrl()), 30, 1000);
+//                return file;
+            } catch (Exception e) {
+                return new AIVelocityImageResponseDTO(500, prompt, e.getMessage());
+            }
+        } else {
+            return new AIVelocityImageResponseDTO(500, prompt, "Configuration missing");
+        }
     }
 }

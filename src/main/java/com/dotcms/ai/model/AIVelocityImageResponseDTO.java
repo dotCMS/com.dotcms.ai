@@ -1,12 +1,12 @@
 package com.dotcms.ai.model;
 
-public class AIVelocityTextResponseDTO {
+public class AIVelocityImageResponseDTO {
 
     private int httpStatus;
     private String request;
     private String response;
 
-    public AIVelocityTextResponseDTO(int httpStatus, String request, String response) {
+    public AIVelocityImageResponseDTO(int httpStatus, String request, String response) {
         this.httpStatus = httpStatus;
         this.request = request;
         this.response = response;

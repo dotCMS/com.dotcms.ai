@@ -2,10 +2,12 @@ package com.dotcms.ai.app;
 
 public enum AppKeys {
     API_URL("apiUrl"),
+    API_IMAGE_URL("apiImageUrl"),
     API_KEY("apiKey"),
     ROLE_PROMPT("rolePrompt"),
     TEXT_PROMPT("textPrompt"),
     IMAGE_PROMPT("imagePrompt"),
+    IMAGE_SIZE("imageSize"),
     MODEL("model");
 
     final public String key;
