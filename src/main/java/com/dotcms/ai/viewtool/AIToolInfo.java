@@ -12,7 +12,7 @@ public class AIToolInfo extends ServletToolInfo {
 
     @Override
     public String getScope () {
-        return ViewContext.APPLICATION;
+        return ViewContext.REQUEST;
     }
 
     @Override
@@ -26,7 +26,7 @@ public class AIToolInfo extends ServletToolInfo {
         AIViewTool viewTool = new AIViewTool();
         viewTool.init( initData );
 
-        setScope( ViewContext.APPLICATION );
+        setScope( ViewContext.REQUEST );
 
         return viewTool;
     }

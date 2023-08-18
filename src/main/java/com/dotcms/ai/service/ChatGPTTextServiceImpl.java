@@ -8,6 +8,7 @@ import com.dotcms.ai.model.ChatGptRequestDTO;
 import com.dotcms.ai.model.ChatGptResponseDTO;
 import com.dotmarketing.util.Logger;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import okhttp3.MediaType;
@@ -53,35 +54,52 @@ public class ChatGPTTextServiceImpl implements ChatGPTTextService {
 
     @Override
     public AITextResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt) {
-
-        ChatGptRequestDTO chatGptRequestDTO = new ChatGptRequestDTO(CHAT_GPT_MODEL, CHAT_GPT_ROLE, CHAT_GPT_PROMPT_ROLE, CHAT_GPT_PROMPT_TEXT, prompt,
-            isRawPrompt);
-
         AITextResponseDTO aiTextResponseDTO = new AITextResponseDTO();
-        aiTextResponseDTO.setModel(chatGptRequestDTO.getModel());
-        aiTextResponseDTO.setPrompt(chatGptRequestDTO.getMessages().get(0).getContent());
 
         try {
-            Request request = new Request.Builder()
-                .url(CHAT_GPT_API_URL)
-                .method("POST", RequestBody.create(JSON_MEDIA_TYPE, Marshaller.marshal(chatGptRequestDTO)))
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer " + CHAT_GPT_API_KEY)
-                .build();
+            ChatGptRequestDTO chatGptRequestDTO = createChatGptRequest(prompt, isRawPrompt);
+            aiTextResponseDTO.setPrompt(chatGptRequestDTO.getMessages().get(0).getContent());
+            aiTextResponseDTO.setModel(chatGptRequestDTO.getModel());
+
+            Request request = createRequest(chatGptRequestDTO);
 
             Response response = httpClient.newCall(request).execute();
-
-            if (HttpResponseStatus.OK.code() == response.code()) {
-                ChatGptResponseDTO chatGptResponseDTO = Marshaller.unmarshal(response.body().string(), ChatGptResponseDTO.class);
-                aiTextResponseDTO.setResponse(chatGptResponseDTO.getChoices().get(0).getMessage().getContent());
-            } else {
-                aiTextResponseDTO.setResponse(String.format("Error calling ChatGPT API: [code=%s] [message=%s] [body=%s]", response.code(), response.message(), response.body().string()));
-             }
-        } catch (Exception e) {
-            Logger.error(this.getClass(), "Error calling ChatGPT API: " + e.getMessage());
-            aiTextResponseDTO.setResponse("Error calling ChatGPT API: " + e.getMessage());
+            processResponse(response, aiTextResponseDTO);
+        } catch (IOException e) {
+            aiTextResponseDTO.setPrompt(prompt);
+            handleApiError(e, aiTextResponseDTO);
         }
 
         return aiTextResponseDTO;
+    }
+
+    private ChatGptRequestDTO createChatGptRequest(String prompt, boolean isRawPrompt) {
+        return new ChatGptRequestDTO(CHAT_GPT_MODEL, CHAT_GPT_ROLE, CHAT_GPT_PROMPT_ROLE, CHAT_GPT_PROMPT_TEXT, prompt, isRawPrompt);
+    }
+
+    private Request createRequest(ChatGptRequestDTO chatGptRequestDTO) throws IOException {
+        return new Request.Builder()
+            .url(CHAT_GPT_API_URL)
+            .method("POST", RequestBody.create(JSON_MEDIA_TYPE, Marshaller.marshal(chatGptRequestDTO)))
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", "Bearer " + CHAT_GPT_API_KEY)
+            .build();
+    }
+
+    private void processResponse(Response response, AITextResponseDTO aiTextResponseDTO) throws IOException {
+        aiTextResponseDTO.setHttpStatus(String.valueOf(response.code()));
+        if (HttpResponseStatus.OK.code() == response.code()) {
+            ChatGptResponseDTO chatGptResponseDTO = Marshaller.unmarshal(response.body().string(), ChatGptResponseDTO.class);
+            aiTextResponseDTO.setResponse(chatGptResponseDTO.getChoices().get(0).getMessage().getContent());
+        } else {
+            aiTextResponseDTO.setResponse(String.format("Error calling ChatGPT API: [code=%s] [message=%s] [body=%s]", response.code(), response.message(), response.body().string()));
+        }
+    }
+
+    private void handleApiError(IOException e, AITextResponseDTO aiTextResponseDTO) {
+        String errorMessage = "Error calling ChatGPT API: " + e.getMessage();
+        Logger.error(this.getClass(), errorMessage);
+        aiTextResponseDTO.setHttpStatus(String.valueOf(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
+        aiTextResponseDTO.setResponse(errorMessage);
     }
 }

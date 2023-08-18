@@ -10,14 +10,25 @@ import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.model.AITextResponseDTO;
 import com.dotcms.ai.model.AIVelocityTextResponseDTO;
+import com.dotcms.rest.api.v1.temp.DotTempFile;
+import com.dotcms.rest.api.v1.temp.TempFileAPI;
+import com.dotmarketing.business.APILocator;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Optional;
+import javax.servlet.http.HttpServletRequest;
+import org.apache.velocity.tools.view.context.ViewContext;
 import org.apache.velocity.tools.view.tools.ViewTool;
 
 public class AIViewTool implements ViewTool {
 
+    private HttpServletRequest request;
+
     @Override
-    public void init(Object initData) {
+    public void init(Object obj) {
+        ViewContext context = (ViewContext) obj;
+        this.request = context.getRequest();
     }
 
     /**
@@ -45,19 +56,31 @@ public class AIViewTool implements ViewTool {
             try {
                 ChatGPTTextService service = new ChatGPTTextServiceImpl(config.get());
                 AITextResponseDTO resp = service.sendChatGPTRequest(prompt, config, raw);
-                return new AIVelocityTextResponseDTO(200, resp.getPrompt(), resp.getResponse());
+                return new AIVelocityTextResponseDTO(resp.getModel(), "200", resp.getPrompt(), resp.getResponse());
             } catch (Exception e) {
-                return new AIVelocityTextResponseDTO(500, prompt, e.getMessage());
+                return new AIVelocityTextResponseDTO(null, "500", prompt, e.getMessage());
             }
         } else {
-            return new AIVelocityTextResponseDTO(500, prompt, "Configuration missing");
+            return new AIVelocityTextResponseDTO(null, "500", prompt, "Configuration missing");
         }
     }
 
+    /**
+     * Generate a response from the AI image service with adding config data to original prompt (imagePrompt). Image size is set in configuration file. Temp
+     * File id is being returned in response
+     *
+     * @return AIVelocityImageResponseDTO
+     */
     public AIVelocityImageResponseDTO imageGenerate(String prompt) {
         return processImageRequest(prompt, false);
     }
 
+    /**
+     * Generate a response from the AI image service  service w/o adding data from config to prompt. Image size is set in configuration file. Temp File id is
+     * being returned in response
+     *
+     * @return AIVelocityImageResponseDTO
+     */
     public AIVelocityImageResponseDTO imageGenerateRaw(String prompt) {
         return processImageRequest(prompt, true);
     }
@@ -68,17 +91,22 @@ public class AIViewTool implements ViewTool {
         if (config.isPresent()) {
             try {
                 ChatGPTImageService service = new ChatGPTImageServiceImpl(config.get());
-                AIImageResponseDTO aiImageResponseDTO = service.sendChatGPTRequest(prompt, config, isRaw);
-                return new AIVelocityImageResponseDTO(Integer.valueOf(aiImageResponseDTO.getChatGPTResponseStatus()), aiImageResponseDTO.getPrompt(),
-                    aiImageResponseDTO.getImageUrl());
-//                final TempFileAPI tempApi = APILocator.getTempFileAPI();
-//                DotTempFile file = tempApi.createTempFileFromUrl("MyImage", null, new URL(aiImageResponseDTO.getImageUrl()), 30, 1000);
-//                return file;
+                final AIImageResponseDTO aiImageResponseDTO = service.sendChatGPTRequest(prompt, config, isRaw);
+                String fileId = null;
+                if (aiImageResponseDTO.getHttpStatus().equals(String.valueOf( HttpResponseStatus.OK.code()))) {
+                    final TempFileAPI tempApi = APILocator.getTempFileAPI();
+                    DotTempFile file = tempApi.createTempFileFromUrl("ChatGPTImage", request, new URL(aiImageResponseDTO.getResponse()), 10, 1000);
+                    return new AIVelocityImageResponseDTO(aiImageResponseDTO.getModel(), aiImageResponseDTO.getHttpStatus(), prompt,
+                        aiImageResponseDTO.getResponse(), file.id);
+                } else {
+                    return new AIVelocityImageResponseDTO(aiImageResponseDTO.getModel(), aiImageResponseDTO.getHttpStatus(), prompt,
+                        aiImageResponseDTO.getResponse(), null);
+                }
             } catch (Exception e) {
-                return new AIVelocityImageResponseDTO(500, prompt, e.getMessage());
+                return new AIVelocityImageResponseDTO(null, "500", prompt, e.getMessage(), null);
             }
         } else {
-            return new AIVelocityImageResponseDTO(500, prompt, "Configuration missing");
+            return new AIVelocityImageResponseDTO(null, "500", prompt, "Configuration missing", null);
         }
     }
 }

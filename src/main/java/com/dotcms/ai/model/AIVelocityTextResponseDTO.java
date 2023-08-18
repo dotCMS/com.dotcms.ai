@@ -2,25 +2,33 @@ package com.dotcms.ai.model;
 
 public class AIVelocityTextResponseDTO {
 
-    private int httpStatus;
-    private String request;
+    private String model;
+    private String httpStatus;
+    private String prompt;
     private String response;
 
-    public AIVelocityTextResponseDTO(int httpStatus, String request, String response) {
+    public AIVelocityTextResponseDTO(String model, String httpStatus, String request, String response) {
+        this.model = model;
         this.httpStatus = httpStatus;
-        this.request = request;
+        this.prompt = request;
         this.response = response;
     }
 
-    public int getHttpStatus() {
+    public String getModel() {
+        return model;
+    }
+
+    public String getHttpStatus() {
         return httpStatus;
     }
 
-    public String getRequest() {
-        return request;
+    public String getPrompt() {
+        return prompt;
     }
 
     public String getResponse() {
         return response;
     }
+
+
 }

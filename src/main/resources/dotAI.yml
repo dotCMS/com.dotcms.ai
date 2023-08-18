@@ -46,12 +46,19 @@ params:
     hint: "Aspect ratio to use for image."
     required: false
   imageSize:
-    value: "1024x1024"
     hidden: false
-    type: "STRING"
+    type: "SELECT"
     label: "Image size"
-    hint: "Image size to generate (eg 1024x1024)"
-    required: false
+    hint: "Image size to generate"
+    required: true
+    value:
+      - label: "1024x1024"
+        value: "1024x1024"
+        selected: true
+      - label: "512x512"
+        value: "512x512"
+      - label: "256x256"
+        value: "256x256"
   model:
     value: "gpt-3.5-turbo"
     hidden: false

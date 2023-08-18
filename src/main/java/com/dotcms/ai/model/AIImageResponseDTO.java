@@ -2,10 +2,43 @@ package com.dotcms.ai.model;
 
 public class AIImageResponseDTO {
 
+    private String model = "OpenAI:DALL-E-2";
     private String prompt;
-    private String imageUrl;
-    private int chatGPTResponseStatus;
-    private String errorMessage;
+    private String httpStatus;
+    private String response;
+    private String fileId;
+
+    public String getResponse() {
+        return response;
+    }
+
+    public void setResponse(String response) {
+        this.response = response;
+    }
+
+    public String getHttpStatus() {
+        return httpStatus;
+    }
+
+    public void setHttpStatus(String httpStatus) {
+        this.httpStatus = httpStatus;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public void setFileId(String fileId) {
+        this.fileId = fileId;
+    }
 
     public String getPrompt() {
         return prompt;
@@ -13,29 +46,5 @@ public class AIImageResponseDTO {
 
     public void setPrompt(String prompt) {
         this.prompt = prompt;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public int getChatGPTResponseStatus() {
-        return chatGPTResponseStatus;
-    }
-
-    public void setChatGPTResponseStatus(int chatGPTResponseStatus) {
-        this.chatGPTResponseStatus = chatGPTResponseStatus;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
     }
 }

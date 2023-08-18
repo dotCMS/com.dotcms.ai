@@ -2,25 +2,37 @@ package com.dotcms.ai.model;
 
 public class AIVelocityImageResponseDTO {
 
-    private int httpStatus;
-    private String request;
+    private String model;
+    private String httpStatus;
+    private String prompt;
     private String response;
+    private String fileId;
 
-    public AIVelocityImageResponseDTO(int httpStatus, String request, String response) {
+    public AIVelocityImageResponseDTO(String model, String httpStatus, String prompt, String response, String fileId) {
+        this.model = model;
         this.httpStatus = httpStatus;
-        this.request = request;
+        this.prompt = prompt;
         this.response = response;
+        this.fileId = fileId;
     }
 
-    public int getHttpStatus() {
+    public String getHttpStatus() {
         return httpStatus;
     }
 
-    public String getRequest() {
-        return request;
+    public String getPrompt() {
+        return prompt;
     }
 
     public String getResponse() {
         return response;
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public String getModel() {
+        return model;
     }
 }

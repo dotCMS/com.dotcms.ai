@@ -8,6 +8,7 @@ import com.dotcms.ai.model.ChatGptImageRequestDTO;
 import com.dotcms.ai.model.ChatGptImageResponseDTO;
 import com.dotmarketing.util.Logger;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import okhttp3.MediaType;
@@ -47,35 +48,52 @@ public class ChatGPTImageServiceImpl implements ChatGPTImageService{
 
     @Override
     public AIImageResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt) {
-
-        ChatGptImageRequestDTO chatGptImageRequestDTO = new ChatGptImageRequestDTO(prompt, CHAT_GPT_IMAGE_COUNT, CHAT_GPT_IMAGE_SIZE, CHAT_GPT_PROMPT_IMAGE, isRawPrompt);
-
         AIImageResponseDTO aiImageResponseDTO = new AIImageResponseDTO();
-        aiImageResponseDTO.setPrompt(chatGptImageRequestDTO.getPrompt());
 
         try {
-            Request request = new Request.Builder()
-                .url(CHAT_GPT_API_URL)
-                .method("POST", RequestBody.create(JSON_MEDIA_TYPE, Marshaller.marshal(chatGptImageRequestDTO)))
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer " + CHAT_GPT_API_KEY)
-                .build();
+            ChatGptImageRequestDTO chatGptImageRequestDTO = createChatGptImageRequest(prompt, isRawPrompt);
+            aiImageResponseDTO.setPrompt(chatGptImageRequestDTO.getPrompt());
+            Request request = createRequest(chatGptImageRequestDTO);
 
             Response response = httpClient.newCall(request).execute();
-            aiImageResponseDTO.setChatGPTResponseStatus(response.code());
-
-            if (HttpResponseStatus.OK.code() == response.code()) {
-                ChatGptImageResponseDTO chatGptImageResponseDTO = Marshaller.unmarshal(response.body().string(), ChatGptImageResponseDTO.class);
-                aiImageResponseDTO.setImageUrl(chatGptImageResponseDTO.getData().get(0).getUrl().toString());
-            } else {
-                aiImageResponseDTO.setErrorMessage(response.body().string());
-            }
-        } catch (Exception e) {
-            Logger.error(this.getClass(), "Error calling ChatGPT API: " + e.getMessage());
-            aiImageResponseDTO.setErrorMessage("Error calling ChatGPT API: " + e.getMessage());
-            aiImageResponseDTO.setChatGPTResponseStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+            processResponse(response, aiImageResponseDTO);
+        } catch (IOException e) {
+            aiImageResponseDTO.setPrompt(prompt);
+            handleApiError(e, aiImageResponseDTO);
         }
 
         return aiImageResponseDTO;
+    }
+
+    private ChatGptImageRequestDTO createChatGptImageRequest(String prompt, boolean isRawPrompt) {
+        return new ChatGptImageRequestDTO(prompt, CHAT_GPT_IMAGE_COUNT, CHAT_GPT_IMAGE_SIZE, CHAT_GPT_PROMPT_IMAGE, isRawPrompt);
+    }
+
+    private Request createRequest(ChatGptImageRequestDTO chatGptImageRequestDTO) throws IOException {
+        return new Request.Builder()
+            .url(CHAT_GPT_API_URL)
+            .method("POST", RequestBody.create(JSON_MEDIA_TYPE, Marshaller.marshal(chatGptImageRequestDTO)))
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", "Bearer " + CHAT_GPT_API_KEY)
+            .build();
+    }
+
+    private void processResponse(Response response, AIImageResponseDTO aiImageResponseDTO) throws IOException {
+        aiImageResponseDTO.setHttpStatus(String.valueOf(response.code()));
+
+        if (HttpResponseStatus.OK.code() == response.code()) {
+            ChatGptImageResponseDTO chatGptImageResponseDTO = Marshaller.unmarshal(response.body().string(), ChatGptImageResponseDTO.class);
+            aiImageResponseDTO.setResponse(chatGptImageResponseDTO.getData().get(0).getUrl().toString());
+        } else {
+            aiImageResponseDTO.setResponse(response.body().string());
+        }
+    }
+
+    private void handleApiError(IOException e, AIImageResponseDTO aiImageResponseDTO) {
+        String errorMessage = "Error calling ChatGPT API: " + e.getMessage();
+        Logger.error(this.getClass(), errorMessage);
+
+        aiImageResponseDTO.setResponse(errorMessage);
+        aiImageResponseDTO.setHttpStatus(String.valueOf(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
     }
 }

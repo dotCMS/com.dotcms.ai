@@ -4,6 +4,7 @@ public class AITextResponseDTO {
 
     private String model;
     private String prompt;
+    private String httpStatus;
     private String response;
 
     public String getModel() {
@@ -11,7 +12,7 @@ public class AITextResponseDTO {
     }
 
     public void setModel(String model) {
-        this.model = model;
+        this.model = "OpenAI:" + model;
     }
 
     public String getPrompt() {
@@ -22,6 +23,14 @@ public class AITextResponseDTO {
         this.prompt = prompt;
     }
 
+    public String getHttpStatus() {
+        return httpStatus;
+    }
+
+    public void setHttpStatus(String httpStatus) {
+        this.httpStatus = httpStatus;
+    }
+
     public String getResponse() {
         return response;
     }
@@ -29,4 +38,6 @@ public class AITextResponseDTO {
     public void setResponse(String response) {
         this.response = response;
     }
+
+
 }
