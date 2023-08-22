@@ -97,16 +97,16 @@ public class AIViewTool implements ViewTool {
                     final TempFileAPI tempApi = APILocator.getTempFileAPI();
                     DotTempFile file = tempApi.createTempFileFromUrl("ChatGPTImage", request, new URL(aiImageResponseDTO.getResponse()), 10, 1000);
                     return new AIVelocityImageResponseDTO(aiImageResponseDTO.getModel(), aiImageResponseDTO.getHttpStatus(), prompt,
-                        aiImageResponseDTO.getResponse(), file.id);
+                        file.id);
                 } else {
                     return new AIVelocityImageResponseDTO(aiImageResponseDTO.getModel(), aiImageResponseDTO.getHttpStatus(), prompt,
-                        aiImageResponseDTO.getResponse(), null);
+                        aiImageResponseDTO.getResponse());
                 }
             } catch (Exception e) {
-                return new AIVelocityImageResponseDTO(null, "500", prompt, e.getMessage(), null);
+                return new AIVelocityImageResponseDTO(null, "500", prompt, e.getMessage());
             }
         } else {
-            return new AIVelocityImageResponseDTO(null, "500", prompt, "Configuration missing", null);
+            return new AIVelocityImageResponseDTO(null, "500", prompt, "Configuration missing");
         }
     }
 }

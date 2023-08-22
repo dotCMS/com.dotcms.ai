@@ -1,5 +1,7 @@
 package com.dotcms.ai.model;
 
+import com.dotmarketing.util.Logger;
+
 public class ChatGptImageRequestDTO {
 
     private String prompt;
@@ -11,8 +13,10 @@ public class ChatGptImageRequestDTO {
 
     public ChatGptImageRequestDTO(String promptInput, int n, String size, String promptImage, boolean rawPrompt) {
         String input = rawPrompt ? promptInput : (promptImage + " " + promptInput);
-        if (input.length() > 999)
+        if (input.length() > 999) {
+            Logger.debug(this.getClass(), "Input prompt truncated. Full input text: " + input);
             input = input.substring(0, 999);
+        }
         this.prompt = input;
         this.n = n;
         this.size = size;

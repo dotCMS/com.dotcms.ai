@@ -16,10 +16,10 @@ public class RequestLoggingInterceptor implements Interceptor {
     public Response intercept(Chain chain) throws IOException {
 
         Request request = chain.request();
-        Logger.info(this.getClass(), String.format("[ChatGPT API request] : URL = %s, method = %s, requestBody = %s", request.url(), request.method(), requestBodyToString(request)));
+        Logger.debug(this.getClass(), String.format("[ChatGPT API request] : URL = %s, method = %s, requestBody = %s", request.url(), request.method(), requestBodyToString(request)));
 
         Response response = chain.proceed(request);
-        Logger.info(this.getClass(), String.format("[ChatGPT API response]: HTTPStatusCode = %s, message = %s, responseBody = %s", response.code(), response.message(), responseBodyToString(response)));
+        Logger.debug(this.getClass(), String.format("[ChatGPT API response]: HTTPStatusCode = %s, message = %s, responseBody = %s", response.code(), response.message(), responseBodyToString(response)));
 
         return response;
     }

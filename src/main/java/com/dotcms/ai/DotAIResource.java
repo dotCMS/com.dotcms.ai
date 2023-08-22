@@ -50,7 +50,7 @@ public class DotAIResource {
             response = handleTextRequest(request, aiTextRequestDTO);
         }
 
-        Logger.info(this.getClass(), String.format("[DotAI API response] : HTTPStatusCode = %s, responseBody = %s", response.getStatus(), response.getEntity().toString()));
+        Logger.debug(this.getClass(), String.format("[DotAI API response] : HTTPStatusCode = %s, responseBody = %s", response.getStatus(), response.getEntity().toString()));
         return response;
     }
 
@@ -66,7 +66,7 @@ public class DotAIResource {
             response = handleTextRequest(request, aiTextRequestDTO);
         }
 
-        Logger.info(this.getClass(), String.format("[DotAI API response] : HTTPStatusCode = %s, responseBody = %s", response.getStatus(), response.getEntity().toString()));
+        Logger.debug(this.getClass(), String.format("[DotAI API response] : HTTPStatusCode = %s, responseBody = %s", response.getStatus(), response.getEntity().toString()));
         return response;
 
     }
@@ -83,12 +83,12 @@ public class DotAIResource {
             response = handleImageRequest(request, aiImageRequestDTO);
         }
 
-        Logger.info(this.getClass(), String.format("[DotAI API response] : HTTPStatusCode = %s, responseBody = %s", response.getStatus(), response.getEntity().toString()));
+        Logger.debug(this.getClass(), String.format("[DotAI API response] : HTTPStatusCode = %s, responseBody = %s", response.getStatus(), response.getEntity().toString()));
         return response;
     }
 
     private Response handleTextRequest(HttpServletRequest request, AITextRequestDTO aiTextRequestDTO) throws IOException {
-        Logger.info(this.getClass(), String.format("[DotAI API request] : IP address = %s, URL = %s, method = %s, parameters = %s, body = %s",
+        Logger.debug(this.getClass(), String.format("[DotAI API request] : IP address = %s, URL = %s, method = %s, parameters = %s, body = %s",
             request.getRemoteAddr(), request.getRequestURL().toString(), request.getMethod(), readParameters(request.getParameterMap()), "POST".equals(request.getMethod()) ? Marshaller.marshal(aiTextRequestDTO) : ""));
 
         final Optional<AppConfig> config = ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getHost(request));
@@ -109,7 +109,7 @@ public class DotAIResource {
     }
 
     private Response handleImageRequest(HttpServletRequest request, AIImageRequestDTO aiImageRequestDTO) throws IOException {
-        Logger.info(this.getClass(), String.format("[DotAI API request] : IP address = %s, URL = %s, method = %s, parameters = %s, body = %s",
+        Logger.debug(this.getClass(), String.format("[DotAI API request] : IP address = %s, URL = %s, method = %s, parameters = %s, body = %s",
             request.getRemoteAddr(), request.getRequestURL().toString(), request.getMethod(), readParameters(request.getParameterMap()), Marshaller.marshal(aiImageRequestDTO)));
 
         final Optional<AppConfig> config = ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getHost(request));
@@ -136,7 +136,7 @@ public class DotAIResource {
                 request.setAttribute("USER", user);
 
                 file = tempApi.createTempFileFromUrl("ChatGPTImage", request, new URL(resp.getResponse()), 10, 1000);
-                resp.setFileId(file.id);
+                resp.setResponse(file.id);
             } catch (DotSecurityException e) {
                 resp.setResponse("Unable to create temp file. Error: " + e.getMessage());
                  return Response.status(500).entity(Marshaller.marshal(resp)).type(MediaType.APPLICATION_JSON_TYPE).build();

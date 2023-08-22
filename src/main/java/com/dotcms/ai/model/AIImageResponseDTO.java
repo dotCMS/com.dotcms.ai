@@ -6,7 +6,6 @@ public class AIImageResponseDTO {
     private String prompt;
     private String httpStatus;
     private String response;
-    private String fileId;
 
     public String getResponse() {
         return response;
@@ -30,14 +29,6 @@ public class AIImageResponseDTO {
 
     public void setModel(String model) {
         this.model = model;
-    }
-
-    public String getFileId() {
-        return fileId;
-    }
-
-    public void setFileId(String fileId) {
-        this.fileId = fileId;
     }
 
     public String getPrompt() {

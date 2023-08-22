@@ -6,14 +6,12 @@ public class AIVelocityImageResponseDTO {
     private String httpStatus;
     private String prompt;
     private String response;
-    private String fileId;
 
-    public AIVelocityImageResponseDTO(String model, String httpStatus, String prompt, String response, String fileId) {
+    public AIVelocityImageResponseDTO(String model, String httpStatus, String prompt, String response) {
         this.model = model;
         this.httpStatus = httpStatus;
         this.prompt = prompt;
         this.response = response;
-        this.fileId = fileId;
     }
 
     public String getHttpStatus() {
@@ -26,10 +24,6 @@ public class AIVelocityImageResponseDTO {
 
     public String getResponse() {
         return response;
-    }
-
-    public String getFileId() {
-        return fileId;
     }
 
     public String getModel() {
