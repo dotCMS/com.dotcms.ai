@@ -141,6 +141,19 @@ URL: https://api.openai.com/v1/images/generations
 </ul>
 ```
 
+## Language variables
+
+This plugin also generates language variables.
+Variables are hardcoded in Activator class.
+If you want to make changes to variables you should do that inside createLanguageVariables() method
+
+```
+        // Define key-value pairs in a map
+        HashMap<String, String> langVariableMap = new HashMap<>();
+        langVariableMap.put("ai-text-box-key", "AI text box value");
+        langVariableMap.put("ai-text-area-key", "AI text area value");
+```
+
 ## Authentication
 
 This API supports the same REST auth infrastructure as other 
