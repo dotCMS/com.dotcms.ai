@@ -49,6 +49,13 @@ public class AIViewTool implements ViewTool {
         return generateTextResponse(prompt, true);
     }
 
+    /**
+     * Processes image request by calling TextService.
+     * @param prompt
+     * @param raw
+     * @return
+     * @throws IOException
+     */
     private AIVelocityTextResponseDTO generateTextResponse(String prompt, boolean raw) throws IOException {
         final Optional<AppConfig> config = ConfigService.INSTANCE.config(null);
 
@@ -85,6 +92,12 @@ public class AIViewTool implements ViewTool {
         return processImageRequest(prompt, true);
     }
 
+    /**
+     * Processes image request by calling ImageService. If response is OK creates temp file and adds its name in response
+     * @param prompt
+     * @param isRaw
+     * @return
+     */
     private AIVelocityImageResponseDTO processImageRequest(String prompt, boolean isRaw) {
         final Optional<AppConfig> config = ConfigService.INSTANCE.config(null);
 

@@ -46,6 +46,13 @@ public class ChatGPTImageServiceImpl implements ChatGPTImageService{
         CHAT_GPT_IMAGE_SIZE = appConfig.getImageSize();
     }
 
+    /**
+     * Creates new DTO class to be used in request body sent to ChatGPT api and returns formatted response
+     * @param prompt
+     * @param config
+     * @param isRawPrompt
+     * @return
+     */
     @Override
     public AIImageResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt) {
         AIImageResponseDTO aiImageResponseDTO = new AIImageResponseDTO();
@@ -69,6 +76,12 @@ public class ChatGPTImageServiceImpl implements ChatGPTImageService{
         return new ChatGptImageRequestDTO(prompt, CHAT_GPT_IMAGE_COUNT, CHAT_GPT_IMAGE_SIZE, CHAT_GPT_PROMPT_IMAGE, isRawPrompt);
     }
 
+    /**
+     * Creates request using generated DTO
+     * @param chatGptImageRequestDTO
+     * @return
+     * @throws IOException
+     */
     private Request createRequest(ChatGptImageRequestDTO chatGptImageRequestDTO) throws IOException {
         return new Request.Builder()
             .url(CHAT_GPT_API_URL)
@@ -78,6 +91,13 @@ public class ChatGPTImageServiceImpl implements ChatGPTImageService{
             .build();
     }
 
+    /**
+     * Handles response from ChatGPT API. If response is OK it unmarshalls response body to DTO class.
+     * If not just uses whichever response is returned from API
+     * @param response
+     * @param aiImageResponseDTO
+     * @throws IOException
+     */
     private void processResponse(Response response, AIImageResponseDTO aiImageResponseDTO) throws IOException {
         aiImageResponseDTO.setHttpStatus(String.valueOf(response.code()));
 
@@ -89,6 +109,11 @@ public class ChatGPTImageServiceImpl implements ChatGPTImageService{
         }
     }
 
+    /**
+     * If there was an error inside plugin it is logged here and API response if modified accordingly
+     * @param e
+     * @param aiImageResponseDTO
+     */
     private void handleApiError(IOException e, AIImageResponseDTO aiImageResponseDTO) {
         String errorMessage = "Error calling ChatGPT API: " + e.getMessage();
         Logger.error(this.getClass(), errorMessage);

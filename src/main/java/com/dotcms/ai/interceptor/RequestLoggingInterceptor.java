@@ -12,6 +12,12 @@ import okio.Buffer;
 
 public class RequestLoggingInterceptor implements Interceptor {
 
+    /**
+     * Method intercepts request and response and logs its content. Intercept all OkHttpClient traffic.
+     * @param chain
+     * @return
+     * @throws IOException
+     */
     @Override
     public Response intercept(Chain chain) throws IOException {
 

@@ -87,6 +87,14 @@ public class DotAIResource {
         return response;
     }
 
+    /**
+     * Logs incoming request to plugin API. First checks if config is available, and returns error if it is not or prompt is empty.
+     * Than it calls TextService
+     * @param request
+     * @param aiTextRequestDTO
+     * @return
+     * @throws IOException
+     */
     private Response handleTextRequest(HttpServletRequest request, AITextRequestDTO aiTextRequestDTO) throws IOException {
         Logger.debug(this.getClass(), String.format("[DotAI API request] : IP address = %s, URL = %s, method = %s, parameters = %s, body = %s",
             request.getRemoteAddr(), request.getRequestURL().toString(), request.getMethod(), readParameters(request.getParameterMap()), "POST".equals(request.getMethod()) ? Marshaller.marshal(aiTextRequestDTO) : ""));
@@ -108,6 +116,14 @@ public class DotAIResource {
 
     }
 
+    /**
+     * Logs incoming request to plugin API. First checks if config is available, and returns error if it is not or prompt is empty.
+     * Then it calls ImageService. If response is OK creates temp file and adds its name in response
+     * @param request
+     * @param aiImageRequestDTO
+     * @return
+     * @throws IOException
+     */
     private Response handleImageRequest(HttpServletRequest request, AIImageRequestDTO aiImageRequestDTO) throws IOException {
         Logger.debug(this.getClass(), String.format("[DotAI API request] : IP address = %s, URL = %s, method = %s, parameters = %s, body = %s",
             request.getRemoteAddr(), request.getRequestURL().toString(), request.getMethod(), readParameters(request.getParameterMap()), Marshaller.marshal(aiImageRequestDTO)));

@@ -52,6 +52,13 @@ public class ChatGPTTextServiceImpl implements ChatGPTTextService {
         CHAT_GPT_PROMPT_IMAGE = appConfig.getImagePrompt();
     }
 
+    /**
+     * Creates new DTO class to be used in request body sent to ChatGPT api and returns formatted response
+     * @param prompt
+     * @param config
+     * @param isRawPrompt
+     * @return
+     */
     @Override
     public AITextResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt) {
         AITextResponseDTO aiTextResponseDTO = new AITextResponseDTO();
@@ -77,6 +84,12 @@ public class ChatGPTTextServiceImpl implements ChatGPTTextService {
         return new ChatGptRequestDTO(CHAT_GPT_MODEL, CHAT_GPT_ROLE, CHAT_GPT_PROMPT_ROLE, CHAT_GPT_PROMPT_TEXT, prompt, isRawPrompt);
     }
 
+    /**
+     * Creates request using generated DTO
+     * @param chatGptRequestDTO
+     * @return
+     * @throws IOException
+     */
     private Request createRequest(ChatGptRequestDTO chatGptRequestDTO) throws IOException {
         return new Request.Builder()
             .url(CHAT_GPT_API_URL)
@@ -86,6 +99,13 @@ public class ChatGPTTextServiceImpl implements ChatGPTTextService {
             .build();
     }
 
+    /**
+     * Handles response from ChatGPT API. If response is OK it unmarshalls response body to DTO class.
+     * If not just uses whichever response is returned from API
+     * @param response
+     * @param aiTextResponseDTO
+     * @throws IOException
+     */
     private void processResponse(Response response, AITextResponseDTO aiTextResponseDTO) throws IOException {
         aiTextResponseDTO.setHttpStatus(String.valueOf(response.code()));
         if (HttpResponseStatus.OK.code() == response.code()) {
@@ -96,6 +116,11 @@ public class ChatGPTTextServiceImpl implements ChatGPTTextService {
         }
     }
 
+    /**
+     *
+     * @param e
+     * @param aiTextResponseDTO
+     */
     private void handleApiError(IOException e, AITextResponseDTO aiTextResponseDTO) {
         String errorMessage = "Error calling ChatGPT API: " + e.getMessage();
         Logger.error(this.getClass(), errorMessage);
