@@ -1,8 +1,12 @@
 package com.dotcms.ai;
 
-import com.dotcms.contenttype.model.field.Field;
+import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.app.AppKeys;
+import com.dotcms.ai.db.EmbeddingsDB;
+import com.dotcms.ai.listener.EmbeddingContentListener;
 import com.dotcms.ai.viewtool.AIToolInfo;
+import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
+import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotcms.contenttype.model.type.KeyValueContentType;
 import com.dotcms.contenttype.transform.field.LegacyFieldTransformer;
@@ -23,16 +27,17 @@ import com.dotmarketing.portlets.languagesmanager.business.LanguageAPIImpl;
 import com.dotmarketing.util.ConfigUtils;
 import com.dotmarketing.util.Logger;
 import com.liferay.portal.model.User;
+import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.osgi.framework.BundleContext;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.osgi.framework.BundleContext;
 
 public class Activator extends GenericBundleActivator {
 
@@ -41,22 +46,25 @@ public class Activator extends GenericBundleActivator {
     private LoggerContext pluginLoggerContext;
 
     private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server"
-        + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
+            + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
 
     public void start(BundleContext context) throws Exception {
         //Initializing log4j...
         LoggerContext dotcmsLoggerContext = Log4jUtil.getLoggerContext();
         //Initialing the log4j context of this plugin based on the dotCMS logger context
         pluginLoggerContext = (LoggerContext) LogManager.getContext(this.getClass().getClassLoader(),
-            false,
-            dotcmsLoggerContext,
-            dotcmsLoggerContext.getConfigLocation());
+                false,
+                dotcmsLoggerContext,
+                dotcmsLoggerContext.getConfigLocation());
 
-        //Initializing services...
-        initializeServices(context);
 
         Logger.info(this.getClass(), "Adding new Restful Service:" + clazz.getSimpleName());
         RestServiceUtil.addResource(clazz);
+
+
+        // set up embeddings table
+        EmbeddingsDB.instance.get();
+
 
         //Registering the ViewTool service
         registerViewToolService(context, new AIToolInfo());
@@ -66,6 +74,18 @@ public class Activator extends GenericBundleActivator {
 
         // create language variables if they don't exist
         createLanguageVariables();
+
+
+        // Register Embedding Actionlet
+        this.registerActionlet(context, new DotEmbeddingsActionlet());
+
+
+        // Add the Embedding Listener
+        subscribeEmbeddingsListener();
+
+
+        //Initializing services...
+        initializeServices(context);
     }
 
     public void createLanguageVariables() {
@@ -80,9 +100,7 @@ public class Activator extends GenericBundleActivator {
         int languageId = (int) languageAPI.getDefaultLanguage().getId();
 
         // Define key-value pairs in a map
-        HashMap<String, String> langVariableMap = new HashMap<>();
-        langVariableMap.put("ai-text-box-key", "AI text box value");
-        langVariableMap.put("ai-text-area-key", "AI text area value");
+        Map<String, String> langVariableMap = Map.of("ai-text-box-key", "AI text box value", "ai-text-area-key", "AI text area value");
 
         // Iterate through the map and create language variables
         langVariableMap.forEach((key, value) -> {
@@ -92,7 +110,7 @@ public class Activator extends GenericBundleActivator {
                 try {
                     createLanguageVariable(key, value, languageId, contentletAPI, systemUser);
                 } catch (DotDataException | DotSecurityException e) {
-                    Logger.error(this.getClass(), "Error creating language variable: " + e.getMessage() );
+                    Logger.error(this.getClass(), "Error creating language variable: " + e.getMessage());
                 }
             } else {
                 Logger.info(this, "Language variable already exists for key: " + key);
@@ -107,7 +125,7 @@ public class Activator extends GenericBundleActivator {
     }
 
     private void createLanguageVariable(String key, String value, int languageId, ContentletAPI contentletAPI, User systemUser)
-        throws DotDataException, DotSecurityException {
+            throws DotDataException, DotSecurityException {
         ContentType languageVariableContentType = APILocator.getContentTypeAPI(systemUser).find(LanguageVariableAPI.LANGUAGEVARIABLE);
         Map<String, Field> fields = languageVariableContentType.fieldMap();
 
@@ -120,8 +138,8 @@ public class Activator extends GenericBundleActivator {
         Logger.info(this, "Creating AI Language Variable content: " + key);
 
         // Set key and value fields
-        contentletAPI.setContentletProperty(languageVariable, asOldField(fields.get(KeyValueContentType.KEY_VALUE_KEY_FIELD_VAR)), key);
-        contentletAPI.setContentletProperty(languageVariable, asOldField(fields.get(KeyValueContentType.KEY_VALUE_VALUE_FIELD_VAR)), value);
+        languageVariable.setStringProperty(fields.get(KeyValueContentType.KEY_VALUE_KEY_FIELD_VAR), key);
+        languageVariable.setStringProperty(fields.get(KeyValueContentType.KEY_VALUE_VALUE_FIELD_VAR), value);
 
         // Set index policy and disable workflow
         languageVariable.setIndexPolicy(IndexPolicy.FORCE);
@@ -137,9 +155,7 @@ public class Activator extends GenericBundleActivator {
         Logger.info(this, "Key/Value has been created for key: " + key);
     }
 
-    public static com.dotmarketing.portlets.structure.model.Field asOldField(final Field newField) {
-        return new LegacyFieldTransformer(newField).asOldField();
-    }
+
 
     public void stop(BundleContext context) throws Exception {
 
@@ -152,6 +168,10 @@ public class Activator extends GenericBundleActivator {
         unregisterServices(context);
 
         unregisterViewToolServices();
+
+
+        unsubscribeEmbeddingsListener();
+        EmbeddingsAPI.impl().shutdown();
 
         //Shutting down log4j in order to avoid memory leaks
         Log4jUtil.shutdown(pluginLoggerContext);
@@ -185,4 +205,17 @@ public class Activator extends GenericBundleActivator {
         installedAppYaml.delete();
         CacheLocator.getAppsCache().clearCache();
     }
+
+    static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
+
+    private void subscribeEmbeddingsListener() {
+
+        APILocator.getLocalSystemEventsAPI().subscribe(LISTENER);
+
+    }
+
+    private void unsubscribeEmbeddingsListener() {
+        APILocator.getLocalSystemEventsAPI().unsubscribe(LISTENER);
+    }
+
 }

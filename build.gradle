@@ -2,7 +2,7 @@ plugins {
     id("biz.aQute.bnd.builder") version "6.4.0"
 }
 
-group = 'com.dotcms.ai'
+group = 'com.dotcms'
 version = '1.0-SNAPSHOT'
 
 configurations {
