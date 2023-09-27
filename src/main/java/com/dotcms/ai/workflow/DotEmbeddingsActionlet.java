@@ -1,4 +1,4 @@
-package com.dotcms.embeddings.workflow;
+package com.dotcms.ai.workflow;
 
 
 import com.dotcms.contenttype.model.field.Field;
@@ -6,7 +6,7 @@ import com.dotcms.contenttype.model.field.StoryBlockField;
 import com.dotcms.contenttype.model.field.TextAreaField;
 import com.dotcms.contenttype.model.field.WysiwygField;
 import com.dotcms.contenttype.model.type.ContentType;
-import com.dotcms.embeddings.api.EmbeddingsAPI;
+import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;

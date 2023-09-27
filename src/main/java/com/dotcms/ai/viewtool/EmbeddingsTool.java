@@ -1,9 +1,9 @@
-package com.dotcms.embeddings.viewtool;
+package com.dotcms.ai.viewtool;
 
 import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 
-import com.dotcms.embeddings.util.Constants;
+import com.dotcms.ai.util.Constants;
 import org.apache.velocity.tools.view.context.ViewContext;
 import org.apache.velocity.tools.view.tools.ViewTool;
 import com.dotcms.security.apps.AppSecrets;

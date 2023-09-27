@@ -1,11 +1,11 @@
-package com.dotcms.embeddings.util;
+package com.dotcms.ai.util;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 
-import com.dotcms.embeddings.util.Constants;
+import com.dotcms.ai.util.Constants;
 import org.apache.commons.io.IOUtils;
 import com.dotcms.system.event.local.business.LocalSystemEventsAPI;
 import com.dotmarketing.business.APILocator;
@@ -14,7 +14,7 @@ import com.dotmarketing.util.ConfigUtils;
 import com.dotmarketing.util.Logger;
 
 public class AppUtil {
-    private final File installedAppYaml = new File(ConfigUtils.getAssetPath() + File.separator + "server"
+    private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server"
                     + File.separator + "apps" + File.separator + Constants.EMBEDDINGS_API_KEY + ".yml");
 
     /**

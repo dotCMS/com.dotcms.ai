@@ -1,20 +1,21 @@
-package com.dotcms.embeddings.api;
+package com.dotcms.ai.api;
 
 import com.dotcms.concurrent.DotConcurrentFactory;
 import com.dotcms.concurrent.DotSubmitter;
 import com.dotcms.contenttype.model.field.Field;
-import com.dotcms.embeddings.db.ContentEmbeddings;
-import com.dotcms.embeddings.db.EmbeddingsDB;
-import com.dotcms.embeddings.util.ConfigProperties;
-import com.dotcms.embeddings.util.ContentToStringUtil;
-import com.dotcms.embeddings.util.EncodingUtil;
-import com.dotcms.embeddings.util.OpenAIRequest;
-import com.dotcms.embeddings.workflow.DotEmbeddingsActionlet;
+import com.dotcms.ai.db.ContentEmbeddings;
+import com.dotcms.ai.db.EmbeddingsDB;
+import com.dotcms.ai.util.ConfigProperties;
+import com.dotcms.ai.util.ContentToStringUtil;
+import com.dotcms.ai.util.EncodingUtil;
+import com.dotcms.ai.util.OpenAIRequest;
+import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONObject;
+import io.vavr.Lazy;
 import io.vavr.control.Try;
 
 import javax.validation.constraints.NotNull;
@@ -39,13 +40,13 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             .build();
 
 
-    final DotSubmitter dotSubmitter = DotConcurrentFactory
-            .getInstance().getSubmitter("embeddingsSubmitter", submitterConfig);
+    final Lazy<DotSubmitter> dotSubmitter = Lazy.of(()->DotConcurrentFactory
+            .getInstance().getSubmitter("embeddingsSubmitter", submitterConfig));
 
 
     @Override
     public void shutdown(){
-        this.dotSubmitter.shutdown();
+        this.dotSubmitter.get().shutdown();
     }
 
 
@@ -53,7 +54,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     @Override
     public void generateEmbeddingsforContentAndField(Contentlet contentlet, Field field) {
 
-        dotSubmitter.submit( () -> {
+        dotSubmitter.get().submit( () -> {
             try {
                 String content = ContentToStringUtil.instance.get().parseField(field, contentlet.getStringProperty(field.variable()));
 

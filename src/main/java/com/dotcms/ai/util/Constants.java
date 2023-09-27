@@ -1,4 +1,4 @@
-package com.dotcms.embeddings.util;
+package com.dotcms.ai.util;
 
 public class Constants {
 

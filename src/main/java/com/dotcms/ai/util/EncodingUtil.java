@@ -1,4 +1,4 @@
-package com.dotcms.embeddings.util;
+package com.dotcms.ai.util;
 
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;

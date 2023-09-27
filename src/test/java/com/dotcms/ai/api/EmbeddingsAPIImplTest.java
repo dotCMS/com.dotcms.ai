@@ -1,6 +1,7 @@
-package com.dotcms.embeddings.api;
+package com.dotcms.ai.api;
 
 
+import com.dotcms.ai.api.EmbeddingsAPIImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -11,8 +12,8 @@ import java.util.Optional;
 
 class EmbeddingsAPIImplTest {
 
-    float embedding0=0.002253932f;
-    float embedding1=-0.009333183f;
+    double embedding0=0.002253932d;
+    double embedding1=-0.009333183d;
     final String testPrompt = "The food was delicious and the waiter...";
 
 
@@ -26,6 +27,10 @@ class EmbeddingsAPIImplTest {
         assert(embeddings.size()>100);
         Double embed0= embeddings.get(0);
         Double embed1= embeddings.get(1);
+
+
+        System.out.println("embed0:" + embed0);
+
         Assertions.assertEquals(embedding0,embed0);
         Assertions.assertEquals(embedding1,embed1);
 

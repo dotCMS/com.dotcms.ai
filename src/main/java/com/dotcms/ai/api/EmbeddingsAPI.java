@@ -1,4 +1,4 @@
-package com.dotcms.embeddings.api;
+package com.dotcms.ai.api;
 
 import com.dotcms.contenttype.model.field.Field;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;

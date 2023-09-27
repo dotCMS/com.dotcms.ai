@@ -1,4 +1,4 @@
-package com.dotcms.embeddings.db;
+package com.dotcms.ai.db;
 
 public class EmbeddingsSQL {
 

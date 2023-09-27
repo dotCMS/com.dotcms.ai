@@ -1,4 +1,4 @@
-package com.dotcms.embeddings.listener;
+package com.dotcms.ai.listener;
 
 import com.dotcms.content.elasticsearch.business.event.ContentletArchiveEvent;
 import com.dotcms.content.elasticsearch.business.event.ContentletCheckinEvent;

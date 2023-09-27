@@ -1,4 +1,4 @@
-package com.dotcms.embeddings.viewtool;
+package com.dotcms.ai.viewtool;
 
 import org.apache.velocity.tools.view.context.ViewContext;
 import org.apache.velocity.tools.view.servlet.ServletToolInfo;

@@ -1,4 +1,4 @@
-package com.dotcms.embeddings.rest;
+package com.dotcms.ai.rest;
 
 import com.dotcms.rest.WebResource;
 import com.dotmarketing.business.APILocator;

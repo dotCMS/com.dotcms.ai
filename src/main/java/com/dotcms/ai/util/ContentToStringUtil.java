@@ -1,9 +1,9 @@
-package com.dotcms.embeddings.util;
+package com.dotcms.ai.util;
 
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.field.StoryBlockField;
-import com.dotcms.embeddings.api.EmbeddingsAPIImpl;
-import com.dotcms.embeddings.workflow.DotEmbeddingsActionlet;
+import com.dotcms.ai.api.EmbeddingsAPIImpl;
+import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
 import com.dotcms.rendering.velocity.viewtools.MarkdownTool;
 import com.dotcms.rendering.velocity.viewtools.content.StoryBlockMap;
 import com.dotcms.repackage.org.jsoup.Jsoup;
