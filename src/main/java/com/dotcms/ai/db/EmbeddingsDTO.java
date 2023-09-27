@@ -2,7 +2,7 @@ package com.dotcms.ai.db;
 
 import java.util.List;
 
-public class ContentEmbeddings {
+public class EmbeddingsDTO {
     final public Double[] embeddings;
     final public String identifier;
     final public String inode;
@@ -13,7 +13,7 @@ public class ContentEmbeddings {
     final public String extractedText;
 
 
-    public ContentEmbeddings(List<Double> embeddings, String identifier, String inode, long language, String title, String contentType, String field, String extractedText) {
+    public EmbeddingsDTO(List<Double> embeddings, String identifier, String inode, long language, String title, String contentType, String field, String extractedText) {
         this.embeddings = embeddings.toArray(new Double[0]);
         this.identifier = identifier;
         this.inode = inode;
@@ -93,8 +93,8 @@ public class ContentEmbeddings {
             return this;
         }
 
-        public ContentEmbeddings build() {
-            return new ContentEmbeddings(embeddings, identifier, inode, language, title, contentType, field, extractedText);
+        public EmbeddingsDTO build() {
+            return new EmbeddingsDTO(embeddings, identifier, inode, language, title, contentType, field, extractedText);
         }
     }
 }

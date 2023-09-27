@@ -1,6 +1,6 @@
 package com.dotcms.ai.db;
 
-public class EmbeddingsSQL {
+class EmbeddingsSQL {
 
     private EmbeddingsSQL(){}
 
@@ -28,7 +28,7 @@ public class EmbeddingsSQL {
                     "embeddings vector(1536)            " +
                     ");  ";
 
-    public static final String[] CREATE_EMBEDDINGS_INDEXES = {
+    static final String[] CREATE_EMBEDDINGS_INDEXES = {
             "create unique index if not exists dot_embeddings_idx1 on dot_embeddings(inode,content_type,field_var)",
             "create unique index if not exists dot_embeddings_idx2 on dot_embeddings(identifier,language)",
     };
@@ -38,7 +38,7 @@ public class EmbeddingsSQL {
      * 1. when there is data in the table and
      * 2. should be calculated as (number of rows / 1000)
      */
-    public static final String[] CREATE_EMBEDDINGS_IVFFLAT_INDEX = {
+    static final String[] CREATE_EMBEDDINGS_IVFFLAT_INDEX = {
             "CREATE INDEX if not exists dot_embeddings_idx3 ON dot_embeddings USING ivfflat (embeddings vector_cosine_ops) WITH (lists = ?);"
     };
 
@@ -49,9 +49,9 @@ public class EmbeddingsSQL {
 
 
 
-    public static final String INSERT_EMBEDDINGS = "insert into dot_embeddings (inode, identifier,language, content_type, field_var, title, extracted_text, embeddings) values (?,?,?,?,?,?,?,?)";
+    static final String INSERT_EMBEDDINGS = "insert into dot_embeddings (inode, identifier,language, content_type, field_var, title, extracted_text, embeddings) values (?,?,?,?,?,?,?,?)";
 
-    public static final String SELECT_EMBEDDINGS_BY_COSINE_DISTANCE = "select inode, title, language, identifier, content_type,field_var from dot_embeddings where content_type like ? and field_var like ? order by embeddings <=> ? limit 10" ;
+    static final String SELECT_EMBEDDINGS_BY_COSINE_DISTANCE = "select inode, title, language, identifier, content_type,field_var from dot_embeddings where content_type like ? and field_var like ? order by embeddings <=> ? limit 10" ;
 
 
 

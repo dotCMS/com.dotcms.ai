@@ -1,5 +1,6 @@
-package com.dotcms.ai;
+package com.dotcms.ai.rest;
 
+import com.dotcms.ai.Marshaller;
 import com.dotcms.ai.model.AIImageRequestDTO;
 import com.dotcms.ai.model.AIImageResponseDTO;
 import com.dotcms.ai.model.AITextRequestDTO;

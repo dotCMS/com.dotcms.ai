@@ -1,12 +1,9 @@
 package com.dotcms.ai.workflow;
 
 
-import com.dotcms.contenttype.model.field.Field;
-import com.dotcms.contenttype.model.field.StoryBlockField;
-import com.dotcms.contenttype.model.field.TextAreaField;
-import com.dotcms.contenttype.model.field.WysiwygField;
-import com.dotcms.contenttype.model.type.ContentType;
 import com.dotcms.ai.api.EmbeddingsAPI;
+import com.dotcms.contenttype.model.field.Field;
+import com.dotcms.contenttype.model.type.ContentType;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
@@ -46,12 +43,12 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
 
     @Override
     public String getName() {
-        return "Generate OpenAI Embeddings";
+        return "OpenAI Embeddings";
     }
 
     @Override
     public String getHowTo() {
-        return "List of {contentType}.{fieldVar} to use to generate the embeddings.  Each type.field should be on its own line, e.g. blog.title<br>blog.blogContent";
+        return "List of {contentType}.{fieldVar} to use to generate the embeddings.  Each type.field should be on its own line, e.g. blog.title<br>blog.blogContent.  If no contentType.fields are specified here, dotCMS will attempt to guess how the content should be indexed based on its content type and/or its fields.";
     }
 
 
@@ -68,11 +65,14 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
 
         List<Field> fields = parseTypesAndFields(type, params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
 
+        if (fields.isEmpty()) {
+            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet);
+        }
+
+
         for (Field field : fields) {
             Logger.info(DotEmbeddingsActionlet.class, "found field:" + type.variable() + "." + field.variable());
-            EmbeddingsAPI.impl().generateEmbeddingsforContentAndField(contentlet, field);
-
-
+            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, Optional.of(field));
         }
 
 
@@ -82,19 +82,13 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
     private List<Field> parseTypesAndFields(@NotNull ContentType type, final String typeAndFieldParam) {
 
         if (UtilMethods.isEmpty(typeAndFieldParam)) {
-            Optional<Field> firstField = type.fields().stream().filter(f -> (f instanceof TextAreaField || f instanceof WysiwygField || f instanceof StoryBlockField)).findFirst();
-            return firstField.isPresent() ? List.of(firstField.get()) : List.of();
-
+            return List.of();
         }
 
 
         final List<Field> typesAndFields = new ArrayList<>();
         final String[] typeFieldArr = typeAndFieldParam.trim().split("\\s*,\\s*");
-        List<Field> fields = Arrays.stream(typeFieldArr)
-                .filter(s -> s.toLowerCase().startsWith(type.variable().toLowerCase()))
-                .map(s -> type.fieldMap().get(s.split(".")[1]))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        List<Field> fields = Arrays.stream(typeFieldArr).filter(s -> s.toLowerCase().startsWith(type.variable().toLowerCase())).map(s -> type.fieldMap().get(s.split(".")[1])).filter(Objects::nonNull).collect(Collectors.toList());
 
 
         return fields;

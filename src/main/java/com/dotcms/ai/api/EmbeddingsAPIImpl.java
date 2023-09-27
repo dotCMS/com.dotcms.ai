@@ -3,10 +3,9 @@ package com.dotcms.ai.api;
 import com.dotcms.concurrent.DotConcurrentFactory;
 import com.dotcms.concurrent.DotSubmitter;
 import com.dotcms.contenttype.model.field.Field;
-import com.dotcms.ai.db.ContentEmbeddings;
+import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.util.ConfigProperties;
-import com.dotcms.ai.util.ContentToStringUtil;
 import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIRequest;
 import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
@@ -21,15 +20,13 @@ import io.vavr.control.Try;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class EmbeddingsAPIImpl implements EmbeddingsAPI {
-
-
-
 
 
     final DotConcurrentFactory.SubmitterConfig submitterConfig = new DotConcurrentFactory.SubmitterConfigBuilder()
@@ -40,41 +37,52 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             .build();
 
 
-    final Lazy<DotSubmitter> dotSubmitter = Lazy.of(()->DotConcurrentFactory
+    final Lazy<DotSubmitter> dotSubmitter = Lazy.of(() -> DotConcurrentFactory
             .getInstance().getSubmitter("embeddingsSubmitter", submitterConfig));
 
 
     @Override
-    public void shutdown(){
+    public void shutdown() {
         this.dotSubmitter.get().shutdown();
     }
 
+    @Override
+    public void generateEmbeddingsforContent(Contentlet contentlet) {
+        generateEmbeddingsforContent(contentlet, Optional.empty());
 
+
+    }
 
     @Override
-    public void generateEmbeddingsforContentAndField(Contentlet contentlet, Field field) {
+    public void generateEmbeddingsforContent(Contentlet contentlet, Optional<Field> field) {
 
-        dotSubmitter.get().submit( () -> {
+        dotSubmitter.get().submit(() -> {
             try {
-                String content = ContentToStringUtil.instance.get().parseField(field, contentlet.getStringProperty(field.variable()));
 
-                Logger.info(DotEmbeddingsActionlet.class, "found content for " + field.variable() + " : " + content);
+                final String content = field.isPresent()
+                        ? ContentToStringUtil.instance.get().parseField(field.get(), contentlet.getStringProperty(field.get().variable()))
+                        : ContentToStringUtil.instance.get().guessWhatToIndex(contentlet);
+                final String fieldVar = field.isPresent()
+                        ? field.get().variable()
+                        : contentlet.getContentType().variable();
+
+                Logger.info(DotEmbeddingsActionlet.class, "found content for " + fieldVar + " : " + content);
                 List<Double> embeddings = generateEmbeddingsforString(content);
-                content = content.substring(0, Math.min(content.length(), 10000));
-                ContentEmbeddings contentEmbeddings = new ContentEmbeddings.Builder()
+
+                EmbeddingsDTO embeddingsDTO = new EmbeddingsDTO.Builder()
                         .withContentType(contentlet.getContentType().variable())
-                        .withField(field.variable())
+                        .withField(fieldVar)
                         .withInode(contentlet.getInode())
                         .withLanguage(contentlet.getLanguageId())
                         .withTitle(contentlet.getTitle())
                         .withIdentifier(contentlet.getIdentifier())
-                        .withExtractedText(content)
+                        .withExtractedText(content.substring(0, Math.min(content.length(), 10000)))
                         .withEmbeddings(embeddings)
                         .build();
 
 
-                EmbeddingsDB.instance.get().saveEmbeddings(contentEmbeddings);
-            }catch(Throwable e){
+                EmbeddingsDB.impl.get().saveEmbeddings(embeddingsDTO);
+            } catch (Throwable e) {
                 Logger.error(EmbeddingsAPIImpl.class, e.getMessage(), e);
 
             }
@@ -83,9 +91,9 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     }
 
 
-    public List<Contentlet> search(@NotNull  String prompt, String contentType, String fieldVar) {
+    public List<Contentlet> search(@NotNull String prompt, String contentType, String fieldVar) {
         if (UtilMethods.isEmpty(prompt)) return List.of();
-        prompt = UtilMethods.truncatify(prompt,1024);
+        prompt = UtilMethods.truncatify(prompt, 1024);
         // load embeddings for query
         List<Double> embeddings = generateEmbeddingsforString(prompt);
 
@@ -95,10 +103,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
     }
 
-
-
-
-
+    @Override
     public List<Double> generateEmbeddingsforString(String stringToEncode) {
         List<Integer> encodedList = EncodingUtil.encoding.get().encode(stringToEncode);
         List<Double> embeddings = new ArrayList<>();
@@ -139,8 +144,6 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     List<Integer> getTokens(String fieldText) {
         return EncodingUtil.encoding.get().encode(fieldText);
     }
-
-
 
 
 }

@@ -1,15 +1,19 @@
-package com.dotcms.ai.util;
+package com.dotcms.ai.api;
 
+import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
+import com.dotcms.contenttype.model.field.BinaryField;
+import com.dotcms.contenttype.model.field.DataTypes;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.field.StoryBlockField;
-import com.dotcms.ai.api.EmbeddingsAPIImpl;
-import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
 import com.dotcms.rendering.velocity.viewtools.MarkdownTool;
 import com.dotcms.rendering.velocity.viewtools.content.StoryBlockMap;
 import com.dotcms.repackage.org.jsoup.Jsoup;
 import com.dotcms.tika.TikaProxyService;
 import com.dotcms.tika.TikaServiceBuilder;
+import com.dotmarketing.business.APILocator;
+import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotRuntimeException;
+import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.StringUtils;
@@ -20,10 +24,12 @@ import org.apache.felix.framework.OSGISystem;
 import javax.validation.constraints.NotNull;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -83,8 +89,54 @@ public class ContentToStringUtil {
 
     }
 
+    /**
+     * This method will index the first long_text field that has been marked as indexed
+     * @param contentlet
+     * @return
+     * @throws IOException
+     * @throws DotDataException
+     * @throws DotSecurityException
+     */
+    public String guessWhatToIndex(@NotNull Contentlet contentlet) throws IOException, DotDataException, DotSecurityException {
+        try {
+            if (contentlet.isFileAsset()) {
+                return parseField(contentlet.getContentType().fieldMap().get("fileAsset"), contentlet.getBinary("fileAsset"));
+            }
 
-    public String getContentForFields(@NotNull Contentlet con, @NotNull List<Field> fields) {
+            if (contentlet.isDotAsset()) {
+                return parseField(contentlet.getContentType().fieldMap().get("asset"), contentlet.getBinary("asset"));
+            }
+
+            if (contentlet.isHTMLPage()) {
+                return parseHTML(APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(contentlet), "dot-user-agent"));
+            }
+
+            Optional<Field> firstTextField = contentlet.getContentType().fields().stream().filter(Field::indexed).filter(f->f.dataType().equals(DataTypes.LONG_TEXT)).findFirst();
+
+            if(firstTextField.isEmpty()){
+                firstTextField = contentlet.getContentType().fields().stream().filter(f->f.dataType().equals(DataTypes.LONG_TEXT)).findFirst();
+            }
+
+            if(firstTextField.isEmpty()){
+                firstTextField = contentlet.getContentType().fields().stream().filter(Field::indexed).filter(f->f.dataType().equals(DataTypes.TEXT)).findFirst();
+            }
+
+            if(firstTextField.isEmpty()){
+                throw new DotDataException("Unable to find a field to build embeddings off of");
+            }
+            return parseField(contentlet, firstTextField.get() );
+        } catch (Exception e) {
+            throw new DotRuntimeException(e);
+        }
+    }
+
+
+
+
+
+
+
+    public String parseFields(@NotNull Contentlet con, @NotNull List<Field> fields) {
         StringBuilder builder = new StringBuilder();
         for (Field field : fields) {
             String fieldVal = con.getStringProperty(field.variable());
@@ -92,9 +144,28 @@ public class ContentToStringUtil {
             builder.append(" \n");
         }
         return builder.toString();
-
-
     }
+
+    public String parseField(@NotNull Contentlet contentlet, @NotNull Field field) {
+        try {
+            if (field instanceof BinaryField) {
+                return parseField(field, contentlet.getBinary(field.variable()));
+            }
+            if (contentlet.isHTMLPage()) {
+                return parseHTML(APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(contentlet), "dot-user-agent"));
+            }
+
+            if (field.dataType().equals(DataTypes.LONG_TEXT) || field.dataType().equals(DataTypes.TEXT)) {
+                return parseField(field, contentlet.getStringProperty(field.variable()));
+            }
+
+            throw new DotRuntimeException("Unable to build String from field " + contentlet.getContentType().variable() + "." + field);
+
+        } catch (Exception e) {
+            throw new DotRuntimeException(e);
+        }
+    }
+
 
     public String parseField(@NotNull Field field, @NotNull String value) {
 

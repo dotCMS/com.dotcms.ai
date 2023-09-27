@@ -4,12 +4,13 @@ import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.listener.EmbeddingContentListener;
+import com.dotcms.ai.rest.DotAIResource;
+import com.dotcms.ai.rest.EmbeddingsResource;
 import com.dotcms.ai.viewtool.AIToolInfo;
 import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotcms.contenttype.model.type.KeyValueContentType;
-import com.dotcms.contenttype.transform.field.LegacyFieldTransformer;
 import com.dotcms.languagevariable.business.LanguageVariableAPI;
 import com.dotcms.languagevariable.business.LanguageVariableAPIImpl;
 import com.dotcms.rest.config.RestServiceUtil;
@@ -36,12 +37,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.Map;
 
 public class Activator extends GenericBundleActivator {
 
-    Class clazz = DotAIResource.class;
+    Class[] clazzes = {DotAIResource.class, EmbeddingsResource.class};
 
     private LoggerContext pluginLoggerContext;
 
@@ -58,12 +58,14 @@ public class Activator extends GenericBundleActivator {
                 dotcmsLoggerContext.getConfigLocation());
 
 
-        Logger.info(this.getClass(), "Adding new Restful Service:" + clazz.getSimpleName());
-        RestServiceUtil.addResource(clazz);
+        for(Class clazz : clazzes) {
 
+            Logger.info(this.getClass(), "Adding new Restful Service:" + clazz.getSimpleName());
+            RestServiceUtil.addResource(clazz);
+        }
 
         // set up embeddings table
-        EmbeddingsDB.instance.get();
+        EmbeddingsDB.impl.get();
 
 
         //Registering the ViewTool service
@@ -161,8 +163,11 @@ public class Activator extends GenericBundleActivator {
 
         deleteYml();
 
-        Logger.info(this.getClass(), "Removing new Restful Service:" + clazz.getSimpleName());
-        RestServiceUtil.removeResource(clazz);
+        for(Class clazz : clazzes) {
+            Logger.info(this.getClass(), "Removing new Restful Service:" + clazz.getSimpleName());
+            RestServiceUtil.removeResource(clazz);
+        }
+
 
         //Unregister all the bundle services
         unregisterServices(context);

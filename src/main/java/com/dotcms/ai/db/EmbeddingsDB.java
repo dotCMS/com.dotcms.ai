@@ -78,7 +78,7 @@ public class EmbeddingsDB {
 
 
 
-    public void saveEmbeddings(ContentEmbeddings embeddings) {
+    public void saveEmbeddings(EmbeddingsDTO embeddings) {
         try (Connection conn = DbConnectionFactory.getDataSource().getConnection()) {
             Array embeds = conn.createArrayOf("float8", embeddings.embeddings);
 
@@ -100,12 +100,12 @@ public class EmbeddingsDB {
     }
 
 
-    public List<ContentEmbeddings> searchEmbeddings(ContentEmbeddings embeddings) {
+    public List<EmbeddingsDTO> searchEmbeddings(EmbeddingsDTO embeddings) {
         try (Connection conn = DbConnectionFactory.getDataSource().getConnection()) {
             Array embeds = conn.createArrayOf("float8", embeddings.embeddings);
             String contentType = UtilMethods.isSet(embeddings.contentType) ? embeddings.contentType : "%";
             String fieldVar = UtilMethods.isSet(embeddings.field) ? embeddings.field : "%";
-            List<ContentEmbeddings> results = new ArrayList<>();
+            List<EmbeddingsDTO> results = new ArrayList<>();
 
 
             DotConnect dotConnect = new DotConnect();
@@ -115,7 +115,7 @@ public class EmbeddingsDB {
                     .addParam(embeds);
 
             dotConnect.loadObjectResults(conn).forEach(r -> {
-                ContentEmbeddings conEmbed = new ContentEmbeddings.Builder()
+                EmbeddingsDTO conEmbed = new EmbeddingsDTO.Builder()
                         .withContentType((String) r.get("content_type"))
                         .withField((String) r.get("field_var"))
                         .withIdentifier((String) r.get("identifier"))
@@ -177,7 +177,7 @@ public class EmbeddingsDB {
     }
 
 
-    public static Lazy<EmbeddingsDB> instance = Lazy.of(EmbeddingsDB::new);
+    public static Lazy<EmbeddingsDB> impl = Lazy.of(EmbeddingsDB::new);
 
 
 

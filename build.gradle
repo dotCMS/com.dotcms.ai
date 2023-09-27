@@ -8,6 +8,8 @@ version = '1.0-SNAPSHOT'
 configurations {
     osgiLibs
 }
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 repositories {
     mavenCentral()
@@ -59,7 +61,18 @@ jar {
                 'Bundle-DocURL': 'https://www.dotcms.com/',
                 'Bundle-Activator': 'com.dotcms.ai.Activator',
                 'Import-Package': '*;version=0',
-                'Bundle-ClassPath' : '.;libs/jtokkit-0.6.1.jar'
+                'Bundle-ClassPath' : '.;libs/jtokkit-0.6.1.jar',
+                'Require-Capability' : ""
         )
     }
+
+
+    bundle {
+        bnd(
+            "-noee": "true",
+            "-sources": "false",
+            "-contract": "!JavaServlet,*"
+        )
+    }
+
 }
