@@ -5,6 +5,8 @@ import com.dotcms.contenttype.model.field.BinaryField;
 import com.dotcms.contenttype.model.field.DataTypes;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.field.StoryBlockField;
+import com.dotcms.contenttype.model.field.TextAreaField;
+import com.dotcms.contenttype.model.field.WysiwygField;
 import com.dotcms.rendering.velocity.viewtools.MarkdownTool;
 import com.dotcms.rendering.velocity.viewtools.content.StoryBlockMap;
 import com.dotcms.repackage.org.jsoup.Jsoup;
@@ -17,18 +19,23 @@ import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.StringUtils;
+import com.dotmarketing.util.UtilMethods;
 import io.vavr.Lazy;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import io.vavr.control.Try;
 import org.apache.felix.framework.OSGISystem;
 
 import javax.validation.constraints.NotNull;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -38,7 +45,7 @@ public class ContentToStringUtil {
     static MarkdownTool markdown = new MarkdownTool();
 
 
-    public static final Lazy<ContentToStringUtil> instance = Lazy.of(ContentToStringUtil::new);
+    public static final Lazy<ContentToStringUtil> impl = Lazy.of(ContentToStringUtil::new);
 
     private ContentToStringUtil() {
 
@@ -53,20 +60,46 @@ public class ContentToStringUtil {
         }
     });
 
-    private String parseHTML(@NotNull String val) {
+    private String parseHTML(@NotNull String html) {
 
-        try (InputStream htmlInputStream = new ByteArrayInputStream(val.getBytes(StandardCharsets.UTF_8))) {
-            return tikaService.get().parseToString(htmlInputStream);
+        Path tempFile = null;
+        try {
+            tempFile = Files.createTempFile(null, ".html");
+            Files.write(tempFile, html.getBytes(StandardCharsets.UTF_8));
+            return parseText(tikaService.get().parseToString(tempFile.toFile()));
         } catch (Exception e) {
-            throw new DotRuntimeException(e);
-        }
+            Logger.warnAndDebug(ContentToStringUtil.class, "Tika failed parsing, trying JSoup:" + e.getMessage(),e);
+            try {
+                return Jsoup.parse(html).text();
+            } catch (Exception e1) {
+                Logger.warnAndDebug(ContentToStringUtil.class, "JSoup failed parsing, trying regex:" + e1.getMessage(),e);
 
+                try {
+                    return html.replaceAll("<[^>]*>", "");
+                } catch (Exception e2) {
+                    Logger.warnAndDebug(ContentToStringUtil.class, "regex failed parsing, returning nothing:" + e2.getMessage(),e);
+                    return null;
+                }
+
+            }
+
+
+        } finally {
+            try {
+                tempFile.toFile().delete();
+            } catch (Exception ex) {
+
+            }
+        }
     }
 
 
     private String parseText(@NotNull String val) {
-
+        val = UtilMethods.isSet(val)
+                ? val.replaceAll("\\s+", " ")
+                : "";
         return val;
+
 
     }
 
@@ -91,49 +124,47 @@ public class ContentToStringUtil {
 
     /**
      * This method will index the first long_text field that has been marked as indexed
+     *
      * @param contentlet
      * @return
      * @throws IOException
      * @throws DotDataException
      * @throws DotSecurityException
      */
-    public String guessWhatToIndex(@NotNull Contentlet contentlet) throws IOException, DotDataException, DotSecurityException {
+    public Tuple2<String,String> guessWhatToIndex(@NotNull Contentlet contentlet) throws IOException, DotDataException, DotSecurityException {
         try {
             if (contentlet.isFileAsset()) {
-                return parseField(contentlet.getContentType().fieldMap().get("fileAsset"), contentlet.getBinary("fileAsset"));
+                return Tuple.of("fileAsset", parseField(contentlet.getContentType().fieldMap().get("fileAsset"), contentlet.getBinary("fileAsset")));
             }
 
             if (contentlet.isDotAsset()) {
-                return parseField(contentlet.getContentType().fieldMap().get("asset"), contentlet.getBinary("asset"));
+                return Tuple.of("asset",parseField(contentlet.getContentType().fieldMap().get("asset"), contentlet.getBinary("asset")));
             }
 
             if (contentlet.isHTMLPage()) {
-                return parseHTML(APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(contentlet), "dot-user-agent"));
+                return Tuple.of("htmlPage", APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(contentlet), "dot-user-agent"));
             }
 
-            Optional<Field> firstTextField = contentlet.getContentType().fields().stream().filter(Field::indexed).filter(f->f.dataType().equals(DataTypes.LONG_TEXT)).findFirst();
+            Optional<Field> firstTextField = contentlet.getContentType().fields().stream().filter(Field::indexed).filter(f ->
+                    f instanceof TextAreaField || f instanceof StoryBlockField || f instanceof WysiwygField
+            ).findFirst();
 
-            if(firstTextField.isEmpty()){
-                firstTextField = contentlet.getContentType().fields().stream().filter(f->f.dataType().equals(DataTypes.LONG_TEXT)).findFirst();
+            if (firstTextField.isEmpty()) {
+                firstTextField = contentlet.getContentType().fields().stream().filter(f -> f.dataType().equals(DataTypes.LONG_TEXT)).findFirst();
             }
 
-            if(firstTextField.isEmpty()){
-                firstTextField = contentlet.getContentType().fields().stream().filter(Field::indexed).filter(f->f.dataType().equals(DataTypes.TEXT)).findFirst();
+            if (firstTextField.isEmpty()) {
+                firstTextField = contentlet.getContentType().fields().stream().filter(Field::indexed).filter(f -> f.dataType().equals(DataTypes.TEXT)).findFirst();
             }
 
-            if(firstTextField.isEmpty()){
+            if (firstTextField.isEmpty()) {
                 throw new DotDataException("Unable to find a field to build embeddings off of");
             }
-            return parseField(contentlet, firstTextField.get() );
+            return Tuple.of(firstTextField.get().variable(),parseField(contentlet, firstTextField.get()));
         } catch (Exception e) {
             throw new DotRuntimeException(e);
         }
     }
-
-
-
-
-
 
 
     public String parseFields(@NotNull Contentlet con, @NotNull List<Field> fields) {

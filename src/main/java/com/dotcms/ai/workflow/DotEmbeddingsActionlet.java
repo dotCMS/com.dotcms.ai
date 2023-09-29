@@ -2,10 +2,14 @@ package com.dotcms.ai.workflow;
 
 
 import com.dotcms.ai.api.EmbeddingsAPI;
+import com.dotcms.ai.app.AppConfig;
+import com.dotcms.ai.app.ConfigService;
+import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
+import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.workflows.actionlet.WorkFlowActionlet;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionClassParameter;
@@ -16,6 +20,7 @@ import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import io.vavr.control.Try;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,7 +66,10 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
 
         final String updateOrDelete = "DELETE".equalsIgnoreCase(params.get(DOT_EMBEDDING_ACTION).getValue()) ? "DELETE" : "CREATE";
         final Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), false)).getOrNull();
-
+        HttpServletRequest request = HttpServletRequestThreadLocal.INSTANCE.getRequest();
+        if(request == null){
+            return;
+        }
 
         List<Field> fields = parseTypesAndFields(type, params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
 

@@ -3,18 +3,21 @@ package com.dotcms.ai.db;
 import java.util.List;
 
 public class EmbeddingsDTO {
-    final public Double[] embeddings;
-    final public String identifier;
-    final public String inode;
-    final public long language;
-    final public String title;
-    final public String contentType;
-    final public String field;
-    final public String extractedText;
+    public final Float[] embeddings;
+    public final String identifier;
+    public final String inode;
+    public final long language;
+    public final String title;
+    public final String contentType;
+    public final String field;
+    public final String extractedText;
+    public final String host;
+    public final int limit;
+    public final int offset;
+    public final float threshold;
 
-
-    public EmbeddingsDTO(List<Double> embeddings, String identifier, String inode, long language, String title, String contentType, String field, String extractedText) {
-        this.embeddings = embeddings.toArray(new Double[0]);
+    public EmbeddingsDTO(List<Float> embeddings, String identifier, String inode, long language, String title, String contentType, String field, String extractedText, String host, int limit, int offset, float threshold) {
+        this.embeddings = (embeddings == null) ? new Float[0] : embeddings.toArray(new Float[0]);
         this.identifier = identifier;
         this.inode = inode;
         this.language = language;
@@ -22,6 +25,10 @@ public class EmbeddingsDTO {
         this.contentType = contentType;
         this.field = field;
         this.extractedText = extractedText;
+        this.host = host;
+        this.limit = limit;
+        this.offset = offset;
+        this.threshold=threshold;
     }
 
     @Override
@@ -33,13 +40,14 @@ public class EmbeddingsDTO {
                 ", title='" + title + '\'' +
                 ", contentType='" + contentType + '\'' +
                 ", field='" + field + '\'' +
+                ", host='" + host + '\'' +
                 ", extractedText='" + extractedText + '\'' +
                 ", embeddings.size='" + embeddings.length + '\'' +
                 '}';
     }
 
     public static final class Builder {
-        private List<Double> embeddings;
+        private List<Float> embeddings;
         private String identifier;
         private String inode;
         private long language;
@@ -47,13 +55,12 @@ public class EmbeddingsDTO {
         private String contentType;
         private String field;
         private String extractedText;
+        private String host;
+        private int limit = 100;
+        private int offset = 0;
+        public float threshold = .5f;
 
-
-        public static Builder aContentEmbeddings() {
-            return new Builder();
-        }
-
-        public Builder withEmbeddings(List<Double> embeddings) {
+        public Builder withEmbeddings(List<Float> embeddings) {
             this.embeddings = embeddings;
             return this;
         }
@@ -63,8 +70,16 @@ public class EmbeddingsDTO {
             return this;
         }
 
+        public Builder withHost(String host) {
+            this.host = host;
+            return this;
+        }
+        public Builder withThreshold(float threshold) {
+            this.threshold = threshold;
+            return this;
+        }
         public Builder withExtractedText(String extractedText) {
-            this.extractedText = identifier;
+            this.extractedText = extractedText;
             return this;
         }
 
@@ -75,6 +90,16 @@ public class EmbeddingsDTO {
 
         public Builder withLanguage(long language) {
             this.language = language;
+            return this;
+        }
+
+        public Builder withLimit(int limit) {
+            this.limit = limit;
+            return this;
+        }
+
+        public Builder withOffset(int offset) {
+            this.offset = offset;
             return this;
         }
 
@@ -94,7 +119,7 @@ public class EmbeddingsDTO {
         }
 
         public EmbeddingsDTO build() {
-            return new EmbeddingsDTO(embeddings, identifier, inode, language, title, contentType, field, extractedText);
+            return new EmbeddingsDTO(embeddings, identifier, inode, language, title, contentType, field, extractedText, host, limit, offset, threshold);
         }
     }
 }

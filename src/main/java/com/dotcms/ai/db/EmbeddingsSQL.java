@@ -6,7 +6,7 @@ class EmbeddingsSQL {
 
 
 
-    static final String INIT_VECTOR_EXTENSION = "CREATE EXTENSION if not exists vector";
+    static final String INIT_VECTOR_EXTENSION = "create extension if not exists vector with schema public;";
 
 
     /**
@@ -21,6 +21,7 @@ class EmbeddingsSQL {
                     "inode varchar(255) not null,       " +
                     "identifier varchar(255) not null,  " +
                     "language bigint not null,          " +
+                    "host varchar(255) not null,        " +
                     "content_type varchar(255) not null," +
                     "field_var varchar(255) not null,   " +
                     "title varchar(512) not null,       " +
@@ -29,8 +30,10 @@ class EmbeddingsSQL {
                     ");  ";
 
     static final String[] CREATE_EMBEDDINGS_INDEXES = {
-            "create unique index if not exists dot_embeddings_idx1 on dot_embeddings(inode,content_type,field_var)",
-            "create unique index if not exists dot_embeddings_idx2 on dot_embeddings(identifier,language)",
+            "create unique index if not exists dot_embeddings_type_field_idx on dot_embeddings(inode,content_type,field_var)",
+            "create index if not exists dot_embeddings_id_lang_idx on dot_embeddings(identifier,language)",
+            "create index if not exists dot_embeddings_host_idx on dot_embeddings(identifier,language)",
+            "create index if not exists dot_embeddings_host_idx on dot_embeddings(host)",
     };
 
     /**
@@ -49,13 +52,12 @@ class EmbeddingsSQL {
 
 
 
-    static final String INSERT_EMBEDDINGS = "insert into dot_embeddings (inode, identifier,language, content_type, field_var, title, extracted_text, embeddings) values (?,?,?,?,?,?,?,?)";
+    static final String INSERT_EMBEDDINGS = "insert into dot_embeddings (inode, identifier,language, content_type, field_var, title, extracted_text, host, embeddings) values (?,?,?,?,?,?,?,?,?)";
 
-    static final String SELECT_EMBEDDINGS_BY_COSINE_DISTANCE = "select inode, title, language, identifier, content_type,field_var from dot_embeddings where content_type like ? and field_var like ? order by embeddings <=> ? limit 10" ;
+    static final String SELECT_EMBEDDINGS_BY_COSINE_DISTANCE = "select inode, title, language, identifier,host, content_type,field_var from dot_embeddings where host like ? and content_type like ? and field_var like ? order by embeddings <=> ? limit ? offset ?" ;
 
+    static final String DELETE_FROM_EMBEDDINGS = "delete from dot_embeddings where host like ? and content_type like ? and field_var like ?" ;
 
-
-    static final String DELETE_FROM_EMBEDDINGS_BY_ID = "delete from dot_embeddings where id =?";
 
     static final String DELETE_FROM_EMBEDDINGS_BY_INODE= "delete from dot_embeddings where inode =?";
 
