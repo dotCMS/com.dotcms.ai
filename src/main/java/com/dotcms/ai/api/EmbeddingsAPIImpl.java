@@ -144,7 +144,6 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
 
 
-
     @Override
     public List<Float> generateEmbeddingsforString(String stringToEncode) {
         List<Integer> encodedList = EncodingUtil.encoding.get().encode(stringToEncode);

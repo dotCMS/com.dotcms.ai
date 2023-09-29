@@ -19,8 +19,10 @@ public class AppConfig implements Serializable {
     private final String imageSize;
 
     private final String model;
+    public  final String searchSystemPrompt;
+    public String searchTextPrompt;
 
-    public AppConfig(String apiUrl, String apiImageUrl, String apiKey, String rolePrompt, String textPrompt, String imagePrompt, String imageSize, String model) {
+    public AppConfig(String apiUrl, String apiImageUrl, String apiKey, String rolePrompt, String textPrompt, String imagePrompt, String imageSize, String model, String searchSystemPrompt, String searchTextPrompt ) {
         this.apiUrl = apiUrl;
         this.apiImageUrl = apiImageUrl;
         this.apiKey = apiKey;
@@ -29,6 +31,8 @@ public class AppConfig implements Serializable {
         this.imagePrompt = imagePrompt;
         this.imageSize = imageSize;
         this.model = model;
+        this.searchTextPrompt=searchTextPrompt;
+        this.searchSystemPrompt =searchSystemPrompt;
     }
 
     public String getApiUrl() {
@@ -46,7 +50,12 @@ public class AppConfig implements Serializable {
     public String getRolePrompt() {
         return rolePrompt;
     }
-
+    public String getSearchTextPrompt() {
+        return searchTextPrompt;
+    }
+    public String getSearchSystemPrompt() {
+        return searchSystemPrompt;
+    }
     public String getTextPrompt() {
         return textPrompt;
     }

@@ -54,18 +54,5 @@ class EmbeddingsSQL {
 
     static final String INSERT_EMBEDDINGS = "insert into dot_embeddings (inode, identifier,language, content_type, field_var, title, extracted_text, host, embeddings) values (?,?,?,?,?,?,?,?,?)";
 
-    static final String SELECT_EMBEDDINGS_BY_COSINE_DISTANCE = "select inode, title, language, identifier,host, content_type,field_var from dot_embeddings where host like ? and content_type like ? and field_var like ? order by embeddings <=> ? limit ? offset ?" ;
-
-    static final String DELETE_FROM_EMBEDDINGS = "delete from dot_embeddings where host like ? and content_type like ? and field_var like ?" ;
-
-
-    static final String DELETE_FROM_EMBEDDINGS_BY_INODE= "delete from dot_embeddings where inode =?";
-
-    static final String DELETE_FROM_EMBEDDINGS_BY_IDENTIFIER= "delete from dot_embeddings where identifier =? and language=?";
-
-    static final String DELETE_FROM_EMBEDDINGS_BY_CONTENT_TYPE= "delete from dot_embeddings where content_type =?";
-
-    static final String DELETE_FROM_EMBEDDINGS_BY_CONTENT_TYPE_FIELD_VAR= "delete from dot_embeddings where content_type =? and field_var=?";
-
 
 }

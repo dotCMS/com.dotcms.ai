@@ -1,5 +1,6 @@
 package com.dotcms.ai.db;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class EmbeddingsDTO {
@@ -12,11 +13,12 @@ public class EmbeddingsDTO {
     public final String field;
     public final String extractedText;
     public final String host;
+    public final String operator;
     public final int limit;
     public final int offset;
     public final float threshold;
 
-    public EmbeddingsDTO(List<Float> embeddings, String identifier, String inode, long language, String title, String contentType, String field, String extractedText, String host, int limit, int offset, float threshold) {
+    public EmbeddingsDTO(List<Float> embeddings, String identifier, String inode, long language, String title, String contentType, String field, String extractedText, String host, int limit, int offset, float threshold, String operator) {
         this.embeddings = (embeddings == null) ? new Float[0] : embeddings.toArray(new Float[0]);
         this.identifier = identifier;
         this.inode = inode;
@@ -28,7 +30,8 @@ public class EmbeddingsDTO {
         this.host = host;
         this.limit = limit;
         this.offset = offset;
-        this.threshold=threshold;
+        this.threshold = threshold;
+        this.operator = operator;
     }
 
     @Override
@@ -59,6 +62,7 @@ public class EmbeddingsDTO {
         private int limit = 100;
         private int offset = 0;
         public float threshold = .5f;
+        public String operator = "<=>";
 
         public Builder withEmbeddings(List<Float> embeddings) {
             this.embeddings = embeddings;
@@ -74,10 +78,21 @@ public class EmbeddingsDTO {
             this.host = host;
             return this;
         }
+
+        final String[] operators = {"<->", "<=>", "<#>"};
+
+        public Builder withOperator(String distanceOperator) {
+            if (Arrays.asList(operators).contains(distanceOperator)) {
+                this.operator = distanceOperator;
+            }
+            return this;
+        }
+
         public Builder withThreshold(float threshold) {
             this.threshold = threshold;
             return this;
         }
+
         public Builder withExtractedText(String extractedText) {
             this.extractedText = extractedText;
             return this;
@@ -119,7 +134,7 @@ public class EmbeddingsDTO {
         }
 
         public EmbeddingsDTO build() {
-            return new EmbeddingsDTO(embeddings, identifier, inode, language, title, contentType, field, extractedText, host, limit, offset, threshold);
+            return new EmbeddingsDTO(embeddings, identifier, inode, language, title, contentType, field, extractedText, host, limit, offset, threshold, operator);
         }
     }
 }

@@ -112,8 +112,8 @@ public class EmbeddingsDB {
 
 
         StringBuilder sql = new StringBuilder("select " +
-                "inode, title, language, identifier,host, content_type,field_var, cosine_similarity " +
-                "from (select inode, title, language, identifier,host, content_type,field_var, 1 - (embeddings <=> ?) AS cosine_similarity " +
+                "inode, title, language, identifier,host, content_type, extracted_text ,field_var, distance " +
+                "from (select inode, title, language, identifier,host, content_type,extracted_text, field_var, (embeddings " + dto.operator + " ?) AS distance " +
                 "from dot_embeddings where true ");
 
         List<Object> params = new ArrayList<>();
@@ -146,10 +146,10 @@ public class EmbeddingsDB {
             params.add(dto.host);
         }
 
-        sql.append(" ) data where cosine_similarity >=? ");
+        sql.append(" ) data where distance <= ? ");
         params.add(dto.threshold);
 
-        sql.append(" order by cosine_similarity desc limit ? offset ? ");
+        sql.append(" order by distance limit ? offset ? ");
         params.add(dto.limit);
         params.add(dto.offset);
 
@@ -167,7 +167,7 @@ public class EmbeddingsDB {
             List<EmbeddingsDTO> results = new ArrayList<>();
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
-                float cosine = rs.getFloat("cosine_similarity");
+                float distance = rs.getFloat("distance");
                 EmbeddingsDTO conEmbed = new EmbeddingsDTO.Builder()
                         .withContentType(rs.getString("content_type"))
                         .withField(rs.getString("field_var"))
@@ -176,7 +176,8 @@ public class EmbeddingsDB {
                         .withTitle(rs.getString("title"))
                         .withLanguage(rs.getLong("language"))
                         .withHost(rs.getString("host"))
-                        .withThreshold(cosine)
+                        .withThreshold(distance)
+                        .withExtractedText(rs.getString("extracted_text"))
                         .build();
                 results.add(conEmbed);
             }

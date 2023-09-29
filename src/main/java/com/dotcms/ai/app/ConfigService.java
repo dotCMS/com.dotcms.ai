@@ -47,6 +47,12 @@ public class ConfigService {
         final String model = Try.of(() -> secrets
             .get(AppKeys.MODEL.key).getString()).getOrElse(StringPool.BLANK);
 
+        final String searchSystemPrompt = Try.of(() -> secrets
+                .get(AppKeys.SEARCH_SYSTEM_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+
+        final String searchTextPrompt = Try.of(() -> secrets
+                .get(AppKeys.SEARCH_TEXT_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+
         Logger.debug(this.getClass().getName(), () -> "apiUrl: " + apiUrl);
         Logger.debug(this.getClass().getName(), () -> "apiImageUrl: " + apiImageUrl);
         Logger.debug(this.getClass().getName(), () -> "apiKey: " + apiKey);
@@ -56,7 +62,7 @@ public class ConfigService {
         Logger.debug(this.getClass().getName(), () -> "imageSize: " + imageSize);
         Logger.debug(this.getClass().getName(), () -> "model: " + model);
 
-        final AppConfig config = new AppConfig(apiUrl, apiImageUrl, apiKey, rolePrompt, textPrompt, imagePrompt, imageSize, model);
+        final AppConfig config = new AppConfig(apiUrl, apiImageUrl, apiKey, rolePrompt, textPrompt, imagePrompt, imageSize, model, searchSystemPrompt, searchTextPrompt);
 
         return Optional.ofNullable(config);
     }

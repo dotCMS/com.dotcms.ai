@@ -66,3 +66,17 @@ params:
     label: "Model"
     hint: "Model used to generate ChatGPT API response."
     required: true
+  searchSystemPrompt:
+    value: "You concisely answer questions based on text that is provided to you."
+    hidden: false
+    type: "STRING"
+    label: "Search Results System Prompt"
+    hint: "A prompt that guides the action and voice the AI will use in the response."
+    required: false
+  searchTextPrompt:
+    value: "Answer this question\n\"{query}?\"\n\nby summarizing the following text:\n\n{supportingText}"
+    hidden: false
+    type: "STRING"
+    label: "Search Results Text Prompt"
+    hint: "The prompt that will generate the response. The {query} will rewritten with the user's question/search and the {supportingText} will be extracted from the dotCMS search results "
+    required: false

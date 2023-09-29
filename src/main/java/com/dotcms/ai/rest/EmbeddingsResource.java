@@ -13,7 +13,6 @@ import com.dotmarketing.common.model.ContentletSearch;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
-import com.dotmarketing.portlets.contentlet.transform.DotTransformerBuilder;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
@@ -34,9 +33,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,8 +43,6 @@ import java.util.regex.Pattern;
  */
 @Path("/v1/ai/embeddings")
 public class EmbeddingsResource {
-
-    private final WebResource webResource = new WebResource();
 
 
     Pattern allowedPattern = Pattern.compile("^[a-zA-Z0-9 \\-,.()]*$");
@@ -115,7 +109,7 @@ public class EmbeddingsResource {
         // force authentication
         User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
 
-        String query = json.optString("query", null);
+        String query = json.optString("query", json.optString("q", null));
         int limit = json.optInt("limit", 1000);
         int offset = json.optInt("offset", 0);
         String fieldVar = json.optString("fieldVar", null);
@@ -144,7 +138,7 @@ public class EmbeddingsResource {
 
     @POST
     @JSONP
-    @Path("/search")
+    @Path("/query")
     @Produces(MediaType.APPLICATION_JSON)
     public final Response searchByPost(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
                                        JSONObject json
@@ -158,7 +152,7 @@ public class EmbeddingsResource {
         int offset = json.optInt("offset", 0);
         String fieldVar = json.optString("fieldVar", null);
         String contentType = json.optString("contentType", null);
-
+        String operator = json.optString("operator", "<=>");
         String site = UtilMethods.isSet(json.optString("site"))
                 ? json.optString("site")
                 : WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(request).getIdentifier();
@@ -167,24 +161,25 @@ public class EmbeddingsResource {
 
 
         List<Float> queryEmbeddings = EmbeddingsAPI.impl().generateEmbeddingsforString(query);
-        EmbeddingsDTO dto = new EmbeddingsDTO.Builder().withEmbeddings(queryEmbeddings)
+        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder().withEmbeddings(queryEmbeddings)
                 .withField(fieldVar)
                 .withContentType(contentType)
                 .withHost(site)
                 .withLimit(limit)
                 .withOffset(offset)
                 .withThreshold((float) json.optDouble("threshold", .5d))
+                .withOperator(operator)
                 .build();
 
-        List<EmbeddingsDTO> searchResults = EmbeddingsDB.impl.get().searchEmbeddings(dto);
+        List<EmbeddingsDTO> searchResults = EmbeddingsDB.impl.get().searchEmbeddings(searcher);
 
         JSONArray results = new JSONArray();
-        for (EmbeddingsDTO searcher : searchResults) {
+        for (EmbeddingsDTO result : searchResults) {
 
-            JSONObject object = ContentResource.contentletToJSON(APILocator.getContentletAPI().find(searcher.inode, user, true), request, response, "false", user, false);
+            JSONObject object = ContentResource.contentletToJSON(APILocator.getContentletAPI().find(result.inode, user, true), request, response, "false", user, false);
 
-            object.put("cosineSimilarity", searcher.threshold);
-
+            object.put("distance", result.threshold);
+            object.put("extractedText", result.extractedText);
             results.add(object);
         }
 
@@ -194,10 +189,10 @@ public class EmbeddingsResource {
 
         JSONObject map = new JSONObject();
         map.put("timeToEmbeddings", totalTime + "ms");
-        map.put("total", searchResults.size() );
-        map.put("results",results );
-
-
+        map.put("total", searchResults.size());
+        map.put("threshold", searcher.threshold);
+        map.put("results", results);
+        map.put("operator", searcher.operator);
 
 
         return Response.ok(map.toString(), MediaType.APPLICATION_JSON).build();
@@ -207,7 +202,7 @@ public class EmbeddingsResource {
 
     @GET
     @JSONP
-    @Path("/search")
+    @Path("/query")
     @Produces(MediaType.APPLICATION_JSON)
     public final Response searchByGet(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
                                       @QueryParam("query") String query,
@@ -215,7 +210,8 @@ public class EmbeddingsResource {
                                       @DefaultValue("0") @QueryParam("offset") int offset,
                                       @QueryParam("site") String site,
                                       @QueryParam("contentType") String contentType,
-                                      @DefaultValue(".5")  @QueryParam("threshold") float threshold,
+                                      @DefaultValue(".5") @QueryParam("threshold") float threshold,
+                                      @DefaultValue("<=>>") @QueryParam("operator") String operator,
                                       @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
         JSONObject json = new JSONObject();
         json.put("query", query);
@@ -225,7 +221,7 @@ public class EmbeddingsResource {
         json.put("contentType", contentType);
         json.put("fieldVar", fieldVar);
         json.put("threshold", threshold);
-
+        json.put("operator", operator);
         return searchByPost(request, response, json);
     }
 
@@ -234,7 +230,7 @@ public class EmbeddingsResource {
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
     public final Response delete(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                      JSONObject json) throws DotDataException, DotSecurityException {
+                                 JSONObject json) throws DotDataException, DotSecurityException {
         new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
 
         EmbeddingsDTO dto = new EmbeddingsDTO.Builder()
@@ -249,7 +245,6 @@ public class EmbeddingsResource {
         return Response.ok(Map.of("deleted", deleted)).build();
 
     }
-
 
 
 }

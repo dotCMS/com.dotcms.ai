@@ -5,6 +5,7 @@ import com.dotcms.http.CircuitBreakerUrl;
 import com.dotmarketing.util.Logger;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -41,6 +42,26 @@ public class OpenAIRequest {
 
 
     }
+    public static void doRequest(String url, String method, String openAiAPIKey, String json, OutputStream out) throws IOException, InterruptedException {
 
+
+        final Map<String,String> headers = Map.of("Authorization", "Bearer " + openAiAPIKey , "Content-Type", "application/json");
+
+
+        CircuitBreakerUrl.builder()
+                .setUrl(url)
+                .setRawData(json)
+                .setHeaders(headers)
+                .setMethod(CircuitBreakerUrl.Method.POST)
+                .setTimeout(600000)
+                .build()
+                .doOut(out);
+
+
+
+
+
+
+    }
 
 }

@@ -8,7 +8,9 @@ public enum AppKeys {
     TEXT_PROMPT("textPrompt"),
     IMAGE_PROMPT("imagePrompt"),
     IMAGE_SIZE("imageSize"),
-    MODEL("model");
+    MODEL("model"),
+    SEARCH_SYSTEM_PROMPT("searchSystemPrompt"),
+    SEARCH_TEXT_PROMPT("searchTextPrompt");
 
     final public String key;
 
