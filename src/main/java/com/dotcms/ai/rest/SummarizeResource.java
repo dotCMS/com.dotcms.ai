@@ -55,7 +55,7 @@ public class SummarizeResource {
                                       @DefaultValue(".5") @QueryParam("threshold") float threshold,
                                       @DefaultValue("false") @QueryParam("stream") boolean stream,
                                       @DefaultValue("1024") @QueryParam("responseLength") int responseLength,
-                                      @DefaultValue("<=>") @QueryParam("operator") String operator,
+                                      @DefaultValue("cosine") @QueryParam("operator") String operator,
                                       @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
 
         SummarizeForm form = new SummarizeForm.Builder()
@@ -109,7 +109,6 @@ public class SummarizeResource {
         }
 
         final StreamingOutput streaming = output -> {
-
             SummarizeAPI.impl().summarizeStream(form, output);
             output.flush();
             output.close();

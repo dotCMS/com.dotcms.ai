@@ -17,7 +17,7 @@ When we do a semantic search of content in dotCMS, we are passing the query to O
 `POST /api/v1/ai/embeddings`
 
 This endpoint is for managing the local database/index of Searchable Embeddings
-You can fire new "indexing" jobs by sending it a query of content that you want to generate embeddings for:
+You can fire new "indexing" jobs by sending it a query of content that you want to generate embeddings for. The `indexName` can be used to segment search indexes into different/arbitrary buckets:
 
 ```
 curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api/v1/ai/embeddings \
@@ -38,7 +38,7 @@ You can also delete existing embeddings - this will delete any embeddings made u
 curl -XDELETE -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api/v1/ai/embeddings \
 -H "Content-Type: application/json" \
 -d '{
-"contentType":"documentation"
+"contentType":"documentation",
 "fieldVar": "blogContent"
 }'
 ```
@@ -70,7 +70,7 @@ curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api
 -d '{
 "query": "where can I find the best beaches",
 "indexName": "blog",
-"operator": "<->
+"operator": "cosine"
 }'
 ```
 
@@ -81,3 +81,12 @@ Finally, you can use ChatGPT to "answer" the query as a question. This takes the
 
 Summarize
 https://auth.dotcms.com/api/v1/ai/summarize/query?query=how+do+I+use+markdown
+```
+curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api/v1/ai/summarize \
+-H "Content-Type: application/json" \
+-d '{
+"query": "what are some of the the best beaches?",
+"indexName": "blog",
+"operator": "cosine"
+}'
+```

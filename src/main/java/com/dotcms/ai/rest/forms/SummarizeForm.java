@@ -7,11 +7,16 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
 
 import com.dotcms.rest.api.Validated;
+import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.web.WebAPILocator;
+import com.dotmarketing.exception.DotRuntimeException;
+import com.dotmarketing.util.UtilMethods;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.vavr.control.Try;
+import joptsimple.internal.Strings;
 
 import java.util.Map;
 
@@ -25,13 +30,16 @@ public class SummarizeForm extends Validated {
     @Max(1000)
     public final int searchLimit;
 
-    @Min(1)
+    @Min(0)
     @Max(1000)
     public final int searchOffset;
 
     @Min(128)
     @Max(10240)
     public final int responseLengthTokens;
+
+    public final long language;
+
 
     public final boolean stream;
     public final String fieldVar;
@@ -45,7 +53,7 @@ public class SummarizeForm extends Validated {
 
 
     private SummarizeForm(SummarizeForm.Builder builder) {
-        this.query = builder.query;
+        this.query = validateBuilderQuery(builder.query);
         this.searchLimit = builder.searchLimit;
         this.fieldVar = builder.fieldVar;
         this.responseLengthTokens = builder.responseLengthTokens;
@@ -55,7 +63,22 @@ public class SummarizeForm extends Validated {
         this.threshold = builder.threshold;
         this.operator = OPERATORS.getOrDefault(builder.operator, "<=>");
         this.site = builder.site;
+        this.language=validateLanguage(builder.language);
         this.searchOffset=builder.searchOffset;
+
+    }
+
+    String validateBuilderQuery(String query){
+        if(UtilMethods.isEmpty(query)){
+            throw new DotRuntimeException("query cannot be null");
+        }
+        return Strings.join(query.trim().split("\\s+"), " ");
+    }
+    long validateLanguage(String language) {
+        return Try.of(()->Long.parseLong(language))
+                .recover(x->APILocator.getLanguageAPI().getLanguage(language).getId())
+                .getOrElseTry(()->APILocator.getLanguageAPI().getDefaultLanguage().getId());
+
     }
 
 
@@ -67,13 +90,16 @@ public class SummarizeForm extends Validated {
         private int searchLimit = 1000;
 
         @JsonSetter(nulls = Nulls.SKIP)
+        private String language ;
+
+        @JsonSetter(nulls = Nulls.SKIP)
         private int searchOffset = 0;
 
         @JsonSetter(nulls = Nulls.SKIP)
         private int responseLengthTokens = 1024;
 
         @JsonSetter(nulls = Nulls.SKIP)
-        private boolean stream = true;
+        private boolean stream = false;
 
         @JsonProperty
         private String fieldVar;
@@ -106,6 +132,17 @@ public class SummarizeForm extends Validated {
             this.searchLimit = searchLimit;
             return this;
         }
+
+        public Builder language(long language) {
+            this.language = String.valueOf(language);
+            return this;
+        }
+        public Builder language(String language) {
+            this.language = String.valueOf(language);
+            return this;
+        }
+
+
         public Builder searchOffset(int searchOffset) {
             this.searchOffset = searchOffset;
             return this;

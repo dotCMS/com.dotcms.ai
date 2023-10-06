@@ -1,5 +1,6 @@
 package com.dotcms.ai.db;
 
+import com.dotcms.ai.rest.forms.SummarizeForm;
 import com.dotmarketing.util.UtilMethods;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -67,6 +68,20 @@ public class EmbeddingsDTO {
     }
 
 
+    public static Builder from(SummarizeForm form) {
+        return new Builder()
+                .withField(form.fieldVar)
+                .withContentType(form.contentType)
+                .withHost(form.site)
+                .withQuery(form.query)
+                .withIndexName(form.indexName)
+                .withLimit(form.searchLimit)
+                .withOffset(form.searchOffset)
+                .withOperator(form.operator)
+                .withThreshold(form.threshold)
+                .withTokenCount(form.responseLengthTokens);
+
+    }
     public static Builder copy(EmbeddingsDTO values) {
         return new Builder()
 

@@ -12,6 +12,7 @@ import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
+import io.vavr.control.Try;
 import org.glassfish.jersey.server.JSONP;
 
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +44,7 @@ public class SearchResource {
     public final Response searchByGet(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
                                       @QueryParam("query") String query,
                                       @DefaultValue("1000") @QueryParam("searchLimit") int searchLimit,
+                                      @DefaultValue("0") @QueryParam("searchOffset") int searchOffset,
                                       @QueryParam("site") String site,
                                       @QueryParam("contentType") String contentType,
                                       @DefaultValue("default") @QueryParam("indexName") String indexName,
@@ -50,13 +52,19 @@ public class SearchResource {
                                       @DefaultValue("false") @QueryParam("stream") boolean stream,
                                       @DefaultValue("1024") @QueryParam("responseLength") int responseLength,
                                       @DefaultValue("<=>") @QueryParam("operator") String operator,
+                                      @QueryParam("language") String language,
                                       @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
+
+
+
 
         SummarizeForm form = new SummarizeForm.Builder()
                 .query(query)
                 .searchLimit(searchLimit)
                 .site(site)
+                .language(language)
                 .contentType(contentType)
+                .searchOffset(searchOffset)
                 .fieldVar(fieldVar)
                 .threshold(threshold)
                 .indexName(indexName)
@@ -79,17 +87,8 @@ public class SearchResource {
 
         User user = new WebResource.InitBuilder(request, response).requiredAnonAccess(AnonymousAccess.READ).init().getUser();
 
-        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder()
-                .withQuery(form.query)
-                .withField(form.fieldVar)
-                .withContentType(form.contentType)
-                .withHost(form.site)
-                .withLimit(form.searchLimit)
-                .withOffset(form.searchOffset)
-                .withIndexName(form.indexName)
-                .withThreshold(form.threshold)
-                .withOperator(form.operator)
-                .build();
+        EmbeddingsDTO searcher = EmbeddingsDTO.from(form).build();
+
 
         List<EmbeddingsDTO> searchResults = EmbeddingsAPI.impl().searchEmbedding(searcher);
 
