@@ -13,16 +13,26 @@ public interface EmbeddingsAPI {
     static EmbeddingsAPI impl(AppConfig config) {
         return new EmbeddingsAPIImpl(config);
     }
+
     static EmbeddingsAPI impl() {
         return new EmbeddingsAPIImpl(null);
     }
+
     void shutdown();
 
-    void generateEmbeddingsforContent(Contentlet contentlet);
+    void generateEmbeddingsforContent(Contentlet contentlet, String index);
 
     int deleteEmbedding(EmbeddingsDTO dto);
 
-    void generateEmbeddingsforContent(Contentlet contentlet, Optional<Field> field);
+    void generateEmbeddingsforContent(Contentlet contentlet, Optional<Field> field, String index);
 
     List<Float> generateEmbeddingsforString(String stringToEncode);
+
+
+    List<EmbeddingsDTO> searchEmbedding(EmbeddingsDTO searcher);
+
+
+    void dropEmbeddingsTable();
+
+    void initEmbeddingsTable();
 }

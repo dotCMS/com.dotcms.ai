@@ -2,6 +2,9 @@ package com.dotcms.ai.api;
 
 import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.ConfigService;
+import com.dotcms.ai.db.EmbeddingsDB;
+import com.dotcms.ai.db.EmbeddingsDTO;
+import com.dotcms.ai.rest.forms.SummarizeForm;
 import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIRequest;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
@@ -15,9 +18,8 @@ import io.vavr.Lazy;
 import io.vavr.control.Try;
 import org.apache.commons.lang3.ArrayUtils;
 
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -52,9 +54,21 @@ public class SummarizeAPIImpl implements SummarizeAPI {
         String  textPrompt = config.get().getSearchTextPrompt();
 
 
-        return textPrompt.replace("{query}", query).replace("{supportingText}", supportingText);
+        return textPrompt.replace("${query}", query).replace("${supportingText}", supportingText);
 
     }
+    private String getSystemPrompt(String query, String supportingText) {
+        if (UtilMethods.isEmpty(query) || UtilMethods.isEmpty(supportingText)) {
+            throw new DotRuntimeException("no query or supportingText to summarize found");
+
+        }
+        String  systemPrompt = config.get().getSearchSystemPrompt();
+
+
+        return systemPrompt.replace("${query}", query).replace("${supportingText}", supportingText);
+
+    }
+
 
     private int countTokens(String testString) {
         Optional<Encoding> encoderOpt = EncodingUtil.registry.getEncodingForModel(config.get().getModel());
@@ -109,18 +123,45 @@ public class SummarizeAPIImpl implements SummarizeAPI {
 
 
 
-    private JSONObject generateRequestObject(String query, String supportingText, int responseLengthTokens){
+    private JSONObject buildRequestDataJson(SummarizeForm form){
+
+        // get embeddings for query
+        List<Float> queryEmbeddings = EmbeddingsAPI.impl().generateEmbeddingsforString(form.query);
+
+
+        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder()
+                .withEmbeddings(queryEmbeddings)
+                .withField(form.fieldVar)
+                .withContentType(form.contentType)
+                .withHost(form.site)
+                .withQuery(form.query)
+                .withIndexName(form.indexName)
+                .withLimit(form.searchLimit)
+                .withOperator(form.operator)
+                .withThreshold(form.threshold)
+                .withTokenCount(form.responseLengthTokens)
+                .build();
+
+
         int maxTokenSize = maxTokensPerModel.getOrDefault(config.get().getModel(), 4096);
-        String systemPrompt = config.get().getSearchSystemPrompt();
 
 
-        String textPrompt = getTextPrompt(query, supportingText);
+
+        // results from our database
+        List<EmbeddingsDTO> searchResults = EmbeddingsDB.impl.get().searchEmbeddings(searcher);
+
+        // aggregate matching results into text
+        StringBuilder supportingText = new StringBuilder();
+        searchResults.forEach(s -> supportingText.append(s.extractedText + " "));
+
+
+        String systemPrompt = getSystemPrompt(searcher.query, supportingText.toString());
+        String textPrompt = getTextPrompt(searcher.query, supportingText.toString());
 
         int systemPromptTokens = countTokens(systemPrompt);
 
-
-        textPrompt = reduceStringToTokenSize(textPrompt, maxTokenSize - responseLengthTokens - systemPromptTokens);
         JSONArray messages = new JSONArray();
+        textPrompt = reduceStringToTokenSize(textPrompt, maxTokenSize - form.responseLengthTokens - systemPromptTokens);
 
         messages.add(Map.of("role", "user", "content", textPrompt));
         messages.add(Map.of("role", "system", "content", systemPrompt));
@@ -128,7 +169,7 @@ public class SummarizeAPIImpl implements SummarizeAPI {
         json.put("messages", messages);
         json.put("model", config.get().getModel());
         json.put("temperature", 0);
-        json.put("max_tokens", responseLengthTokens);
+        json.put("max_tokens", form.responseLengthTokens);
 
         json.put("stream", false);
 
@@ -139,9 +180,12 @@ public class SummarizeAPIImpl implements SummarizeAPI {
 
 
     @Override
-    public JSONObject summarize(String query, String docText, int responseLengthTokens) {
+    public JSONObject summarize(SummarizeForm form) {
 
-        JSONObject json = generateRequestObject(query, docText, responseLengthTokens);
+
+
+        // send all this as a json blob to OpenAI
+        JSONObject json = buildRequestDataJson(form);
 
 
         String responseString = Try.of(() -> OpenAIRequest.doRequest(config.get().getApiUrl(), "post", config.get().getApiKey(), json.toString())).getOrElseThrow(e -> new DotRuntimeException(e));
@@ -150,8 +194,12 @@ public class SummarizeAPIImpl implements SummarizeAPI {
 
     }
     @Override
-    public void summarizeStream(String query, String docText, int responseLengthTokens, OutputStream out) {
-        JSONObject json = generateRequestObject(query, docText, responseLengthTokens);
+    public void summarizeStream(SummarizeForm form, OutputStream out) {
+
+
+
+
+        JSONObject json = buildRequestDataJson(form);
         json.put("stream", true);
         Try.run(() -> OpenAIRequest.doRequest(config.get().getApiUrl(), "post", config.get().getApiKey(), json.toString(), out)).getOrElseThrow(e -> new DotRuntimeException(e));
 

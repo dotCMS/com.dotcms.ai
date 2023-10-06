@@ -1,12 +1,15 @@
 package com.dotcms.ai.rest;
 
 import com.dotcms.ai.api.EmbeddingsAPI;
-import com.dotcms.ai.api.SummarizeAPI;
+import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.ai.rest.forms.SummarizeForm;
 import com.dotcms.rest.AnonymousAccess;
+import com.dotcms.rest.ContentResource;
 import com.dotcms.rest.WebResource;
+import com.dotmarketing.business.APILocator;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
+import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
 import org.glassfish.jersey.server.JSONP;
@@ -22,27 +25,17 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Call
  */
-@Path("/v1/ai/summarize")
-public class SummarizeResource {
+@Path("/v1/ai/search")
+public class SearchResource {
 
-    private final WebResource webResource = new WebResource();
-
-
-    private final Pattern allowedPattern = Pattern.compile("^[a-zA-Z0-9 \\-,.()]*$");
-
-    private String sanitizeParams(String in) {
-        return (in == null || allowedPattern.matcher(in).matches()) ? in : "";
-
-    }
 
     @GET
     @JSONP
@@ -52,6 +45,7 @@ public class SummarizeResource {
                                       @DefaultValue("1000") @QueryParam("searchLimit") int searchLimit,
                                       @QueryParam("site") String site,
                                       @QueryParam("contentType") String contentType,
+                                      @DefaultValue("default") @QueryParam("indexName") String indexName,
                                       @DefaultValue(".5") @QueryParam("threshold") float threshold,
                                       @DefaultValue("false") @QueryParam("stream") boolean stream,
                                       @DefaultValue("1024") @QueryParam("responseLength") int responseLength,
@@ -65,6 +59,7 @@ public class SummarizeResource {
                 .contentType(contentType)
                 .fieldVar(fieldVar)
                 .threshold(threshold)
+                .indexName(indexName)
                 .operator(operator)
                 .stream(stream)
                 .responseLengthTokens(responseLength)
@@ -75,48 +70,66 @@ public class SummarizeResource {
 
     @POST
     @JSONP
-    @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+
+    @Produces(MediaType.APPLICATION_JSON)
     public final Response searchByPost(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
                                        SummarizeForm form
 
     ) throws DotDataException, DotSecurityException, IOException {
 
-        // get user if we have one (this is allow anon)
         User user = new WebResource.InitBuilder(request, response).requiredAnonAccess(AnonymousAccess.READ).init().getUser();
 
-        if (form.query == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", "query required")).build();
-        }
+        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder()
+                .withQuery(form.query)
+                .withField(form.fieldVar)
+                .withContentType(form.contentType)
+                .withHost(form.site)
+                .withLimit(form.searchLimit)
+                .withOffset(form.searchOffset)
+                .withIndexName(form.indexName)
+                .withThreshold(form.threshold)
+                .withOperator(form.operator)
+                .build();
+
+        List<EmbeddingsDTO> searchResults = EmbeddingsAPI.impl().searchEmbedding(searcher);
+
+        Map<String,Object> reducedResults = new LinkedHashMap<>();
+
 
 
         long startTime = System.currentTimeMillis();
 
+        for (EmbeddingsDTO result : searchResults) {
 
-        List<Float> queryEmbeddings = EmbeddingsAPI.impl().generateEmbeddingsforString(form.query);
+            JSONObject contentObject = (JSONObject) reducedResults.getOrDefault(result.inode,ContentResource.contentletToJSON(APILocator.getContentletAPI().find(result.inode, user, true), request, response, "false", user, false));
+            JSONArray matches = contentObject.optJSONArray("matches")==null ? new JSONArray() : contentObject.optJSONArray("matches");
+                JSONObject match = new JSONObject();
+                match.put("distance", result.threshold);
+                match.put("extractedText", result.extractedText);
+                matches.add(match);
+            contentObject.put("matches", matches);
 
+            if(!reducedResults.containsKey(result.inode)) {
+                reducedResults.put(result.inode,contentObject);
+            }
 
-        if (!form.stream) {
-            JSONObject jsonResponse = SummarizeAPI.impl().summarize(form);
-            JSONObject map = new JSONObject();
-            map.put("timeToEmbeddings", System.currentTimeMillis() - startTime + "ms");
-            map.put("total", jsonResponse.size());
-            map.put("threshold", form.threshold);
-            map.put("results", jsonResponse);
-            map.put("operator", form.operator);
-            map.put("searchLimit", form.searchLimit);
-
-            return Response.ok(map.toString(), MediaType.APPLICATION_JSON).build();
         }
 
-        final StreamingOutput streaming = output -> {
 
-            SummarizeAPI.impl().summarizeStream(form, output);
-            output.flush();
-            output.close();
+        long totalTime = System.currentTimeMillis() - startTime;
 
-        };
 
-        return Response.ok(streaming).build();
+        JSONObject map = new JSONObject();
+        map.put("timeToEmbeddings", totalTime + "ms");
+        map.put("total", searchResults.size());
+        map.put("threshold", searcher.threshold);
+        map.put("results", reducedResults.values());
+        map.put("operator", searcher.operator);
+
+
+        return Response.ok(map.toString(), MediaType.APPLICATION_JSON).build();
+
+
     }
 
 }

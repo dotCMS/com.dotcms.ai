@@ -1,20 +1,16 @@
 package com.dotcms.ai.rest;
 
 import com.dotcms.ai.api.EmbeddingsAPI;
-import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.contenttype.model.field.Field;
-import com.dotcms.rest.AnonymousAccess;
-import com.dotcms.rest.ContentResource;
 import com.dotcms.rest.WebResource;
 import com.dotmarketing.business.APILocator;
-import com.dotmarketing.business.web.WebAPILocator;
+import com.dotmarketing.business.Role;
 import com.dotmarketing.common.model.ContentletSearch;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.UtilMethods;
-import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
 import org.glassfish.jersey.server.JSONP;
@@ -22,17 +18,14 @@ import org.glassfish.jersey.server.JSONP;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,20 +40,9 @@ public class EmbeddingsResource {
 
     Pattern allowedPattern = Pattern.compile("^[a-zA-Z0-9 \\-,.()]*$");
 
-    String sanitizeParams(String in) {
-        if (in == null) {
-            return in;
-        }
-        if (allowedPattern.matcher(in).matches()) {
-            return in;
-        }
-        return "";
-    }
-
-
     @GET
     @JSONP
-    @Path("/")
+    @Path("/test")
     @Produces(MediaType.APPLICATION_JSON)
     public final Response indexByInode(@Context final HttpServletRequest request, @Context final HttpServletResponse response) {
 
@@ -68,161 +50,67 @@ public class EmbeddingsResource {
         return builder.build();
     }
 
-
     @POST
     @JSONP
-    @Path("/embed")
+    @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
-    public final Response indexByInode(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                       JSONObject json
-
-
-    ) throws DotDataException, DotSecurityException {
-        String inode = json.optString("inode", null);
-        String identifier = json.optString("identifier", null);
-        long language = json.optLong("language", 0);
-        inode = sanitizeParams(inode);
-        identifier = sanitizeParams(identifier);
-        language = language == 0 ? APILocator.getLanguageAPI().getDefaultLanguage().getId() : language;
-
-        String query = UtilMethods.isSet(inode)
-                ? " +inode:" + inode
-                : " +identifier:" + identifier + " +language:" + language;
-
-        JSONObject jsonOut = new JSONObject();
-        jsonOut.put("query", query);
-
-
-        return indexByQuery(request, response, jsonOut);
-
-    }
-
-
-    @POST
-    @JSONP
-    @Path("/embedByQuery")
-    @Produces(MediaType.APPLICATION_JSON)
-    public final Response indexByQuery(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                       JSONObject json
+    public final Response embed(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
+                                JSONObject json
 
     ) throws DotDataException, DotSecurityException {
         // force authentication
-        User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+        final User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+        final String inode = sanitizeParams(json.optString("inode"));
+        final String identifier = sanitizeParams(json.optString("identifier"));
+        final long language = json.optLong("language", APILocator.getLanguageAPI().getDefaultLanguage().getId());
+        final int limit = json.optInt("limit", 1000);
+        final int offset = json.optInt("offset");
+        final String fieldVar = json.optString("fieldVar");
+        final String indexName = json.optString("indexName", "default");
 
-        String query = json.optString("query", json.optString("q", null));
-        int limit = json.optInt("limit", 1000);
-        int offset = json.optInt("offset", 0);
-        String fieldVar = json.optString("fieldVar", null);
+        String query = json.optString("query") != null
+                ? json.optString("query")
+                : UtilMethods.isSet(inode)
+                ? " +inode:" + inode
+                : " +identifier:" + identifier + " +language:" + language;
+
+
         long startTime = System.currentTimeMillis();
+
+        if (UtilMethods.isEmpty(query)) {
+            return Response.ok("query is required").build();
+        }
 
 
         // searchIndex(String luceneQuery, int limit, int offset, String sortBy, User user, boolean respectFrontendRoles)
         List<ContentletSearch> searchResults = APILocator.getContentletAPI().searchIndex(query, limit, offset, "moddate", user, false);
 
-
+        int good, bad = 0;
         for (ContentletSearch searcher : searchResults) {
             Contentlet contentlet = APILocator.getContentletAPI().find(searcher.getInode(), user, false);
             Optional<Field> field = contentlet.getContentType().fields().stream().filter(f -> f.variable().equalsIgnoreCase(fieldVar)).findFirst();
-            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, field);
+            try {
+                EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, field, indexName);
+            } catch (Exception e) {
+
+            }
         }
 
         long totalTime = System.currentTimeMillis() - startTime;
 
 
-        Map<String, Object> map = Map.of("timeToEmbeddings", totalTime + "ms", "totalToEmbed", searchResults.size());
+        Map<String, Object> map = Map.of("timeToEmbeddings", totalTime + "ms", "totalToEmbed", searchResults.size(), "indexName", indexName);
         ResponseBuilder builder = Response.ok(map, MediaType.APPLICATION_JSON);
 
         return builder.build();
 
     }
 
-    @POST
-    @JSONP
-    @Path("/query")
-    @Produces(MediaType.APPLICATION_JSON)
-    public final Response searchByPost(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                       JSONObject json
-
-    ) throws DotDataException, DotSecurityException, IOException {
-
-        // get user if we have one (this is allow anon)
-        User user = new WebResource.InitBuilder(request, response).requiredAnonAccess(AnonymousAccess.READ).init().getUser();
-        String query = json.optString("query", null);
-        int limit = json.optInt("limit", 40);
-        int offset = json.optInt("offset", 0);
-        String fieldVar = json.optString("fieldVar", null);
-        String contentType = json.optString("contentType", null);
-        String operator = json.optString("operator", "<=>");
-        String site = UtilMethods.isSet(json.optString("site"))
-                ? json.optString("site")
-                : WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(request).getIdentifier();
-
-        long startTime = System.currentTimeMillis();
-
-
-        List<Float> queryEmbeddings = EmbeddingsAPI.impl().generateEmbeddingsforString(query);
-        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder().withEmbeddings(queryEmbeddings)
-                .withField(fieldVar)
-                .withContentType(contentType)
-                .withHost(site)
-                .withLimit(limit)
-                .withOffset(offset)
-                .withThreshold((float) json.optDouble("threshold", .5d))
-                .withOperator(operator)
-                .build();
-
-        List<EmbeddingsDTO> searchResults = EmbeddingsDB.impl.get().searchEmbeddings(searcher);
-
-        JSONArray results = new JSONArray();
-        for (EmbeddingsDTO result : searchResults) {
-
-            JSONObject object = ContentResource.contentletToJSON(APILocator.getContentletAPI().find(result.inode, user, true), request, response, "false", user, false);
-
-            object.put("distance", result.threshold);
-            object.put("extractedText", result.extractedText);
-            results.add(object);
+    String sanitizeParams(String in) {
+        if (in == null || allowedPattern.matcher(in).matches()) {
+            return in;
         }
-
-
-        long totalTime = System.currentTimeMillis() - startTime;
-
-
-        JSONObject map = new JSONObject();
-        map.put("timeToEmbeddings", totalTime + "ms");
-        map.put("total", searchResults.size());
-        map.put("threshold", searcher.threshold);
-        map.put("results", results);
-        map.put("operator", searcher.operator);
-
-
-        return Response.ok(map.toString(), MediaType.APPLICATION_JSON).build();
-
-
-    }
-
-    @GET
-    @JSONP
-    @Path("/query")
-    @Produces(MediaType.APPLICATION_JSON)
-    public final Response searchByGet(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                      @QueryParam("query") String query,
-                                      @DefaultValue("10") @QueryParam("limit") int limit,
-                                      @DefaultValue("0") @QueryParam("offset") int offset,
-                                      @QueryParam("site") String site,
-                                      @QueryParam("contentType") String contentType,
-                                      @DefaultValue(".5") @QueryParam("threshold") float threshold,
-                                      @DefaultValue("<=>>") @QueryParam("operator") String operator,
-                                      @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
-        JSONObject json = new JSONObject();
-        json.put("query", query);
-        json.put("limit", limit);
-        json.put("site", site);
-        json.put("offset", offset);
-        json.put("contentType", contentType);
-        json.put("fieldVar", fieldVar);
-        json.put("threshold", threshold);
-        json.put("operator", operator);
-        return searchByPost(request, response, json);
+        return "";
     }
 
     @DELETE
@@ -246,5 +134,23 @@ public class EmbeddingsResource {
 
     }
 
+    @DELETE
+    @JSONP
+    @Path("/db")
+    @Produces(MediaType.APPLICATION_JSON)
+    public final Response dropAndRecreateTables(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
+                                                JSONObject json) throws DotDataException, DotSecurityException {
+        new WebResource.InitBuilder(request, response)
+                .requiredBackendUser(true)
+                .requiredRoles(Role.CMS_ADMINISTRATOR_ROLE)
+                .requestAndResponse(request, response)
+                .rejectWhenNoUser(true)
+                .init();
 
+
+        EmbeddingsAPI.impl().dropEmbeddingsTable();
+        EmbeddingsAPI.impl().initEmbeddingsTable();
+        return Response.ok(Map.of("created", true)).build();
+
+    }
 }

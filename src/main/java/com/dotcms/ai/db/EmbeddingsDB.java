@@ -22,18 +22,18 @@ import java.util.Map;
 public class EmbeddingsDB {
 
 
-    void initVectorExtension() {
-        Logger.info(EmbeddingsDB.class, "Adding PGVector extenstion to database");
+    public void initVectorExtension() {
+        Logger.info(EmbeddingsDB.class, "Adding PGVector extension to database");
         runSQL(EmbeddingsSQL.INIT_VECTOR_EXTENSION);
     }
 
 
-    void initVectorDbTable() {
+    public void initVectorDbTable() {
         Logger.info(EmbeddingsDB.class, "Adding table dot_embeddings to database");
         runSQL(EmbeddingsSQL.CREATE_EMBEDDINGS_TABLE);
 
-        Logger.info(EmbeddingsDB.class, "Adding indexes to dot_embedding_table");
-        for (String index : EmbeddingsSQL.CREATE_EMBEDDINGS_INDEXES) {
+        Logger.info(EmbeddingsDB.class, "Adding indexes to dot_embedding table");
+        for (String index : EmbeddingsSQL.CREATE_TABLE_INDEXES) {
             runSQL(index);
 
         }
@@ -41,13 +41,16 @@ public class EmbeddingsDB {
 
     }
 
-    void initVectorDbIndex() {
-
+    public void dropVectorDbTable() {
+        Logger.info(EmbeddingsDB.class, "Dropping table dot_embeddings from database");
+        runSQL(EmbeddingsSQL.DROP_EMBEDDINGS_TABLE);
 
     }
 
-    void countVectorDbSize() {
 
+
+    void countVectorDbSize() {
+        //ToDo
 
     }
 
@@ -99,6 +102,8 @@ public class EmbeddingsDB {
             statement.setObject(++i, embeddings.title);
             statement.setObject(++i, embeddings.extractedText);
             statement.setObject(++i, embeddings.host);
+            statement.setObject(++i, embeddings.indexName);
+            statement.setObject(++i, embeddings.tokenCount);
             statement.setObject(++i, vector);
             statement.execute();
 
@@ -111,10 +116,8 @@ public class EmbeddingsDB {
     public List<EmbeddingsDTO> searchEmbeddings(EmbeddingsDTO dto) {
 
 
-        StringBuilder sql = new StringBuilder("select " +
-                "inode, title, language, identifier,host, content_type, extracted_text ,field_var, distance " +
-                "from (select inode, title, language, identifier,host, content_type,extracted_text, field_var, (embeddings " + dto.operator + " ?) AS distance " +
-                "from dot_embeddings where true ");
+        StringBuilder sql = new StringBuilder();
+        sql.append(EmbeddingsSQL.SEARCH_EMBEDDINGS_SELECT_PREFIX.replace("{operator}", dto.operator));
 
         List<Object> params = new ArrayList<>();
 
@@ -145,6 +148,13 @@ public class EmbeddingsDB {
             sql.append(" and host=? ");
             params.add(dto.host);
         }
+        if (UtilMethods.isSet(dto.indexName)) {
+            sql.append(" and index_name=? ");
+            params.add(dto.indexName);
+        }
+
+
+
 
         sql.append(" ) data where distance <= ? ");
         params.add(dto.threshold);
@@ -175,7 +185,9 @@ public class EmbeddingsDB {
                         .withInode(rs.getString("inode"))
                         .withTitle(rs.getString("title"))
                         .withLanguage(rs.getLong("language"))
+                        .withIndexName(rs.getString("index_name"))
                         .withHost(rs.getString("host"))
+                        .withTokenCount(rs.getInt("token_count"))
                         .withThreshold(distance)
                         .withExtractedText(rs.getString("extracted_text"))
                         .build();
@@ -203,6 +215,11 @@ public class EmbeddingsDB {
             builder.append(" and identifier=? ");
             params.add(dto.identifier);
         }
+        if (UtilMethods.isSet(dto.indexName)) {
+            builder.append(" and index_name=? ");
+            params.add(dto.indexName);
+        }
+
         if (dto.language > 0) {
             builder.append(" and language=? ");
             params.add(dto.language);

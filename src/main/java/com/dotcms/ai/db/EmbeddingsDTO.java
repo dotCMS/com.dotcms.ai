@@ -1,8 +1,13 @@
 package com.dotcms.ai.db;
 
+import com.dotmarketing.util.UtilMethods;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 import java.util.Arrays;
 import java.util.List;
 
+@JsonDeserialize(builder = EmbeddingsDTO.Builder.class)
 public class EmbeddingsDTO {
     public final Float[] embeddings;
     public final String identifier;
@@ -13,56 +18,116 @@ public class EmbeddingsDTO {
     public final String field;
     public final String extractedText;
     public final String host;
+    public final String indexName;
     public final String operator;
     public final int limit;
+    public final int tokenCount;
     public final int offset;
     public final float threshold;
+    public final String query;
+    private final String[] operators = {"<->", "<=>", "<#>"};
 
-    public EmbeddingsDTO(List<Float> embeddings, String identifier, String inode, long language, String title, String contentType, String field, String extractedText, String host, int limit, int offset, float threshold, String operator) {
-        this.embeddings = (embeddings == null) ? new Float[0] : embeddings.toArray(new Float[0]);
-        this.identifier = identifier;
-        this.inode = inode;
-        this.language = language;
-        this.title = title;
-        this.contentType = contentType;
-        this.field = field;
-        this.extractedText = extractedText;
-        this.host = host;
-        this.limit = limit;
-        this.offset = offset;
-        this.threshold = threshold;
-        this.operator = operator;
+    private EmbeddingsDTO(Builder builder) {
+        this.embeddings = (builder.embeddings == null) ? new Float[0] : builder.embeddings.toArray(new Float[0]);
+        this.identifier = builder.identifier;
+        this.inode = builder.inode;
+        this.language = builder.language;
+        this.title = builder.title;
+        this.contentType = builder.contentType;
+        this.field = builder.field;
+        this.extractedText = builder.extractedText;
+        this.host = builder.host;
+        this.limit = builder.limit;
+        this.offset = builder.offset;
+        this.threshold = builder.threshold;
+        this.operator = (Arrays.asList(operators).contains(builder.operator)) ? builder.operator : "<=>";
+        this.indexName = UtilMethods.isSet(builder.indexName) ? builder.indexName : "default";
+        this.tokenCount = builder.tokenCount;
+        this.query=builder.query;
     }
 
     @Override
     public String toString() {
-        return "ContentEmbeddings{" +
+        return "EmbeddingsDTO{" +
                 "identifier='" + identifier + '\'' +
                 ", inode='" + inode + '\'' +
                 ", language=" + language +
                 ", title='" + title + '\'' +
                 ", contentType='" + contentType + '\'' +
                 ", field='" + field + '\'' +
-                ", host='" + host + '\'' +
                 ", extractedText='" + extractedText + '\'' +
-                ", embeddings.size='" + embeddings.length + '\'' +
+                ", host='" + host + '\'' +
+                ", indexName='" + indexName + '\'' +
+                ", operator='" + operator + '\'' +
+                ", limit=" + limit +
+                ", tokenCount=" + tokenCount +
+                ", offset=" + offset +
+                ", threshold=" + threshold +
                 '}';
     }
 
+
+    public static Builder copy(EmbeddingsDTO values) {
+        return new Builder()
+
+                .withEmbeddings((values.embeddings == null) ? List.of() : Arrays.asList(values.embeddings))
+                .withIdentifier(values.identifier)
+                .withInode(values.inode)
+                .withIndexName(values.indexName)
+                .withLanguage(values.language)
+                .withTitle(values.title)
+                .withContentType(values.contentType)
+                .withField(values.field)
+                .withExtractedText(values.extractedText)
+                .withHost(values.host)
+                .withLimit(values.limit)
+                .withOffset(values.offset)
+                .withThreshold(values.threshold)
+                .withOperator(values.operator)
+                .withIndexName(values.indexName)
+                .withTokenCount(values.tokenCount)
+                .withQuery(values.query);
+
+    }
+
+
     public static final class Builder {
+
+        @JsonProperty(defaultValue = ".5f")
+        public float threshold;
+        @JsonProperty(defaultValue = "<=>")
+        public String operator;
+        @JsonProperty
+        int tokenCount = 0;
+        @JsonProperty
         private List<Float> embeddings;
+        @JsonProperty
         private String identifier;
+        @JsonProperty
         private String inode;
+        @JsonProperty
         private long language;
+        @JsonProperty
         private String title;
+        @JsonProperty
         private String contentType;
+        @JsonProperty
         private String field;
+        @JsonProperty(defaultValue = "default")
+        private String indexName;
+        @JsonProperty
         private String extractedText;
+        @JsonProperty
         private String host;
-        private int limit = 100;
+        @JsonProperty(defaultValue = "100")
+        private int limit;
+        @JsonProperty(defaultValue = "0")
         private int offset = 0;
-        public float threshold = .5f;
-        public String operator = "<=>";
+        @JsonProperty
+        private String query;
+
+
+
 
         public Builder withEmbeddings(List<Float> embeddings) {
             this.embeddings = embeddings;
@@ -78,13 +143,17 @@ public class EmbeddingsDTO {
             this.host = host;
             return this;
         }
-
-        final String[] operators = {"<->", "<=>", "<#>"};
+        public Builder withQuery(String query) {
+            this.query = query;
+            return this;
+        }
+        public Builder withIndexName(String indexName) {
+            this.indexName = UtilMethods.isSet(indexName) ? indexName : "default";
+            return this;
+        }
 
         public Builder withOperator(String distanceOperator) {
-            if (Arrays.asList(operators).contains(distanceOperator)) {
-                this.operator = distanceOperator;
-            }
+            this.operator = distanceOperator;
             return this;
         }
 
@@ -113,6 +182,11 @@ public class EmbeddingsDTO {
             return this;
         }
 
+        public Builder withTokenCount(int tokenCount) {
+            this.tokenCount = tokenCount;
+            return this;
+        }
+
         public Builder withOffset(int offset) {
             this.offset = offset;
             return this;
@@ -134,7 +208,7 @@ public class EmbeddingsDTO {
         }
 
         public EmbeddingsDTO build() {
-            return new EmbeddingsDTO(embeddings, identifier, inode, language, title, contentType, field, extractedText, host, limit, offset, threshold, operator);
+            return new EmbeddingsDTO(this);
         }
     }
 }

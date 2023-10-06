@@ -6,6 +6,7 @@ import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.listener.EmbeddingContentListener;
 import com.dotcms.ai.rest.DotAIResource;
 import com.dotcms.ai.rest.EmbeddingsResource;
+import com.dotcms.ai.rest.SearchResource;
 import com.dotcms.ai.rest.SummarizeResource;
 import com.dotcms.ai.viewtool.AIToolInfo;
 import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
@@ -42,7 +43,7 @@ import java.util.Map;
 
 public class Activator extends GenericBundleActivator {
 
-    Class[] clazzes = {DotAIResource.class, EmbeddingsResource.class, SummarizeResource.class};
+    Class[] clazzes = {DotAIResource.class, EmbeddingsResource.class, SummarizeResource.class, SearchResource.class};
 
     private LoggerContext pluginLoggerContext;
 
@@ -59,11 +60,6 @@ public class Activator extends GenericBundleActivator {
                 dotcmsLoggerContext.getConfigLocation());
 
 
-        for(Class clazz : clazzes) {
-
-            Logger.info(this.getClass(), "Adding new Restful Service:" + clazz.getSimpleName());
-            RestServiceUtil.addResource(clazz);
-        }
 
         // set up embeddings table
         EmbeddingsDB.impl.get();
@@ -89,6 +85,14 @@ public class Activator extends GenericBundleActivator {
 
         //Initializing services...
         initializeServices(context);
+
+
+        for(Class clazz : clazzes) {
+            Logger.info(this.getClass(), "Adding new Restful Service:" + clazz.getSimpleName());
+            RestServiceUtil.addResource(clazz);
+        }
+
+
     }
 
     public void createLanguageVariables() {

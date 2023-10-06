@@ -35,14 +35,16 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
     private static final long serialVersionUID = 1L;
     private static final String DOT_EMBEDDING_TYPES_FIELDS = "dotEmbeddingTypes";
     private static final String DOT_EMBEDDING_ACTION = "dotEmbeddingAction";
-
+    private static final String DOT_EMBEDDING_INDEX = "default";
     @Override
     public List<WorkflowActionletParameter> getParameters() {
 
         final List<WorkflowActionletParameter> params = new ArrayList<>();
 
         params.add(new WorkflowActionletParameter(DOT_EMBEDDING_TYPES_FIELDS, "List of {contentType}.{fieldVar} to use to generate the embeddings.  Each type.field should be on its own line, e.g. blog.title<br>blog.blogContent", "", false));
-        params.add(new WorkflowActionletParameter(DOT_EMBEDDING_ACTION, "CREATE|DELETE", "CREATE", false));
+        params.add(new WorkflowActionletParameter(DOT_EMBEDDING_INDEX, "Index Name", "", false));
+        params.add(new WorkflowActionletParameter(DOT_EMBEDDING_ACTION, "INSERT|DELETE", "INSERT", false));
+
         return params;
     }
 
@@ -64,8 +66,9 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
         final ContentType type = processor.getContentlet().getContentType();
 
 
-        final String updateOrDelete = "DELETE".equalsIgnoreCase(params.get(DOT_EMBEDDING_ACTION).getValue()) ? "DELETE" : "CREATE";
+        final String updateOrDelete = "DELETE".equalsIgnoreCase(params.get(DOT_EMBEDDING_ACTION).getValue()) ? "DELETE" : "INSERT";
         final Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), false)).getOrNull();
+        final String indexName = UtilMethods.isSet(params.get(DOT_EMBEDDING_INDEX).getValue()) ? params.get(DOT_EMBEDDING_INDEX).getValue(): "default";
         HttpServletRequest request = HttpServletRequestThreadLocal.INSTANCE.getRequest();
         if(request == null){
             return;
@@ -74,13 +77,13 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
         List<Field> fields = parseTypesAndFields(type, params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
 
         if (fields.isEmpty()) {
-            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet);
+            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, indexName);
         }
 
 
         for (Field field : fields) {
             Logger.info(DotEmbeddingsActionlet.class, "found field:" + type.variable() + "." + field.variable());
-            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, Optional.of(field));
+            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, Optional.of(field), indexName);
         }
 
 
