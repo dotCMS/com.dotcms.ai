@@ -1,55 +1,63 @@
 package com.dotcms.ai.api;
 
-import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
+import com.dotcms.ai.util.ConfigProperties;
 import com.dotcms.contenttype.model.field.BinaryField;
 import com.dotcms.contenttype.model.field.DataTypes;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.field.StoryBlockField;
 import com.dotcms.contenttype.model.field.TextAreaField;
 import com.dotcms.contenttype.model.field.WysiwygField;
+import com.dotcms.contenttype.model.type.ContentType;
 import com.dotcms.rendering.velocity.viewtools.MarkdownTool;
 import com.dotcms.rendering.velocity.viewtools.content.StoryBlockMap;
 import com.dotcms.repackage.org.jsoup.Jsoup;
 import com.dotcms.tika.TikaProxyService;
 import com.dotcms.tika.TikaServiceBuilder;
 import com.dotmarketing.business.APILocator;
-import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotRuntimeException;
-import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.StringUtils;
 import com.dotmarketing.util.UtilMethods;
 import io.vavr.Lazy;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
-import io.vavr.Tuple3;
 import io.vavr.control.Try;
 import org.apache.felix.framework.OSGISystem;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class ContentToStringUtil {
 
-    static MarkdownTool markdown = new MarkdownTool();
-
-
     public static final Lazy<ContentToStringUtil> impl = Lazy.of(ContentToStringUtil::new);
+    private static final String[] MARKDOWN_STRING_PATTERNS = {
+            "(^|[\\n])\\s*1\\.\\s.*\\s+1\\.\\s",                    // markdown list with 1. \n 1.
+            "(^|[\\n])\\s*-\\s.*\\s+-\\s",                          // markdown unordered list -
+            "(^|[\\n])\\s*\\*\\s.*\\s+\\*\\s",                      // markdown unordered list *
+            "\\s(__|\\*\\*)(?!\\s)(.(?!\\1))+(?!\\s(?=\\1))",       // markdown __bold__
+            "\\[[^]]+\\]\\(https?:\\/\\/\\S+\\)",                   // markdown link [this is a link](http://linking)
+            "\\n####\\s.*$",                                        // markdown h4
+            "\\n###\\s.*$",                                         // markdown h3
+            "\\n##\\s.*$",                                          // markdown h2
+            "\\n#\\s.*$",                                           // markdown h1
+            "\\n```"                                                // markdown code block
 
-    private ContentToStringUtil() {
 
-    }
+    };
+    private static final Lazy<List<Pattern>> MARKDOWN_PATTERNS = Lazy.of(() -> Arrays.stream(MARKDOWN_STRING_PATTERNS).map(Pattern::compile).collect(Collectors.toList()));
+    private static final Pattern HTML_PATTERN = Pattern.compile(".*\\<[^>]+>.*");
+    static MarkdownTool markdown = new MarkdownTool();
+    final Set<String> indexFileExtensions = Set.of(ConfigProperties.getArrayProperty("BUILD_EMBEDDINGS_FOR_FILE_EXTENSIONS", new String[]{"pdf", "doc", "docx", "txt", "html"}));
+    final int minimumTextLength = ConfigProperties.getIntProperty("MINIMIUM_TEXT_LENGTH_TO_EMBED", 1024);
+
 
 
     private final Lazy<TikaProxyService> tikaService = Lazy.of(() -> {
@@ -60,7 +68,18 @@ public class ContentToStringUtil {
         }
     });
 
-    private String parseHTML(@NotNull String html) {
+    private ContentToStringUtil() {
+
+    }
+
+    /**
+     * This creates a tmp file with an .html extension so that tika can parse it as "html".  If tika fails, we fall
+     * back to JSoup.  If that fails, we fall back to regex
+     *
+     * @param html
+     * @return
+     */
+    private Optional<String> parseHTML(@NotNull String html) {
 
         Path tempFile = null;
         try {
@@ -68,42 +87,38 @@ public class ContentToStringUtil {
             Files.write(tempFile, html.getBytes(StandardCharsets.UTF_8));
             return parseText(tikaService.get().parseToString(tempFile.toFile()));
         } catch (Exception e) {
-            Logger.warnAndDebug(ContentToStringUtil.class, "Tika failed parsing, trying JSoup:" + e.getMessage(),e);
+            Logger.warnAndDebug(ContentToStringUtil.class, "Tika failed parsing, trying JSoup:" + e.getMessage(), e);
             try {
-                return Jsoup.parse(html).text();
+                return Optional.ofNullable(Jsoup.parse(html).text());
             } catch (Exception e1) {
-                Logger.warnAndDebug(ContentToStringUtil.class, "JSoup failed parsing, trying regex:" + e1.getMessage(),e);
-
-                try {
-                    return html.replaceAll("<[^>]*>", "");
-                } catch (Exception e2) {
-                    Logger.warnAndDebug(ContentToStringUtil.class, "regex failed parsing, returning nothing:" + e2.getMessage(),e);
-                    return null;
-                }
-
+                Logger.warnAndDebug(ContentToStringUtil.class, "JSoup failed parsing, trying regex:" + e1.getMessage(), e);
+                return Try.of(() -> html.replaceAll("<[^>]*>", "")).toJavaOptional();
             }
 
 
         } finally {
             try {
-                tempFile.toFile().delete();
+                tempFile.toFile().delete();//NOSONAR
             } catch (Exception ex) {
-
+                //NOSONAR
             }
         }
     }
 
-
-    private String parseText(@NotNull String val) {
+    private Optional<String> parseText(@NotNull String val) {
         val = UtilMethods.isSet(val)
                 ? val.replaceAll("\\s+", " ")
-                : "";
-        return val;
+                : null;
+
+        if(UtilMethods.isEmpty(val) || val.length()<1024){
+            return Optional.empty();
+        }
+        return Optional.of(val);
 
 
     }
 
-    private String parseBlockEditor(@NotNull String val) {
+    private Optional<String> parseBlockEditor(@NotNull String val) {
 
         final StoryBlockMap storyBlockMap = new StoryBlockMap(val);
         return parseHTML(storyBlockMap.toHtml());
@@ -111,7 +126,7 @@ public class ContentToStringUtil {
 
     }
 
-    private String parseMarkdown(@NotNull String val) {
+    private Optional<String> parseMarkdown(@NotNull String val) {
 
         try {
             MarkdownTool tool = new MarkdownTool();
@@ -127,135 +142,124 @@ public class ContentToStringUtil {
      *
      * @param contentlet
      * @return
-     * @throws IOException
-     * @throws DotDataException
-     * @throws DotSecurityException
      */
-    public Tuple2<String,String> guessWhatToIndex(@NotNull Contentlet contentlet) throws IOException, DotDataException, DotSecurityException {
-        try {
-            if (contentlet.isFileAsset()) {
-                return Tuple.of("fileAsset", parseField(contentlet.getContentType().fieldMap().get("fileAsset"), contentlet.getBinary("fileAsset")));
-            }
 
-            if (contentlet.isDotAsset()) {
-                return Tuple.of("asset",parseField(contentlet.getContentType().fieldMap().get("asset"), contentlet.getBinary("asset")));
-            }
 
-            if (contentlet.isHTMLPage()) {
-                return Tuple.of("htmlPage", APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(contentlet), "dot-user-agent"));
+    public Optional<Field> guessWhatFieldToIndex(@NotNull Contentlet contentlet) {
+        if (contentlet.isFileAsset()) {
+            File fileAsset = Try.of(() -> contentlet.getBinary("fileAsset")).getOrNull();
+            if (!indexMe(fileAsset)) {
+                return Optional.empty();
             }
-
-            Optional<Field> firstTextField = contentlet.getContentType().fields().stream().filter(Field::indexed).filter(f ->
-                    f instanceof TextAreaField || f instanceof StoryBlockField || f instanceof WysiwygField
-            ).findFirst();
-
-            if (firstTextField.isEmpty()) {
-                firstTextField = contentlet.getContentType().fields().stream().filter(f -> f.dataType().equals(DataTypes.LONG_TEXT)).findFirst();
-            }
-
-            if (firstTextField.isEmpty()) {
-                firstTextField = contentlet.getContentType().fields().stream().filter(Field::indexed).filter(f -> f.dataType().equals(DataTypes.TEXT)).findFirst();
-            }
-
-            if (firstTextField.isEmpty()) {
-                throw new DotDataException("Unable to find a field to build embeddings off of");
-            }
-            return Tuple.of(firstTextField.get().variable(),parseField(contentlet, firstTextField.get()));
-        } catch (Exception e) {
-            throw new DotRuntimeException(e);
+            return Optional.ofNullable(contentlet.getContentType().fieldMap().get("fileAsset"));
         }
+        if (contentlet.isDotAsset()) {
+            File asset = Try.of(() -> contentlet.getBinary("asset")).getOrNull();
+            if (!indexMe(asset)) {
+                return Optional.empty();
+            }
+            return Optional.ofNullable(contentlet.getContentType().fieldMap().get("asset"));
+        }
+
+        final String ignoreUrlMapFields = (contentlet.getContentType().urlMapPattern() != null) ? contentlet.getContentType().urlMapPattern() : "";
+
+        Optional<Field> foundField= contentlet.getContentType()
+                .fields()
+                .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
+                .filter(f -> f instanceof StoryBlockField || f instanceof WysiwygField
+                ).findFirst();
+
+        if(foundField.isPresent()){
+            return foundField;
+        }
+
+        return contentlet.getContentType()
+                .fields()
+                .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
+                .filter(f ->
+                        f instanceof TextAreaField  || f.dataType().equals(DataTypes.LONG_TEXT)
+                ).findFirst();
+    }
+
+    private boolean indexMe(File file) {
+
+        return file != null && indexFileExtensions.contains(UtilMethods.getFileExtension(file.toString()));
     }
 
 
     public String parseFields(@NotNull Contentlet con, @NotNull List<Field> fields) {
         StringBuilder builder = new StringBuilder();
         for (Field field : fields) {
-            String fieldVal = con.getStringProperty(field.variable());
-            builder.append(parseField(field, fieldVal));
+            builder.append(parseField(con, Optional.of(field)));
             builder.append(" \n");
         }
         return builder.toString();
     }
 
-    public String parseField(@NotNull Contentlet contentlet, @NotNull Field field) {
-        try {
-            if (field instanceof BinaryField) {
-                return parseField(field, contentlet.getBinary(field.variable()));
-            }
-            if (contentlet.isHTMLPage()) {
-                return parseHTML(APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(contentlet), "dot-user-agent"));
-            }
-
-            if (field.dataType().equals(DataTypes.LONG_TEXT) || field.dataType().equals(DataTypes.TEXT)) {
-                return parseField(field, contentlet.getStringProperty(field.variable()));
-            }
-
-            throw new DotRuntimeException("Unable to build String from field " + contentlet.getContentType().variable() + "." + field);
-
-        } catch (Exception e) {
-            throw new DotRuntimeException(e);
+    private Optional<String> parseFile(@NotNull File file) {
+        if (!indexMe(file)) {
+            return Optional.empty();
         }
+
+        return Try.of(() -> tikaService.get().parseToString(file)).toJavaOptional();
+
     }
 
+    public Optional<String> parseField(@NotNull Contentlet contentlet, @NotNull Optional<Field> fieldOpt) {
+        if(UtilMethods.isEmpty(()->contentlet.getIdentifier())) {
+            return Optional.empty();
+        }
+        ContentType type = contentlet.getContentType();
 
-    public String parseField(@NotNull Field field, @NotNull String value) {
 
+        if (fieldOpt.isEmpty() && contentlet.isHTMLPage() == Boolean.TRUE) {
+            return parsePage(contentlet);
+        }
+        if (fieldOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        Field field = fieldOpt.get();
+        if (field instanceof BinaryField) {
+            return parseFile(Try.of(() -> contentlet.getBinary(field.variable())).getOrNull());
+        }
+        String value = contentlet.getStringProperty(field.variable());
 
         if (field instanceof StoryBlockField && StringUtils.isJson(value)) {
-            Logger.info(DotEmbeddingsActionlet.class, "field:" + field.variable() + " is a Blockeditor field");
+            Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is a StoryBlockField field");
             return parseBlockEditor(value);
         }
         if (isMarkdown(value)) {
-            Logger.info(DotEmbeddingsActionlet.class, "field:" + field.variable() + " is a markdown field");
+            Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is a markdown field");
             return parseMarkdown(value);
         }
         if (isHtml(value)) {
-            Logger.info(DotEmbeddingsActionlet.class, "field:" + field.variable() + " is an HTML field");
+            Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is an HTML field");
             return parseHTML(value);
         }
-        Logger.info(DotEmbeddingsActionlet.class, "field:" + field.variable() + " is an text field");
+        Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is a text field");
         return parseText(value);
 
     }
 
-    public String parseField(@NotNull Field field, @NotNull File file) {
+    private Optional<String> parsePage(Contentlet pageContentlet) {
+        if(UtilMethods.isEmpty(()->pageContentlet.getIdentifier())) {
+            return Optional.empty();
+        }
         try {
-            return tikaService.get().parseToString(file);
+            if (Boolean.FALSE.equals(pageContentlet.isHTMLPage())) {
+                return Optional.empty();
+            }
+            return Optional.ofNullable(APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(pageContentlet), "dot-user-agent"));
         } catch (Exception e) {
-            throw new DotRuntimeException(e);
+            Logger.warnAndDebug(this.getClass(), "parsePage:" + pageContentlet + " failed:" + e.getMessage(), e);
+            return Optional.empty();
         }
     }
-
-    public String parsePage(Contentlet pageContentlet) {
-        try {
-            //HTML
-        } catch (Exception e) {
-            throw new DotRuntimeException(e);
-        }
-        return null;
-    }
-
-
-    private static final String[] MARKDOWN_STRING_PATTERNS = {
-            "(^|[\\n])\\s*1\\.\\s.*\\s+1\\.\\s",                    // markdown list with 1. \n 1.
-            "(^|[\\n])\\s*-\\s.*\\s+-\\s",                          // markdown unordered list -
-            "(^|[\\n])\\s*\\*\\s.*\\s+\\*\\s",                      // markdown unordered list *
-            "\\s(__|\\*\\*)(?!\\s)(.(?!\\1))+(?!\\s(?=\\1))",       // markdown __bold__
-            "\\[[^]]+\\]\\(https?:\\/\\/\\S+\\)",                   // markdown link [this is a link](http://linking)
-            "\\n####\\s.*$",                                        // markdown h4
-            "\\n###\\s.*$",                                         // markdown h3
-            "\\n##\\s.*$",                                          // markdown h2
-            "\\n#\\s.*$",                                           // markdown h1
-            "\\n```"                                                // markdown code block
-
-
-    };
-
-    private static final Lazy<List<Pattern>> MARKDOWN_PATTERNS = Lazy.of(() -> Arrays.stream(MARKDOWN_STRING_PATTERNS).map(Pattern::compile).collect(Collectors.toList()));
-
 
     private boolean isMarkdown(@NotNull String value) {
-
+        if(UtilMethods.isEmpty(value)) {
+            return false;
+        }
 
         String converted = Try.of(() -> markdown.parse(value.substring(0, Math.min(value.length(), 10000)))).getOrNull();
         if (converted == null || value.equals(converted)) {
@@ -265,11 +269,11 @@ public class ContentToStringUtil {
         return MARKDOWN_PATTERNS.get().stream().filter(p -> p.matcher(value).find()).count() > 1;
     }
 
-
-    private static final Pattern HTML_PATTERN = Pattern.compile(".*\\<[^>]+>.*");
-
     // it is HTML if parsing it returns a different value than it
     private boolean isHtml(@NotNull String value) {
+        if(UtilMethods.isEmpty(value)) {
+            return false;
+        }
         if (HTML_PATTERN.matcher(value).matches()) {
             return true;
         }

@@ -7,7 +7,6 @@ import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.ai.util.ConfigProperties;
 import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIRequest;
-import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.concurrent.DotConcurrentFactory;
 import com.dotcms.concurrent.DotSubmitter;
@@ -19,15 +18,11 @@ import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONObject;
 import io.vavr.Lazy;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import io.vavr.control.Try;
-import joptsimple.internal.Strings;
 
 import javax.validation.constraints.NotNull;
 import java.text.BreakIterator;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -42,12 +37,15 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     final AppConfig config;
     final DotConcurrentFactory.SubmitterConfig submitterConfig = new DotConcurrentFactory.SubmitterConfigBuilder()
             .poolSize(ConfigProperties.getIntProperty("EMBEDDINGS_THREADS", 1))
-            .maxPoolSize(ConfigProperties.getIntProperty("EMBEDDINGS_THREADS_MAX", 3))
-            .queueCapacity(ConfigProperties.getIntProperty("EMBEDDINGS_THREADS_QUEUE", 1000))
+            .maxPoolSize(ConfigProperties.getIntProperty("EMBEDDINGS_THREADS_MAX", 10))
+            .queueCapacity(ConfigProperties.getIntProperty("EMBEDDINGS_THREADS_QUEUE", 10000))
             .rejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy())
             .build();
+
+
     final Lazy<DotSubmitter> dotSubmitter = Lazy.of(() -> DotConcurrentFactory.getInstance().getSubmitter("embeddingsSubmitter", submitterConfig));
 
+    final static int SPLIT_AT_WORDS = ConfigProperties.getIntProperty("SPLIT_AT_WORDS", 65);
 
     EmbeddingsAPIImpl(AppConfig config) {
 
@@ -61,11 +59,11 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
     @Override
     public void generateEmbeddingsforContent(Contentlet contentlet, String indexName) {
-        generateEmbeddingsforContent(contentlet, Optional.empty(),indexName);
+        generateEmbeddingsforContent(contentlet, Optional.empty(), indexName);
     }
 
     @Override
-    public int deleteEmbedding(EmbeddingsDTO dto) {
+    public int deleteEmbedding(@NotNull EmbeddingsDTO dto) {
 
 
         return EmbeddingsDB.impl.get().deleteEmbeddings(dto);
@@ -74,30 +72,23 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     }
 
     @Override
-    public List<EmbeddingsDTO> searchEmbedding(EmbeddingsDTO searcher) {
-
-        List<Float> queryEmbeddings = generateEmbeddingsforString(searcher.query);
+    public void generateEmbeddingsforContent(@NotNull Contentlet contentlet, Optional<Field> tryField, String indexName) {
 
 
-        EmbeddingsDTO newSearcher = EmbeddingsDTO.copy(searcher).withEmbeddings(queryEmbeddings)
-                .build();
+        final Optional<Field> field = tryField.isPresent() ? tryField : ContentToStringUtil.impl.get().guessWhatFieldToIndex(contentlet);
+        final Optional<String> content = ContentToStringUtil.impl.get().parseField(contentlet, field);
 
-        return EmbeddingsDB.impl.get().searchEmbeddings(newSearcher);
-
-    }
-
-    @Override
-    public void generateEmbeddingsforContent(Contentlet contentlet, Optional<Field> field, String indexName) {
 
         dotSubmitter.get().submit(() -> {
+
             try {
 
-                final Tuple2<String, String> fieldThenContent = field.isPresent() ? Tuple.of(field.get().variable(), ContentToStringUtil.impl.get().parseField(field.get(), contentlet.getStringProperty(field.get().variable()))) : ContentToStringUtil.impl.get().guessWhatToIndex(contentlet);
-
-                if (UtilMethods.isEmpty(() -> fieldThenContent._2)) {
-                    Logger.info(EmbeddingsAPIImpl.class, "No content found for contentlet id:" + contentlet.getIdentifier() + " title:" + contentlet.getTitle());
+                if (content.isEmpty() || UtilMethods.isEmpty(content.get())) {
+                    Logger.info(EmbeddingsAPIImpl.class, "Skipping/No Content for contentlet:" + contentlet.getContentType().variable() + " id:" + contentlet.getIdentifier() + " title:" + contentlet.getTitle());
+                    return;
                 }
-                final String cleanContent = Strings.join(fieldThenContent._2.trim().split("\\s+"), " ");
+
+                final String cleanContent = String.join(" ", content.get().trim().split("\\s+"));
 
                 // split into sentences
                 BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.getDefault());
@@ -107,7 +98,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
                 int start = iterator.first();
                 for (int end = iterator.next(); end != BreakIterator.DONE; start = end, end = iterator.next()) {
                     buffer.append(cleanContent.substring(start, end) + " ");
-                    if (buffer.toString().split("\\s+").length > 65) {
+                    if (buffer.toString().split("\\s+").length > SPLIT_AT_WORDS) {
                         paragraphs.add(buffer.toString());
                         buffer.setLength(0);
                     }
@@ -124,23 +115,71 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             } catch (Throwable e) {
                 Logger.error(EmbeddingsAPIImpl.class, e.getMessage(), e);
 
+
             }
 
         });
     }
 
-    private void saveEmbedding(String content,Contentlet contentlet, Optional<Field> field,String indexName ){
+    @Override
+    public List<Float> generateEmbeddingsforString(String stringToEncode) {
+        List<Integer> encodedList = EncodingUtil.encoding.get().encode(stringToEncode);
+        List<Float> embeddings = new ArrayList<>();
+        batches(encodedList, 8000).forEach(l -> embeddings.addAll(generateEmbeddingsforTokens(l)));
+        return embeddings;
+    }
+
+    @Override
+    public List<EmbeddingsDTO> searchEmbedding(EmbeddingsDTO searcher) {
+
+        List<Float> queryEmbeddings = generateEmbeddingsforString(searcher.query);
+
+
+        EmbeddingsDTO newSearcher = EmbeddingsDTO.copy(searcher).withEmbeddings(queryEmbeddings)
+                .build();
+
+        return EmbeddingsDB.impl.get().searchEmbeddings(newSearcher);
+
+    }
+
+    @Override
+    public void dropEmbeddingsTable() {
+
+
+        EmbeddingsDB.impl.get().dropVectorDbTable();
+
+
+    }
+
+    @Override
+    public void initEmbeddingsTable() {
+
+        EmbeddingsDB.impl.get().initVectorExtension();
+        EmbeddingsDB.impl.get().initVectorDbTable();
+
+
+    }
+
+    <T> Stream<List<T>> batches(List<T> source, int length) {
+        if (length <= 0) throw new IllegalArgumentException("length = " + length);
+        int size = source.size();
+        if (size <= 0) return Stream.empty();
+        int fullChunks = (size - 1) / length;
+        return IntStream.range(0, fullChunks + 1).mapToObj(n -> source.subList(n * length, n == fullChunks ? size : (n + 1) * length));
+    }
+
+    private void saveEmbedding(@NotNull String content, @NotNull Contentlet contentlet, Optional<Field> field, String indexName) {
         final String fieldVar = field.isPresent() ? field.get().variable() : contentlet.getContentType().variable();
-        if(UtilMethods.isEmpty(content)){
+        if (UtilMethods.isEmpty(content)) {
             return;
         }
 
         List<Integer> tokens = EncodingUtil.encoding.get().encode(content);
-        if(tokens.isEmpty()){
-            Logger.debug(DotEmbeddingsActionlet.class, "NO TOKENS for " + contentlet.getContentType().variable() + "." + fieldVar + " : " + content);
+        if (tokens.isEmpty()) {
+            Logger.debug(this.getClass(), "NO TOKENS for " + contentlet.getContentType().variable() + "." + fieldVar + " : " + content);
             return;
         }
-        Logger.info(DotEmbeddingsActionlet.class, "found content for " + contentlet.getContentType().variable() + "." + fieldVar + " : " + content);
+        Logger.info(this.getClass(), "found content for " + contentlet.getContentType().variable() + "." + fieldVar + " : " + content);
         List<Float> embeddings = generateEmbeddingsforTokens(tokens);
 
         EmbeddingsDTO embeddingsDTO = new EmbeddingsDTO.Builder()
@@ -160,54 +199,9 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         EmbeddingsDB.impl.get().saveEmbeddings(embeddingsDTO);
 
 
-
-
     }
 
-
-    private static String API_KEY=null;
-    private static long lastAPIKeyUpdate=0;
-    String getAPIKey(){
-        if(API_KEY == null || System.currentTimeMillis() > lastAPIKeyUpdate+60000){
-            synchronized (this.getClass()) {
-                if(API_KEY == null || System.currentTimeMillis() > lastAPIKeyUpdate+60000) {
-                    API_KEY = config.getApiKey();
-                    lastAPIKeyUpdate = System.currentTimeMillis();
-                }
-            }
-        }
-        return API_KEY;
-
-    }
-
-
-
-    @Override
-    public List<Float> generateEmbeddingsforString(String stringToEncode) {
-        List<Integer> encodedList = EncodingUtil.encoding.get().encode(stringToEncode);
-        List<Float> embeddings = new ArrayList<>();
-        batches(encodedList, 8000).forEach(l -> embeddings.addAll(generateEmbeddingsforTokens(l)));
-        return embeddings;
-    }
-
-    @Override
-    public void dropEmbeddingsTable() {
-
-
-        EmbeddingsDB.impl.get().dropVectorDbTable();
-
-
-    }
-
-    <T> Stream<List<T>> batches(List<T> source, int length) {
-        if (length <= 0) throw new IllegalArgumentException("length = " + length);
-        int size = source.size();
-        if (size <= 0) return Stream.empty();
-        int fullChunks = (size - 1) / length;
-        return IntStream.range(0, fullChunks + 1).mapToObj(n -> source.subList(n * length, n == fullChunks ? size : (n + 1) * length));
-    }
-
-    List<Float> generateEmbeddingsforTokens(List<Integer> tokens) {
+    List<Float> generateEmbeddingsforTokens(@NotNull List<Integer> tokens) {
 
         JSONObject json = new JSONObject();
         json.put("model", ConfigProperties.getProperty("OPEN_AI_MODEL", "text-embedding-ada-002"));
@@ -226,24 +220,8 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         }).collect(Collectors.toList());
     }
 
-    @Override
-    public void initEmbeddingsTable() {
-
-        EmbeddingsDB.impl.get().initVectorExtension();
-        EmbeddingsDB.impl.get().initVectorDbTable();
-
-
-    }
-
-    public List<Contentlet> search(@NotNull String prompt, String contentType, String fieldVar) {
-        if (UtilMethods.isEmpty(prompt)) return List.of();
-        prompt = UtilMethods.truncatify(prompt, 1024);
-        // load embeddings for query
-        List<Float> embeddings = generateEmbeddingsforString(prompt);
-
-
-        return List.of();
-
+    String getAPIKey() {
+        return config.getApiKey();
 
     }
 

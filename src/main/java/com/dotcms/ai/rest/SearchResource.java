@@ -12,7 +12,6 @@ import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
-import io.vavr.control.Try;
 import org.glassfish.jersey.server.JSONP;
 
 import javax.servlet.http.HttpServletRequest;
@@ -27,9 +26,12 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Call
@@ -37,6 +39,7 @@ import java.util.Map;
 @Path("/v1/ai/search")
 public class SearchResource {
 
+    final static String MATCHES = "dotMatches";
 
     @GET
     @JSONP
@@ -54,8 +57,6 @@ public class SearchResource {
                                       @DefaultValue("<=>") @QueryParam("operator") String operator,
                                       @QueryParam("language") String language,
                                       @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
-
-
 
 
         SummarizeForm form = new SummarizeForm.Builder()
@@ -76,9 +77,9 @@ public class SearchResource {
         return searchByPost(request, response, form);
     }
 
+
     @POST
     @JSONP
-
     @Produces(MediaType.APPLICATION_JSON)
     public final Response searchByPost(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
                                        SummarizeForm form
@@ -92,24 +93,31 @@ public class SearchResource {
 
         List<EmbeddingsDTO> searchResults = EmbeddingsAPI.impl().searchEmbedding(searcher);
 
-        Map<String,Object> reducedResults = new LinkedHashMap<>();
+        Map<String, Object> reducedResults = new LinkedHashMap<>();
 
-
+        Set<String> fields = Arrays.stream(form.fields).collect(Collectors.toSet());
+        fields.add(MATCHES);
 
         long startTime = System.currentTimeMillis();
 
         for (EmbeddingsDTO result : searchResults) {
 
-            JSONObject contentObject = (JSONObject) reducedResults.getOrDefault(result.inode,ContentResource.contentletToJSON(APILocator.getContentletAPI().find(result.inode, user, true), request, response, "false", user, false));
-            JSONArray matches = contentObject.optJSONArray("matches")==null ? new JSONArray() : contentObject.optJSONArray("matches");
-                JSONObject match = new JSONObject();
-                match.put("distance", result.threshold);
-                match.put("extractedText", result.extractedText);
-                matches.add(match);
-            contentObject.put("matches", matches);
+            JSONObject contentObject = (JSONObject) reducedResults.getOrDefault(result.inode, ContentResource.contentletToJSON(APILocator.getContentletAPI().find(result.inode, user, true), request, response, "false", user, false));
 
-            if(!reducedResults.containsKey(result.inode)) {
-                reducedResults.put(result.inode,contentObject);
+            if (fields.size() > 1) {
+                contentObject.keySet().removeIf(k->!fields.contains(k));
+            }
+
+
+            JSONArray matches = contentObject.optJSONArray(MATCHES) == null ? new JSONArray() : contentObject.optJSONArray(MATCHES);
+            JSONObject match = new JSONObject();
+            match.put("distance", result.threshold);
+            match.put("extractedText", result.extractedText);
+            matches.add(match);
+            contentObject.put(MATCHES, matches);
+
+            if (!reducedResults.containsKey(result.inode)) {
+                reducedResults.put(result.inode, contentObject);
             }
 
         }

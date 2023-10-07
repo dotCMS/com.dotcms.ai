@@ -9,6 +9,8 @@ import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import com.pgvector.PGvector;
 import io.vavr.Lazy;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.sql.Connection;
@@ -22,11 +24,19 @@ import java.util.Map;
 public class EmbeddingsDB {
 
 
+    public static final Lazy<EmbeddingsDB> impl = Lazy.of(EmbeddingsDB::new);
+
+
+    private EmbeddingsDB() {
+        initVectorExtension();
+        initVectorDbTable();
+
+    }
+
     public void initVectorExtension() {
         Logger.info(EmbeddingsDB.class, "Adding PGVector extension to database");
         runSQL(EmbeddingsSQL.INIT_VECTOR_EXTENSION);
     }
-
 
     public void initVectorDbTable() {
         Logger.info(EmbeddingsDB.class, "Adding table dot_embeddings to database");
@@ -47,34 +57,9 @@ public class EmbeddingsDB {
 
     }
 
-
-
-    void countVectorDbSize() {
-        //ToDo
-
-    }
-
-
     public void runSQL(String sql) {
         try (Connection db = getPGVectorConnection()) {
-            new DotConnect().setSQL(sql).loadResult();
-        } catch (SQLException | DotDataException e) {
-            throw new DotRuntimeException(e);
-        }
-    }
-
-
-    public void runSQL(DotConnect dotConnect) {
-        try (Connection db = getPGVectorConnection()) {
-            dotConnect.loadResult(db);
-        } catch (SQLException | DotDataException e) {
-            throw new DotRuntimeException(e);
-        }
-    }
-
-    public List<Map<String, Object>> loadResults(String sql) {
-        try (Connection db = getPGVectorConnection()) {
-            return new DotConnect().setSQL(sql).loadObjectResults();
+            new DotConnect().setSQL(sql).loadResult(db);
         } catch (SQLException | DotDataException e) {
             throw new DotRuntimeException(e);
         }
@@ -85,6 +70,8 @@ public class EmbeddingsDB {
         PGvector.addVectorType(conn);
         return conn;
     }
+
+
 
 
     public void saveEmbeddings(EmbeddingsDTO embeddings) {
@@ -112,48 +99,14 @@ public class EmbeddingsDB {
         }
     }
 
-
     public List<EmbeddingsDTO> searchEmbeddings(EmbeddingsDTO dto) {
 
 
-        StringBuilder sql = new StringBuilder();
-        sql.append(EmbeddingsSQL.SEARCH_EMBEDDINGS_SELECT_PREFIX.replace("{operator}", dto.operator));
+        StringBuilder sql = new StringBuilder(EmbeddingsSQL.SEARCH_EMBEDDINGS_SELECT_PREFIX.replace("{operator}", dto.operator));
 
-        List<Object> params = new ArrayList<>();
+        List<Object> params = appendParams(sql, dto);
 
-        params.add(new PGvector(ArrayUtils.toPrimitive(dto.embeddings)));
-
-
-        if (UtilMethods.isSet(dto.inode)) {
-            sql.append(" and inode=? ");
-            params.add(dto.inode);
-        }
-        if (UtilMethods.isSet(dto.identifier)) {
-            sql.append(" and identifier=? ");
-            params.add(dto.identifier);
-        }
-        if (dto.language > 0) {
-            sql.append(" and language=? ");
-            params.add(dto.language);
-        }
-        if (UtilMethods.isSet(dto.contentType)) {
-            sql.append(" and content_type=? ");
-            params.add(dto.contentType);
-        }
-        if (UtilMethods.isSet(dto.field)) {
-            sql.append(" and field_var=? ");
-            params.add(dto.field);
-        }
-        if (UtilMethods.isSet(dto.host)) {
-            sql.append(" and host=? ");
-            params.add(dto.host);
-        }
-        if (UtilMethods.isSet(dto.indexName)) {
-            sql.append(" and index_name=? ");
-            params.add(dto.indexName);
-        }
-
-
+        params.add(0, new PGvector(ArrayUtils.toPrimitive(dto.embeddings)));
 
 
         sql.append(" ) data where distance <= ? ");
@@ -164,12 +117,10 @@ public class EmbeddingsDB {
         params.add(dto.offset);
 
 
-
-
         try (Connection conn = getPGVectorConnection();
              PreparedStatement statement = conn.prepareStatement(sql.toString())) {
 
-            for (int  i = 0; i < params.size(); i++) {
+            for (int i = 0; i < params.size(); i++) {
                 statement.setObject((i + 1), params.get(i));
             }
 
@@ -200,46 +151,15 @@ public class EmbeddingsDB {
 
     }
 
-
     public int deleteEmbeddings(EmbeddingsDTO dto) {
 
 
-        StringBuilder builder = new StringBuilder("delete from dot_embeddings where true ");
-
-        List<Object> params = new ArrayList<>();
-        if (UtilMethods.isSet(dto.inode)) {
-            builder.append(" and inode=? ");
-            params.add(dto.inode);
-        }
-        if (UtilMethods.isSet(dto.identifier)) {
-            builder.append(" and identifier=? ");
-            params.add(dto.identifier);
-        }
-        if (UtilMethods.isSet(dto.indexName)) {
-            builder.append(" and index_name=? ");
-            params.add(dto.indexName);
-        }
-
-        if (dto.language > 0) {
-            builder.append(" and language=? ");
-            params.add(dto.language);
-        }
-        if (UtilMethods.isSet(dto.contentType)) {
-            builder.append(" and content_type=? ");
-            params.add(dto.contentType);
-        }
-        if (UtilMethods.isSet(dto.field)) {
-            builder.append(" and field_var=? ");
-            params.add(dto.field);
-        }
-        if (UtilMethods.isSet(dto.host)) {
-            builder.append(" and host=? ");
-            params.add(dto.host);
-        }
+        StringBuilder sql = new StringBuilder("delete from dot_embeddings where true ");
+        List<Object> params = appendParams(sql, dto);
         Logger.info(EmbeddingsDB.class, "deleting embeddings:" + dto);
 
         try (Connection conn = getPGVectorConnection();
-             PreparedStatement statement = conn.prepareStatement(builder.toString())) {
+             PreparedStatement statement = conn.prepareStatement(sql.toString())) {
 
             for (int i = 0; i < params.size(); i++) {
                 statement.setObject((i + 1), params.get(i));
@@ -252,24 +172,69 @@ public class EmbeddingsDB {
         }
     }
 
+    public List<Tuple2<String,Long>> countEmbeddings(EmbeddingsDTO dto) {
+        StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_PREFIX);
+        List<Object> params = appendParams(sql, dto);
 
 
+        try (Connection conn = getPGVectorConnection();
+             PreparedStatement statement = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                statement.setObject((i + 1), params.get(i));
+            }
+            List<Tuple2<String,Long>> results = new ArrayList<>();
+            ResultSet rs = statement.executeQuery();
+            while(rs.next()) {
+                results.add(Tuple.of(rs.getString("index_name"), rs.getLong("test")));
 
 
+            }
+            return results;
+        } catch (SQLException e) {
+            throw new DotRuntimeException(e);
+        }
 
-
-    private EmbeddingsDB() {
-        initVectorExtension();
-        initVectorDbTable();
 
     }
 
-    long countEmbeddings() {
-        return (Long) loadResults(EmbeddingsSQL.COUNT_EMBEDDINGS).get(0).get("test");
+
+    List<Object> appendParams(StringBuilder sql, EmbeddingsDTO dto){
+        List<Object> params = new ArrayList<>();
+
+        if (UtilMethods.isSet(dto.inode)) {
+            sql.append(" and inode=? ");
+            params.add(dto.inode);
+        }
+        if (UtilMethods.isSet(dto.identifier)) {
+            sql.append(" and identifier=? ");
+            params.add(dto.identifier);
+        }
+        if (dto.language > 0) {
+            sql.append(" and language=? ");
+            params.add(dto.language);
+        }
+        if (UtilMethods.isSet(dto.contentType)) {
+            sql.append(" and content_type=? ");
+            params.add(dto.contentType);
+        }
+        if (UtilMethods.isSet(dto.field)) {
+            sql.append(" and field_var=? ");
+            params.add(dto.field);
+        }
+        if (UtilMethods.isSet(dto.host)) {
+            sql.append(" and host=? ");
+            params.add(dto.host);
+        }
+        if (UtilMethods.isSet(dto.indexName)) {
+            sql.append(" and index_name=? ");
+            params.add(dto.indexName);
+        }
+        return params;
+
+
+
     }
-
-
-    public static final Lazy<EmbeddingsDB> impl = Lazy.of(EmbeddingsDB::new);
 
 
 }

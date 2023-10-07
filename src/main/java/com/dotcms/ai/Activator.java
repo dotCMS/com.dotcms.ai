@@ -38,27 +38,22 @@ import org.osgi.framework.BundleContext;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.Map;
 
 public class Activator extends GenericBundleActivator {
 
+    static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
+    private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server" + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
     Class[] clazzes = {DotAIResource.class, EmbeddingsResource.class, SummarizeResource.class, SearchResource.class};
-
     private LoggerContext pluginLoggerContext;
-
-    private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server"
-            + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
 
     public void start(BundleContext context) throws Exception {
         //Initializing log4j...
         LoggerContext dotcmsLoggerContext = Log4jUtil.getLoggerContext();
         //Initialing the log4j context of this plugin based on the dotCMS logger context
-        pluginLoggerContext = (LoggerContext) LogManager.getContext(this.getClass().getClassLoader(),
-                false,
-                dotcmsLoggerContext,
-                dotcmsLoggerContext.getConfigLocation());
-
+        pluginLoggerContext = (LoggerContext) LogManager.getContext(this.getClass().getClassLoader(), false, dotcmsLoggerContext, dotcmsLoggerContext.getConfigLocation());
 
 
         // set up embeddings table
@@ -87,12 +82,68 @@ public class Activator extends GenericBundleActivator {
         initializeServices(context);
 
 
-        for(Class clazz : clazzes) {
+        for (Class clazz : clazzes) {
             Logger.info(this.getClass(), "Adding new Restful Service:" + clazz.getSimpleName());
             RestServiceUtil.addResource(clazz);
         }
 
 
+    }
+
+    public void stop(BundleContext context) throws Exception {
+
+        deleteYml();
+
+        for (Class clazz : clazzes) {
+            Logger.info(this.getClass(), "Removing new Restful Service:" + clazz.getSimpleName());
+            RestServiceUtil.removeResource(clazz);
+        }
+
+
+        //Unregister all the bundle services
+        unregisterServices(context);
+
+        unregisterViewToolServices();
+
+
+        unsubscribeEmbeddingsListener();
+        EmbeddingsAPI.impl().shutdown();
+
+        //Shutting down log4j in order to avoid memory leaks
+        Log4jUtil.shutdown(pluginLoggerContext);
+    }
+
+    /**
+     * Deletes the App yaml to the apps directory and refreshes the apps
+     */
+    private void deleteYml() throws IOException {
+
+        Logger.info(this.getClass().getName(), "deleting the YAML File:" + installedAppYaml);
+
+        installedAppYaml.delete();
+        CacheLocator.getAppsCache().clearCache();
+    }
+
+    private void unsubscribeEmbeddingsListener() {
+        APILocator.getLocalSystemEventsAPI().unsubscribe(LISTENER);
+    }
+
+    /**
+     * copies the App yaml to the apps directory and refreshes the apps
+     */
+    private void copyAppYml() throws IOException {
+
+        Logger.info(this.getClass().getName(), "copying YAML File:" + installedAppYaml);
+
+        if (!installedAppYaml.exists()) {
+            installedAppYaml.createNewFile();
+        }
+
+        try (final InputStream in = this.getClass().getResourceAsStream("/" + AppKeys.APP_YAML_NAME); final OutputStream out = Files.newOutputStream(installedAppYaml.toPath())) {
+            IOUtils.copy(in, out);
+        }
+
+        CacheLocator.getAppsCache().clearCache();
     }
 
     public void createLanguageVariables() {
@@ -125,14 +176,19 @@ public class Activator extends GenericBundleActivator {
         });
     }
 
+    private void subscribeEmbeddingsListener() {
+
+        APILocator.getLocalSystemEventsAPI().subscribe(LISTENER);
+
+    }
+
     private boolean languageVariableExists(String key, int languageId, User systemUser) {
         LanguageVariableAPI languageVariableAPI = new LanguageVariableAPIImpl();
         String langVar = languageVariableAPI.getLanguageVariable(key, languageId, systemUser);
         return langVar != null && !langVar.equals(key);
     }
 
-    private void createLanguageVariable(String key, String value, int languageId, ContentletAPI contentletAPI, User systemUser)
-            throws DotDataException, DotSecurityException {
+    private void createLanguageVariable(String key, String value, int languageId, ContentletAPI contentletAPI, User systemUser) throws DotDataException, DotSecurityException {
         ContentType languageVariableContentType = APILocator.getContentTypeAPI(systemUser).find(LanguageVariableAPI.LANGUAGEVARIABLE);
         Map<String, Field> fields = languageVariableContentType.fieldMap();
 
@@ -160,72 +216,6 @@ public class Activator extends GenericBundleActivator {
         languageVariable.setBoolProperty(Contentlet.DISABLE_WORKFLOW, true);
         contentletAPI.publish(languageVariable, systemUser, Boolean.FALSE);
         Logger.info(this, "Key/Value has been created for key: " + key);
-    }
-
-
-
-    public void stop(BundleContext context) throws Exception {
-
-        deleteYml();
-
-        for(Class clazz : clazzes) {
-            Logger.info(this.getClass(), "Removing new Restful Service:" + clazz.getSimpleName());
-            RestServiceUtil.removeResource(clazz);
-        }
-
-
-        //Unregister all the bundle services
-        unregisterServices(context);
-
-        unregisterViewToolServices();
-
-
-        unsubscribeEmbeddingsListener();
-        EmbeddingsAPI.impl().shutdown();
-
-        //Shutting down log4j in order to avoid memory leaks
-        Log4jUtil.shutdown(pluginLoggerContext);
-    }
-
-    /**
-     * copies the App yaml to the apps directory and refreshes the apps
-     */
-    private void copyAppYml() throws IOException {
-
-        Logger.info(this.getClass().getName(), "copying YAML File:" + installedAppYaml);
-
-        if (!installedAppYaml.exists()) {
-            installedAppYaml.createNewFile();
-        }
-
-        try (final InputStream in = this.getClass().getResourceAsStream("/" + AppKeys.APP_YAML_NAME)) {
-            IOUtils.copy(in, Files.newOutputStream(installedAppYaml.toPath()));
-        }
-
-        CacheLocator.getAppsCache().clearCache();
-    }
-
-    /**
-     * Deletes the App yaml to the apps directory and refreshes the apps
-     */
-    private void deleteYml() throws IOException {
-
-        Logger.info(this.getClass().getName(), "deleting the YAML File:" + installedAppYaml);
-
-        installedAppYaml.delete();
-        CacheLocator.getAppsCache().clearCache();
-    }
-
-    static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
-
-    private void subscribeEmbeddingsListener() {
-
-        APILocator.getLocalSystemEventsAPI().subscribe(LISTENER);
-
-    }
-
-    private void unsubscribeEmbeddingsListener() {
-        APILocator.getLocalSystemEventsAPI().unsubscribe(LISTENER);
     }
 
 }

@@ -1,15 +1,19 @@
 package com.dotcms.ai.rest;
 
 import com.dotcms.ai.api.EmbeddingsAPI;
+import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.db.EmbeddingsDTO;
+import com.dotcms.ai.rest.forms.SummarizeForm;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.rest.WebResource;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.Role;
 import com.dotmarketing.common.model.ContentletSearch;
 import com.dotmarketing.exception.DotDataException;
+import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
+import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
@@ -18,14 +22,17 @@ import org.glassfish.jersey.server.JSONP;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,19 +67,11 @@ public class EmbeddingsResource {
     ) throws DotDataException, DotSecurityException {
         // force authentication
         final User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
-        final String inode = sanitizeParams(json.optString("inode"));
-        final String identifier = sanitizeParams(json.optString("identifier"));
-        final long language = json.optLong("language", APILocator.getLanguageAPI().getDefaultLanguage().getId());
-        final int limit = json.optInt("limit", 1000);
-        final int offset = json.optInt("offset");
+        final int limit = json.optInt("limit", 1000) < 1 ? 1000 : json.optInt("limit", 1000);
+        final int offset = json.optInt("offset", 0) < 0 ? 0 : json.optInt("offset", 0);
         final String fieldVar = json.optString("fieldVar");
         final String indexName = json.optString("indexName", "default");
-
-        String query = json.optString("query") != null
-                ? json.optString("query")
-                : UtilMethods.isSet(inode)
-                ? " +inode:" + inode
-                : " +identifier:" + identifier + " +language:" + language;
+        final String query = getQuery(json);
 
 
         long startTime = System.currentTimeMillis();
@@ -80,31 +79,60 @@ public class EmbeddingsResource {
         if (UtilMethods.isEmpty(query)) {
             return Response.ok("query is required").build();
         }
+        try {
+            int added = 0;
+            int newOffset = offset;
+            for (int i = 0; i < 10000; i++) {
+
+                // searchIndex(String luceneQuery, int limit, int offset, String sortBy, User user, boolean respectFrontendRoles)
+                List<ContentletSearch> searchResults = APILocator.getContentletAPI().searchIndex(query, limit, newOffset, "moddate", user, false);
+                if (searchResults.isEmpty()) {
+                    break;
+                }
+                newOffset += limit;
 
 
-        // searchIndex(String luceneQuery, int limit, int offset, String sortBy, User user, boolean respectFrontendRoles)
-        List<ContentletSearch> searchResults = APILocator.getContentletAPI().searchIndex(query, limit, offset, "moddate", user, false);
-
-        int good, bad = 0;
-        for (ContentletSearch searcher : searchResults) {
-            Contentlet contentlet = APILocator.getContentletAPI().find(searcher.getInode(), user, false);
-            Optional<Field> field = contentlet.getContentType().fields().stream().filter(f -> f.variable().equalsIgnoreCase(fieldVar)).findFirst();
-            try {
-                EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, field, indexName);
-            } catch (Exception e) {
-
+                for (ContentletSearch results : searchResults) {
+                    Contentlet contentlet = APILocator.getContentletAPI().find(results.getInode(), user, false);
+                    if(UtilMethods.isEmpty(()->contentlet.getContentType())){
+                        continue;
+                    }
+                    Optional<Field> field = contentlet.getContentType().fields().stream().filter(f -> f.variable().equalsIgnoreCase(fieldVar)).findFirst();
+                    EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, field, indexName);
+                    if (++added >= limit) {
+                        break;
+                    }
+                }
             }
+
+            long totalTime = System.currentTimeMillis() - startTime;
+
+
+            Map<String, Object> map = Map.of("timeToEmbeddings", totalTime + "ms", "totalToEmbed", added, "indexName", indexName);
+            ResponseBuilder builder = Response.ok(map, MediaType.APPLICATION_JSON);
+
+            return builder.build();
+        }catch(Throwable e){
+            Logger.error(this.getClass(), e.getMessage(), e);
+            return Response.status(500).entity(Map.of("error", e.getMessage())).build();
         }
 
-        long totalTime = System.currentTimeMillis() - startTime;
-
-
-        Map<String, Object> map = Map.of("timeToEmbeddings", totalTime + "ms", "totalToEmbed", searchResults.size(), "indexName", indexName);
-        ResponseBuilder builder = Response.ok(map, MediaType.APPLICATION_JSON);
-
-        return builder.build();
-
     }
+
+    String getQuery(JSONObject json) {
+        StringBuilder builder = new StringBuilder(json.optString("query", ""));
+        if (UtilMethods.isSet(json.optString("inode"))) {
+            builder.append(" +inode:" + json.optString("inode"));
+        }
+        if (UtilMethods.isSet(json.optString("identifier"))) {
+            builder.append(" +identifier:" + json.optString("identifier"));
+        }
+        if (UtilMethods.isSet(json.optString("language"))) {
+            builder.append(" +language:" + json.optString("language"));
+        }
+        return builder.toString();
+    }
+
 
     String sanitizeParams(String in) {
         if (in == null || allowedPattern.matcher(in).matches()) {
@@ -151,6 +179,46 @@ public class EmbeddingsResource {
         EmbeddingsAPI.impl().dropEmbeddingsTable();
         EmbeddingsAPI.impl().initEmbeddingsTable();
         return Response.ok(Map.of("created", true)).build();
+
+    }
+
+    @GET
+    @JSONP
+    @Path("/count")
+    @Produces(MediaType.APPLICATION_JSON)
+    public final Response count(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
+
+                                @QueryParam("site") String site,
+                                @QueryParam("contentType") String contentType,
+                                @QueryParam("indexName") String indexName,
+                                @QueryParam("language") String language,
+                                @QueryParam("identifier") String identifier,
+                                @QueryParam("inode") String inode,
+                                @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
+
+        SummarizeForm form = new SummarizeForm.Builder().contentType(contentType).site(site).language(language).fieldVar(fieldVar).indexName(indexName).query("NOT USED").build();
+        return count(request, response, form);
+
+
+    }
+
+    @POST
+    @JSONP
+    @Path("/count")
+    @Produces(MediaType.APPLICATION_JSON)
+    public final Response count(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
+                                SummarizeForm form) throws DotDataException, DotSecurityException {
+        new WebResource.InitBuilder(request, response)
+                .requiredBackendUser(true)
+                .requiredRoles(Role.CMS_ADMINISTRATOR_ROLE)
+                .requestAndResponse(request, response)
+                .rejectWhenNoUser(true)
+                .init();
+
+        EmbeddingsDTO dto = EmbeddingsDTO.from(form).build();
+
+
+        return Response.ok(Map.of("embeddingsCount", EmbeddingsDB.impl.get().countEmbeddings(dto))).build();
 
     }
 }

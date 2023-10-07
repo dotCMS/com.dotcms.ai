@@ -1,9 +1,13 @@
 package com.dotcms.ai.util;
 
+import com.dotmarketing.util.UtilMethods;
 import io.vavr.control.Try;
 
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * This class reads configuration values from config.properties file.
@@ -25,9 +29,15 @@ public class ConfigProperties {
 
     public static String getProperty(String key, String defaultValue) {
         return System.getenv(envKey(key)) != null ? System.getenv(envKey(key)) : properties.getProperty(key) != null ? properties.getProperty(key) : defaultValue;
-
     }
 
+    public static String[] getArrayProperty(String key, String[] defaultValue) {
+        String notSplit = getProperty(key);
+        if (UtilMethods.isEmpty(notSplit)) {
+            return defaultValue;
+        }
+        return Arrays.stream(notSplit.split(",")).filter(s -> UtilMethods.isSet(s)).map(s -> s.trim()).collect(Collectors.toList()).toArray(new String[0]);
+    }
     public static String getProperty(String key) {
         return getProperty(key, null);
     }

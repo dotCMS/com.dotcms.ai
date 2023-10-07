@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.vavr.control.Try;
-import joptsimple.internal.Strings;
+
 
 import java.util.Map;
 
@@ -31,7 +31,6 @@ public class SummarizeForm extends Validated {
     public final int searchLimit;
 
     @Min(0)
-    @Max(1000)
     public final int searchOffset;
 
     @Min(128)
@@ -48,7 +47,7 @@ public class SummarizeForm extends Validated {
     public final float threshold;
     public final String operator;
     public final String site;
-
+    public final String[] fields;
     static final Map<String,String> OPERATORS=Map.of("distance", "<->", "cosine", "<=>", "innerProduct", "<#>");
 
 
@@ -58,13 +57,14 @@ public class SummarizeForm extends Validated {
         this.fieldVar = builder.fieldVar;
         this.responseLengthTokens = builder.responseLengthTokens;
         this.stream = builder.stream;
-        this.indexName = builder.indexName;
+        this.indexName = UtilMethods.isSet(builder.indexName) ? builder.indexName : "default";
         this.contentType = builder.contentType;
         this.threshold = builder.threshold;
         this.operator = OPERATORS.getOrDefault(builder.operator, "<=>");
         this.site = builder.site;
         this.language=validateLanguage(builder.language);
         this.searchOffset=builder.searchOffset;
+        this.fields=builder.fields!=null ? builder.fields.trim().split("[\\s+,]") : new String[0];
 
     }
 
@@ -72,7 +72,7 @@ public class SummarizeForm extends Validated {
         if(UtilMethods.isEmpty(query)){
             throw new DotRuntimeException("query cannot be null");
         }
-        return Strings.join(query.trim().split("\\s+"), " ");
+        return String.join(" ", query.trim().split("\\s+"));
     }
     long validateLanguage(String language) {
         return Try.of(()->Long.parseLong(language))
@@ -111,7 +111,7 @@ public class SummarizeForm extends Validated {
         private String contentType;
 
         @JsonSetter(nulls = Nulls.SKIP)
-        private float threshold = .8f;
+        private float threshold = .25f;
 
         @JsonSetter(nulls = Nulls.SKIP)
         private String operator = "cosine";
@@ -119,8 +119,8 @@ public class SummarizeForm extends Validated {
         @JsonSetter(nulls = Nulls.SKIP)
         private String site = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()).getIdentifier();
 
-
-
+        @JsonSetter(nulls = Nulls.SKIP)
+        public String fields;
 
 
         public Builder query(String query) {

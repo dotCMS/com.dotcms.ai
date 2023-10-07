@@ -41,7 +41,7 @@ class EmbeddingsSQL {
     static final String[] CREATE_EMBEDDINGS_IVFFLAT_INDEX = {
             "CREATE INDEX if not exists dot_embeddings_idx3 ON dot_embeddings USING ivfflat (embeddings vector_cosine_ops) WITH (lists = ?);"
     };
-    static final String COUNT_EMBEDDINGS = "select count(*) as test from dot_embeddings";
+    static final String COUNT_EMBEDDINGS_PREFIX = "select count(*) as test, index_name from dot_embeddings group by index_name having true ";
     static final String INSERT_EMBEDDINGS = "insert into dot_embeddings (inode, identifier,language, content_type, field_var, title, extracted_text, host, index_name, token_count, embeddings) values (?,?,?,?,?,?,?,?,?,?,?)";
 
 
