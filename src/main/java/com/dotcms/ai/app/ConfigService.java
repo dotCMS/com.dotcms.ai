@@ -7,6 +7,7 @@ import com.dotmarketing.business.APILocator;
 import com.dotmarketing.util.Logger;
 import com.liferay.util.StringPool;
 import io.vavr.control.Try;
+
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,8 +22,8 @@ public class ConfigService {
     public Optional<AppConfig> config(final Host host) {
 
         final Optional<AppSecrets> appSecrets = Try.of(
-                () -> APILocator.getAppsAPI().getSecrets(AppKeys.APP_KEY, true, host, APILocator.systemUser()))
-            .getOrElse(Optional.empty());
+                        () -> APILocator.getAppsAPI().getSecrets(AppKeys.APP_KEY, true, host, APILocator.systemUser()))
+                .getOrElse(Optional.empty());
 
         if (!appSecrets.isPresent()) {
             Logger.debug(this.getClass().getName(), () -> "App secrets is empty for host: " + (host != null ? host.getHostname() : "NULL"));
@@ -31,21 +32,21 @@ public class ConfigService {
 
         final Map<String, Secret> secrets = appSecrets.get().getSecrets();
         final String apiUrl = Try.of(() -> secrets
-            .get(AppKeys.API_URL.key).getString()).getOrElse(StringPool.BLANK);
+                .get(AppKeys.API_URL.key).getString()).getOrElse(StringPool.BLANK);
         final String apiImageUrl = Try.of(() -> secrets
-            .get(AppKeys.API_IMAGE_URL.key).getString()).getOrElse(StringPool.BLANK);
+                .get(AppKeys.API_IMAGE_URL.key).getString()).getOrElse(StringPool.BLANK);
         final String apiKey = Try.of(() -> secrets
-            .get(AppKeys.API_KEY.key).getString()).getOrElse(StringPool.BLANK);
+                .get(AppKeys.API_KEY.key).getString()).getOrElse(StringPool.BLANK);
         final String rolePrompt = Try.of(() -> secrets
-            .get(AppKeys.ROLE_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+                .get(AppKeys.ROLE_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
         final String textPrompt = Try.of(() -> secrets
-            .get(AppKeys.TEXT_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+                .get(AppKeys.TEXT_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
         final String imagePrompt = Try.of(() -> secrets
-            .get(AppKeys.IMAGE_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+                .get(AppKeys.IMAGE_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
         final String imageSize = Try.of(() -> secrets
-            .get(AppKeys.IMAGE_SIZE.key).getString()).getOrElse(StringPool.BLANK);
+                .get(AppKeys.IMAGE_SIZE.key).getString()).getOrElse(StringPool.BLANK);
         final String model = Try.of(() -> secrets
-            .get(AppKeys.MODEL.key).getString()).getOrElse(StringPool.BLANK);
+                .get(AppKeys.MODEL.key).getString()).getOrElse(StringPool.BLANK);
 
         final String searchSystemPrompt = Try.of(() -> secrets
                 .get(AppKeys.SEARCH_SYSTEM_PROMPT.key).getString()).getOrElse(StringPool.BLANK);

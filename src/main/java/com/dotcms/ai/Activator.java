@@ -74,12 +74,16 @@ public class Activator extends GenericBundleActivator {
         this.registerActionlet(context, new DotEmbeddingsActionlet());
 
 
-        // Add the Embedding Listener
+        // Add the Embedding Listener (this does nothing right now)
         subscribeEmbeddingsListener();
 
+        // Add the test AI portlet
+        String[] xmls = new String[]{"portlet.xml"};
+        registerPortlets( context, xmls );
 
         //Initializing services...
         initializeServices(context);
+
 
 
         for (Class clazz : clazzes) {
