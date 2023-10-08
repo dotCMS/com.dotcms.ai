@@ -21,7 +21,7 @@ class EmbeddingsAPIImplTest {
     @Test
     public void test_embeddings() {
 
-        AppConfig config = new AppConfig(null, null, System.getenv("DOT_OPEN_AI_API_KEY"), null, null, null, null, null);
+        AppConfig config = new AppConfig(null, null, System.getenv("DOT_OPEN_AI_API_KEY"), null, null, null, null, null, null, null);
         List<Float> embeddings = new EmbeddingsAPIImpl(config).generateEmbeddingsforString(testPrompt);
 
 

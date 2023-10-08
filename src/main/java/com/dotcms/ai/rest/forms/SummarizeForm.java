@@ -57,7 +57,7 @@ public class SummarizeForm extends Validated {
         this.fieldVar = builder.fieldVar;
         this.responseLengthTokens = builder.responseLengthTokens;
         this.stream = builder.stream;
-        this.indexName = UtilMethods.isSet(builder.indexName) ? builder.indexName : "default";
+        this.indexName = builder.indexName ;
         this.contentType = builder.contentType;
         this.threshold = builder.threshold;
         this.operator = OPERATORS.getOrDefault(builder.operator, "<=>");
@@ -105,7 +105,7 @@ public class SummarizeForm extends Validated {
         private String fieldVar;
 
         @JsonProperty
-        private String indexName;
+        private String indexName="default";
 
         @JsonProperty
         private String contentType;

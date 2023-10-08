@@ -18,6 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -172,10 +173,10 @@ public class EmbeddingsDB {
         }
     }
 
-    public List<Tuple2<String,Long>> countEmbeddings(EmbeddingsDTO dto) {
+    public Map<String,Long> countEmbeddings(EmbeddingsDTO dto) {
         StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_PREFIX);
         List<Object> params = appendParams(sql, dto);
-
+        sql.append(" group by index_name");
 
         try (Connection conn = getPGVectorConnection();
              PreparedStatement statement = conn.prepareStatement(sql.toString())) {
@@ -183,12 +184,10 @@ public class EmbeddingsDB {
             for (int i = 0; i < params.size(); i++) {
                 statement.setObject((i + 1), params.get(i));
             }
-            List<Tuple2<String,Long>> results = new ArrayList<>();
+            Map<String,Long> results = new HashMap<>();
             ResultSet rs = statement.executeQuery();
             while(rs.next()) {
-                results.add(Tuple.of(rs.getString("index_name"), rs.getLong("test")));
-
-
+                results.put(rs.getString("index_name"), rs.getLong("test"));
             }
             return results;
         } catch (SQLException e) {

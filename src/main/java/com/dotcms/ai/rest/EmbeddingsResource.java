@@ -214,7 +214,7 @@ public class EmbeddingsResource {
                 .requestAndResponse(request, response)
                 .rejectWhenNoUser(true)
                 .init();
-
+        form = (form==null) ? new SummarizeForm.Builder().query("NOT USED").build() : form;
         EmbeddingsDTO dto = EmbeddingsDTO.from(form).build();
 
 

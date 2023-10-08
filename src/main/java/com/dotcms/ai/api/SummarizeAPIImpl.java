@@ -169,7 +169,7 @@ public class SummarizeAPIImpl implements SummarizeAPI {
 
         JSONObject json = buildRequestDataJson(summaryRequest, localResults);
         json.put("stream", true);
-        Try.run(() -> OpenAIRequest.doRequest(config.get().getApiUrl(), "post", config.get().getApiKey(), json.toString(), out)).getOrElseThrow(DotRuntimeException::new);
+        Try.run(() -> OpenAIRequest.streamRequest(config.get().getApiUrl(), config.get().getApiKey(), json.toString(), out)).getOrElseThrow(DotRuntimeException::new);
 
 
     }
