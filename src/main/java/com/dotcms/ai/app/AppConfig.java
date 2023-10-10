@@ -1,35 +1,48 @@
 package com.dotcms.ai.app;
 
+import com.dotcms.ai.util.ConfigProperties;
+import com.dotcms.security.apps.Secret;
+import com.dotmarketing.util.Logger;
+import com.liferay.util.StringPool;
+import io.vavr.control.Try;
+
 import java.io.Serializable;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class AppConfig implements Serializable {
 
+    public final String model;
     private final String apiUrl;
-
     private final String apiImageUrl;
-
     private final String apiKey;
-
     private final String rolePrompt;
-
     private final String textPrompt;
-
     private final String imagePrompt;
-
     private final String imageSize;
+    private final Map<String, Secret> configValues;
 
-    private final String model;
+    public AppConfig(Map<String, Secret> secrets) {
+        this.configValues = secrets.entrySet().stream().filter(e->e.getKey().startsWith("com.dotcms.ai")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        apiUrl = Try.of(() -> secrets.get(AppKeys.API_URL.key).getString()).getOrElse(StringPool.BLANK);
+        apiImageUrl = Try.of(() -> secrets.get(AppKeys.API_IMAGE_URL.key).getString()).getOrElse(StringPool.BLANK);
+        apiKey = Try.of(() -> secrets.get(AppKeys.API_KEY.key).getString()).getOrElse(StringPool.BLANK);
+        rolePrompt = Try.of(() -> secrets.get(AppKeys.ROLE_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+        textPrompt = Try.of(() -> secrets.get(AppKeys.TEXT_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+        imagePrompt = Try.of(() -> secrets.get(AppKeys.IMAGE_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
+        imageSize = Try.of(() -> secrets.get(AppKeys.IMAGE_SIZE.key).getString()).getOrElse(StringPool.BLANK);
+        model = Try.of(() -> secrets.get(AppKeys.MODEL.key).getString()).getOrElse(StringPool.BLANK);
+        Logger.debug(this.getClass().getName(), () -> "apiUrl: " + apiUrl);
+        Logger.debug(this.getClass().getName(), () -> "apiImageUrl: " + apiImageUrl);
+        Logger.debug(this.getClass().getName(), () -> "apiKey: " + apiKey);
+        Logger.debug(this.getClass().getName(), () -> "rolePrompt: " + rolePrompt);
+        Logger.debug(this.getClass().getName(), () -> "textPrompt: " + textPrompt);
+        Logger.debug(this.getClass().getName(), () -> "imagePrompt: " + imagePrompt);
+        Logger.debug(this.getClass().getName(), () -> "imageSize: " + imageSize);
+        Logger.debug(this.getClass().getName(), () -> "model: " + model);
 
-    public AppConfig(String apiUrl, String apiImageUrl, String apiKey, String rolePrompt, String textPrompt, String imagePrompt, String imageSize, String model) {
-        this.apiUrl = apiUrl;
-        this.apiImageUrl = apiImageUrl;
-        this.apiKey = apiKey;
-        this.rolePrompt = rolePrompt;
-        this.textPrompt = textPrompt;
-        this.imagePrompt = imagePrompt;
-        this.imageSize = imageSize;
-        this.model = model;
     }
+
 
     public String getApiUrl() {
         return apiUrl;
@@ -47,6 +60,7 @@ public class AppConfig implements Serializable {
         return rolePrompt;
     }
 
+
     public String getTextPrompt() {
         return textPrompt;
     }
@@ -62,6 +76,63 @@ public class AppConfig implements Serializable {
     public String getModel() {
         return model;
     }
+
+    /**
+     * this is needed to allow for custom config properties to be added to the APP
+     * defaults for the values can
+     *
+     * @param key
+     * @return
+     */
+
+    public String getConfig(AppKeys key) {
+        return getConfig(key, StringPool.BLANK);
+    }
+
+    public String getConfig(AppKeys appKey, String defaultValue) {
+        if (blacklisted(appKey)) {
+            return defaultValue;
+        }
+
+        if (configValues.containsKey(appKey.key)) {
+            return Try.of(() -> configValues.get(appKey.key).getString()).getOrNull();
+        }
+
+        return ConfigProperties.getProperty(appKey.key, defaultValue);
+
+    }
+
+    private boolean blacklisted(AppKeys key) {
+        return !key.key.startsWith("com.dotcms.ai");
+    }
+
+    public int getConfig(AppKeys appKey, int defaultValue) {
+        if (blacklisted(appKey)) {
+            return defaultValue;
+        }
+        if (configValues.containsKey(appKey.key)) {
+            return Try.of(() -> Integer.parseInt(configValues.get(appKey.key).getString())).getOrElse(defaultValue);
+        }
+        return ConfigProperties.getIntProperty(appKey.key, defaultValue);
+    }
+
+    public boolean getConfig(AppKeys appKey, boolean defaultValue) {
+        if (blacklisted(appKey)) {
+            return defaultValue;
+        }
+        if (configValues.containsKey(appKey.key)) {
+            return Try.of(() -> configValues.get(appKey.key).getBoolean()).getOrElse(defaultValue);
+        }
+        return ConfigProperties.getBooleanProperty(appKey.key, defaultValue);
+
+    }
+
+    public String[] getConfig(AppKeys appKey, String[] arrayValue) {
+        String returnValue = getConfig(appKey, String.join(",",arrayValue));
+        return returnValue != null ? returnValue.trim().split("\\s+,") : arrayValue;
+
+    }
+
 
 
 }

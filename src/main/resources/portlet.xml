@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+
+<portlet-app>
+
+    <portlet>
+        <portlet-name>dotAI</portlet-name>
+        <display-name>dotAI</display-name>
+        <portlet-class>com.liferay.portlet.VelocityPortlet</portlet-class>
+        <init-param>
+            <name>view-template</name>
+            <value>/ext/dotai.vtl</value>
+        </init-param>
+        <expiration-cache>0</expiration-cache>
+        <supports>
+            <mime-type>text/html</mime-type>
+        </supports>
+    </portlet>
+
+
+</portlet-app>
