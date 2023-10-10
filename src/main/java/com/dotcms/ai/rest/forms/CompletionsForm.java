@@ -20,8 +20,8 @@ import io.vavr.control.Try;
 
 import java.util.Map;
 
-@JsonDeserialize(builder = SummarizeForm.Builder.class)
-public class SummarizeForm extends Validated {
+@JsonDeserialize(builder = CompletionsForm.Builder.class)
+public class CompletionsForm extends Validated {
 
     @Size(min=1, max = 4096)
     public final String query;
@@ -51,7 +51,7 @@ public class SummarizeForm extends Validated {
     static final Map<String,String> OPERATORS=Map.of("distance", "<->", "cosine", "<=>", "innerProduct", "<#>");
 
 
-    private SummarizeForm(SummarizeForm.Builder builder) {
+    private CompletionsForm(CompletionsForm.Builder builder) {
         this.query = validateBuilderQuery(builder.query);
         this.searchLimit = builder.searchLimit;
         this.fieldVar = builder.fieldVar;
@@ -187,8 +187,8 @@ public class SummarizeForm extends Validated {
             return this;
         }
 
-        public SummarizeForm build() {
-            return new SummarizeForm(this);
+        public CompletionsForm build() {
+            return new CompletionsForm(this);
 
         }
     }

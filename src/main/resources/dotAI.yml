@@ -1,14 +1,23 @@
-name: "ChatGPT"
-description: "Credentials and options for using ChatGPT with dotCMS"
-iconUrl: "https://www.someurl.com"
-allowExtraParameters: false
+name: "OpenAI"
+iconUrl: "https://static.dotcms.com/assets/icons/apps/chatgpt_logo.svg"
+allowExtraParameters: true
+description: |
+  Credentials and options for using OpenAI/ChatGPT with dotCMS.  We recommend you have a single config for all your sites, 
+  by placing all config on the SYSTEM_HOST or provide a configuration PER site. There are a number of config 
+  properties that can be set in the extra parameter fields. You can see their property names here.  
+  
+  https://github.com/dotCMS/com.dotcms.ai/blob/main/src/main/java/com/dotcms/ai/app/AppKeys.java
+  
+  The properties that can be configured from the App in the Extras fields start with `com.dotcms.ai`.
+  
+
 params:
   apiUrl:
     value: "https://api.openai.com/v1/chat/completions"
     hidden: false
     type: "STRING"
     label: "API URL"
-    hint: "ChatGPT API URL address"
+    hint: "Completions API URL address.  This is "
     required: true
   apiImageUrl:
     value: "https://api.openai.com/v1/images/generations"
@@ -66,17 +75,3 @@ params:
     label: "Model"
     hint: "Model used to generate ChatGPT API response."
     required: true
-  searchSystemPrompt:
-    value: "You concisely answer questions based on text that is provided to you."
-    hidden: false
-    type: "STRING"
-    label: "Search Results System Prompt"
-    hint: "A prompt that guides the action and voice the AI will use in the response."
-    required: false
-  searchTextPrompt:
-    value: "Answer this question\n\"${query}?\"\n\nby summarizing the following text:\n\n${supportingText}"
-    hidden: false
-    type: "STRING"
-    label: "Search Results Text Prompt"
-    hint: "The prompt that will generate the response. The ${query} will rewritten with the user's question/search and the ${supportingText} will be extracted from the dotCMS search results "
-    required: false

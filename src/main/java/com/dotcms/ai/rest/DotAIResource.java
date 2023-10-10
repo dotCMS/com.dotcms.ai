@@ -1,12 +1,12 @@
 package com.dotcms.ai.rest;
 
 import com.dotcms.ai.Marshaller;
-import com.dotcms.ai.model.AIImageRequestDTO;
-import com.dotcms.ai.model.AIImageResponseDTO;
-import com.dotcms.ai.model.AITextRequestDTO;
 import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.model.AIErrorResponseDTO;
+import com.dotcms.ai.model.AIImageRequestDTO;
+import com.dotcms.ai.model.AIImageResponseDTO;
+import com.dotcms.ai.model.AITextRequestDTO;
 import com.dotcms.ai.model.AITextResponseDTO;
 import com.dotcms.ai.service.ChatGPTImageService;
 import com.dotcms.ai.service.ChatGPTImageServiceImpl;
@@ -18,15 +18,12 @@ import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.util.Logger;
+import com.dotmarketing.util.UtilMethods;
 import com.liferay.portal.model.User;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import java.io.IOException;
+import org.apache.commons.lang.StringUtils;
 
-import java.net.URL;
-import java.util.Map;
-import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
-
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -35,7 +32,9 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import org.apache.commons.lang.StringUtils;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Map;
 
 @Path("/ai/")
 public class DotAIResource {
@@ -75,7 +74,6 @@ public class DotAIResource {
     @Path("image/generate")
     @POST
     public Response doPostImage(@Context HttpServletRequest request) throws IOException {
-        User user = (User) request.getAttribute("USER");
         Response response;
         if (request.getInputStream().available() == 0) {
             response = createErrorResponse("MissingRequestBody", "Missing request body.", Status.BAD_REQUEST);
@@ -100,18 +98,16 @@ public class DotAIResource {
         Logger.debug(this.getClass(), String.format("[DotAI API request] : IP address = %s, URL = %s, method = %s, parameters = %s, body = %s",
             request.getRemoteAddr(), request.getRequestURL().toString(), request.getMethod(), readParameters(request.getParameterMap()), "POST".equals(request.getMethod()) ? Marshaller.marshal(aiTextRequestDTO) : ""));
 
-        final Optional<AppConfig> config = ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getHost(request));
+        final AppConfig config = ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getHost(request));
 
-        if (!config.isPresent()) {
-            return createErrorResponse("ConfigMissing", "App Config missing", Status.INTERNAL_SERVER_ERROR);
-        }
+
 
         if (StringUtils.isBlank(aiTextRequestDTO.getPrompt())) {
             return createErrorResponse("MissingParameter", "The 'prompt' is required.", Status.BAD_REQUEST);
         }
 
-        ChatGPTTextService service = new ChatGPTTextServiceImpl(config.get());
-        AITextResponseDTO resp = service.sendChatGPTRequest(aiTextRequestDTO.getPrompt(), config, false);
+        ChatGPTTextService service = new ChatGPTTextServiceImpl(config);
+        AITextResponseDTO resp = service.sendChatGPTRequest(aiTextRequestDTO.getPrompt(),  false);
 
         return Response.ok(Marshaller.marshal(resp)).type(MediaType.APPLICATION_JSON_TYPE).build();
 
@@ -129,9 +125,9 @@ public class DotAIResource {
         Logger.debug(this.getClass(), String.format("[DotAI API request] : IP address = %s, URL = %s, method = %s, parameters = %s, body = %s",
             request.getRemoteAddr(), request.getRequestURL().toString(), request.getMethod(), readParameters(request.getParameterMap()), Marshaller.marshal(aiImageRequestDTO)));
 
-        final Optional<AppConfig> config = ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getHost(request));
+        final AppConfig config = ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getHost(request));
 
-        if (!config.isPresent()) {
+        if (UtilMethods.isEmpty(config.getApiKey())) {
             return createErrorResponse("ConfigMissing", "App Config missing", Status.INTERNAL_SERVER_ERROR);
         }
 
@@ -139,7 +135,7 @@ public class DotAIResource {
             return createErrorResponse("MissingParameter", "The 'prompt' is required.", Status.BAD_REQUEST);
         }
 
-        ChatGPTImageService service = new ChatGPTImageServiceImpl(config.get());
+        ChatGPTImageService service = new ChatGPTImageServiceImpl(config);
         AIImageResponseDTO resp = service.sendChatGPTRequest(aiImageRequestDTO.getPrompt(), config, false);
 
         if (resp.getHttpStatus().equals(String.valueOf(HttpResponseStatus.OK.code()))) {

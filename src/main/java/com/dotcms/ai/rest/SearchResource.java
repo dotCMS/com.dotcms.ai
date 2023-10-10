@@ -2,15 +2,11 @@ package com.dotcms.ai.rest;
 
 import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.db.EmbeddingsDTO;
-import com.dotcms.ai.rest.forms.SummarizeForm;
+import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotcms.rest.AnonymousAccess;
-import com.dotcms.rest.ContentResource;
 import com.dotcms.rest.WebResource;
-import com.dotmarketing.business.APILocator;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
-import com.dotmarketing.util.json.JSONArray;
-import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
 import org.glassfish.jersey.server.JSONP;
 
@@ -26,12 +22,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Call
@@ -39,7 +29,6 @@ import java.util.stream.Collectors;
 @Path("/v1/ai/search")
 public class SearchResource {
 
-    final static String MATCHES = "dotMatches";
 
     @GET
     @JSONP
@@ -59,7 +48,7 @@ public class SearchResource {
                                       @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
 
 
-        SummarizeForm form = new SummarizeForm.Builder()
+        CompletionsForm form = new CompletionsForm.Builder()
                 .query(query)
                 .searchLimit(searchLimit)
                 .site(site)
@@ -82,59 +71,16 @@ public class SearchResource {
     @JSONP
     @Produces(MediaType.APPLICATION_JSON)
     public final Response searchByPost(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                       SummarizeForm form
+                                       CompletionsForm form
 
     ) throws DotDataException, DotSecurityException, IOException {
 
         User user = new WebResource.InitBuilder(request, response).requiredAnonAccess(AnonymousAccess.READ).init().getUser();
 
-        EmbeddingsDTO searcher = EmbeddingsDTO.from(form).build();
+        EmbeddingsDTO searcher = EmbeddingsDTO.from(form).withUser(user).build();
 
 
-        List<EmbeddingsDTO> searchResults = EmbeddingsAPI.impl().searchEmbedding(searcher);
-
-        Map<String, Object> reducedResults = new LinkedHashMap<>();
-
-        Set<String> fields = Arrays.stream(form.fields).collect(Collectors.toSet());
-        fields.add(MATCHES);
-
-        long startTime = System.currentTimeMillis();
-
-        for (EmbeddingsDTO result : searchResults) {
-
-            JSONObject contentObject = (JSONObject) reducedResults.getOrDefault(result.inode, ContentResource.contentletToJSON(APILocator.getContentletAPI().find(result.inode, user, true), request, response, "false", user, false));
-
-            if (fields.size() > 1) {
-                contentObject.keySet().removeIf(k->!fields.contains(k));
-            }
-
-
-            JSONArray matches = contentObject.optJSONArray(MATCHES) == null ? new JSONArray() : contentObject.optJSONArray(MATCHES);
-            JSONObject match = new JSONObject();
-            match.put("distance", result.threshold);
-            match.put("extractedText", result.extractedText);
-            matches.add(match);
-            contentObject.put(MATCHES, matches);
-
-            if (!reducedResults.containsKey(result.inode)) {
-                reducedResults.put(result.inode, contentObject);
-            }
-
-        }
-
-
-        long totalTime = System.currentTimeMillis() - startTime;
-
-
-        JSONObject map = new JSONObject();
-        map.put("timeToEmbeddings", totalTime + "ms");
-        map.put("total", searchResults.size());
-        map.put("threshold", searcher.threshold);
-        map.put("results", reducedResults.values());
-        map.put("operator", searcher.operator);
-
-
-        return Response.ok(map.toString(), MediaType.APPLICATION_JSON).build();
+        return Response.ok(EmbeddingsAPI.impl().searchEmbedding(searcher).toString(), MediaType.APPLICATION_JSON).build();
 
 
     }

@@ -1,9 +1,10 @@
 package com.dotcms.ai.api;
 
 import com.dotcms.ai.app.AppConfig;
+import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.db.EmbeddingsDTO;
-import com.dotcms.ai.rest.forms.SummarizeForm;
+import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIRequest;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
@@ -22,21 +23,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class SummarizeAPIImpl implements SummarizeAPI {
+public class CompletionsAPIImpl implements CompletionsAPI {
 
 
     final Lazy<AppConfig> config;
 
-    final Lazy<AppConfig> defaultConfig = Lazy.of(() -> Try.of(() -> ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest())).get()).getOrElseThrow(DotRuntimeException::new));
+    final Lazy<AppConfig> defaultConfig = Lazy.of(() -> Try.of(() -> ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()))).getOrElseThrow(DotRuntimeException::new));
     final Map<String, Integer> maxTokensPerModel = Map.of("gpt-4", 8192, "gpt-4-32k", 32768, "gpt-4-32k-0613", 32768, "gpt-3.5-turbo", 4096, "gpt-3.5-turbo-16k", 16384, "gpt-3.5-turbo-0613", 4096, "gpt-3.5-turbo-16k-0613", 16384, "text-davinci-003", 4097, "text-davinci-002", 4097, "code-davinci-002", 8001);
 
 
-    public SummarizeAPIImpl() {
+    public CompletionsAPIImpl() {
         this(null);
     }
 
 
-    public SummarizeAPIImpl(Lazy<AppConfig> config) {
+    public CompletionsAPIImpl(Lazy<AppConfig> config) {
 
         this.config = (config != null)
                 ? config
@@ -44,10 +45,10 @@ public class SummarizeAPIImpl implements SummarizeAPI {
     }
 
     @Override
-    public JSONObject summarize(SummarizeForm summaryRequest) {
+    public JSONObject summarize(CompletionsForm summaryRequest) {
         EmbeddingsDTO searcher = EmbeddingsDTO.from(summaryRequest)
                 .build();
-        List<EmbeddingsDTO> localResults = EmbeddingsAPI.impl().searchEmbedding(searcher);
+        List<EmbeddingsDTO> localResults = EmbeddingsAPI.impl().getEmbeddingResults(searcher);
 
         // send all this as a json blob to OpenAI
         JSONObject json = buildRequestDataJson(summaryRequest, localResults);
@@ -59,7 +60,7 @@ public class SummarizeAPIImpl implements SummarizeAPI {
 
     }
 
-    private JSONObject buildRequestDataJson(SummarizeForm form, List<EmbeddingsDTO> searchResults) {
+    private JSONObject buildRequestDataJson(CompletionsForm form, List<EmbeddingsDTO> searchResults) {
 
 
         int maxTokenSize = maxTokensPerModel.getOrDefault(config.get().getModel(), 4096);
@@ -94,7 +95,7 @@ public class SummarizeAPIImpl implements SummarizeAPI {
             throw new DotRuntimeException("no query or supportingText to summarize found");
 
         }
-        String systemPrompt = config.get().getSearchSystemPrompt();
+        String systemPrompt = config.get().getConfig(AppKeys.COMPLETION_ROLE_PROMPT, "You concisely answer questions based on text that is provided to you.");
 
 
         return systemPrompt.replace("${query}", query).replace("${supportingText}", supportingText).replace("??", "?");
@@ -106,7 +107,7 @@ public class SummarizeAPIImpl implements SummarizeAPI {
             throw new DotRuntimeException("no query or supportingText to summarize found");
 
         }
-        String textPrompt = config.get().getSearchTextPrompt();
+        String textPrompt  = config.get().getConfig(AppKeys.COMPLETION_TEXT_PROMPT, "Answer this question\\n\\\"${query}?\\\"\\n\\nby summarizing the following text:\\n\\n${supportingText}");
 
 
         return textPrompt.replace("${query}", query).replace("${supportingText}", supportingText).replace("??", "?");
@@ -160,11 +161,11 @@ public class SummarizeAPIImpl implements SummarizeAPI {
     }
 
     @Override
-    public void summarizeStream(SummarizeForm summaryRequest, OutputStream out) {
+    public void summarizeStream(CompletionsForm summaryRequest, OutputStream out) {
         EmbeddingsDTO searcher = EmbeddingsDTO.from(summaryRequest)
                 .build();
 
-        List<EmbeddingsDTO> localResults = EmbeddingsAPI.impl().searchEmbedding(searcher);
+        List<EmbeddingsDTO> localResults = EmbeddingsAPI.impl().getEmbeddingResults(searcher);
 
 
         JSONObject json = buildRequestDataJson(summaryRequest, localResults);

@@ -1,8 +1,8 @@
 package com.dotcms.ai.rest;
 
+import com.dotcms.ai.api.CompletionsAPI;
 import com.dotcms.ai.api.EmbeddingsAPI;
-import com.dotcms.ai.api.SummarizeAPI;
-import com.dotcms.ai.rest.forms.SummarizeForm;
+import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotcms.rest.AnonymousAccess;
 import com.dotcms.rest.WebResource;
 import com.dotmarketing.exception.DotDataException;
@@ -31,8 +31,8 @@ import java.util.regex.Pattern;
 /**
  * Call
  */
-@Path("/v1/ai/summarize")
-public class SummarizeResource {
+@Path("/v1/ai/completions")
+public class CompletionsResource {
 
     private final WebResource webResource = new WebResource();
 
@@ -58,7 +58,7 @@ public class SummarizeResource {
                                       @DefaultValue("cosine") @QueryParam("operator") String operator,
                                       @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
 
-        SummarizeForm form = new SummarizeForm.Builder()
+        CompletionsForm form = new CompletionsForm.Builder()
                 .query(query)
                 .searchLimit(searchLimit)
                 .site(site)
@@ -77,7 +77,7 @@ public class SummarizeResource {
     @JSONP
     @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
     public final Response searchByPost(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                       SummarizeForm form
+                                       CompletionsForm form
 
     ) throws DotDataException, DotSecurityException, IOException {
 
@@ -96,7 +96,7 @@ public class SummarizeResource {
 
 
         if (!form.stream) {
-            JSONObject jsonResponse = SummarizeAPI.impl().summarize(form);
+            JSONObject jsonResponse = CompletionsAPI.impl().summarize(form);
             JSONObject map = new JSONObject();
             map.put("timeToEmbeddings", System.currentTimeMillis() - startTime + "ms");
             map.put("total", jsonResponse.size());
@@ -109,7 +109,7 @@ public class SummarizeResource {
         }
 
         final StreamingOutput streaming = output -> {
-            SummarizeAPI.impl().summarizeStream(form, output);
+            CompletionsAPI.impl().summarizeStream(form, output);
             output.flush();
             output.close();
 

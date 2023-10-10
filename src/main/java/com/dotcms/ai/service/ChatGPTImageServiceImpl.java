@@ -54,7 +54,7 @@ public class ChatGPTImageServiceImpl implements ChatGPTImageService{
      * @return
      */
     @Override
-    public AIImageResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt) {
+    public AIImageResponseDTO sendChatGPTRequest(String prompt, AppConfig config, boolean isRawPrompt) {
         AIImageResponseDTO aiImageResponseDTO = new AIImageResponseDTO();
 
         try {

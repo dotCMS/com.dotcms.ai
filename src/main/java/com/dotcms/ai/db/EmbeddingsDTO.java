@@ -1,9 +1,10 @@
 package com.dotcms.ai.db;
 
-import com.dotcms.ai.rest.forms.SummarizeForm;
+import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotmarketing.util.UtilMethods;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.liferay.portal.model.User;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +27,9 @@ public class EmbeddingsDTO {
     public final int offset;
     public final float threshold;
     public final String query;
+    public final String[] showFields;
+    public final User user;
+
     private final String[] operators = {"<->", "<=>", "<#>"};
 
     private EmbeddingsDTO(Builder builder) {
@@ -45,6 +49,8 @@ public class EmbeddingsDTO {
         this.indexName = UtilMethods.isSet(builder.indexName) ? builder.indexName : "default";
         this.tokenCount = builder.tokenCount;
         this.query=builder.query;
+        this.user=builder.user;
+        this.showFields=builder.showFields;
     }
 
     @Override
@@ -68,12 +74,13 @@ public class EmbeddingsDTO {
     }
 
 
-    public static Builder from(SummarizeForm form) {
+    public static Builder from(CompletionsForm form) {
         return new Builder()
                 .withField(form.fieldVar)
                 .withContentType(form.contentType)
                 .withHost(form.site)
                 .withQuery(form.query)
+                .withShowFields(form.fields)
                 .withIndexName(form.indexName)
                 .withLimit(form.searchLimit)
                 .withOffset(form.searchOffset)
@@ -101,6 +108,8 @@ public class EmbeddingsDTO {
                 .withOperator(values.operator)
                 .withIndexName(values.indexName)
                 .withTokenCount(values.tokenCount)
+                .withShowFields(values.showFields)
+                .withUser(values.user)
                 .withQuery(values.query);
 
     }
@@ -141,7 +150,8 @@ public class EmbeddingsDTO {
         @JsonProperty
         private String query;
 
-
+        private User user;
+        private String[] showFields;
 
 
         public Builder withEmbeddings(List<Float> embeddings) {
@@ -171,7 +181,14 @@ public class EmbeddingsDTO {
             this.operator = distanceOperator;
             return this;
         }
-
+        public Builder withShowFields(String[] showFields) {
+            this.showFields = showFields;
+            return this;
+        }
+        public Builder withUser(User user) {
+            this.user = user;
+            return this;
+        }
         public Builder withThreshold(float threshold) {
             this.threshold = threshold;
             return this;

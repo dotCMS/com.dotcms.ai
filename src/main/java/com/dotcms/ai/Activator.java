@@ -2,12 +2,13 @@ package com.dotcms.ai;
 
 import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.app.AppKeys;
+import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.listener.EmbeddingContentListener;
+import com.dotcms.ai.rest.CompletionsResource;
 import com.dotcms.ai.rest.DotAIResource;
 import com.dotcms.ai.rest.EmbeddingsResource;
 import com.dotcms.ai.rest.SearchResource;
-import com.dotcms.ai.rest.SummarizeResource;
 import com.dotcms.ai.viewtool.AIToolInfo;
 import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
 import com.dotcms.contenttype.model.field.Field;
@@ -22,7 +23,6 @@ import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.loggers.Log4jUtil;
 import com.dotmarketing.osgi.GenericBundleActivator;
-import com.dotmarketing.portlets.contentlet.business.ContentletAPI;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.contentlet.model.IndexPolicy;
 import com.dotmarketing.portlets.languagesmanager.business.LanguageAPI;
@@ -30,6 +30,7 @@ import com.dotmarketing.portlets.languagesmanager.business.LanguageAPIImpl;
 import com.dotmarketing.util.ConfigUtils;
 import com.dotmarketing.util.Logger;
 import com.liferay.portal.model.User;
+import io.vavr.control.Try;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -40,13 +41,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class Activator extends GenericBundleActivator {
 
     static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
     private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server" + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
-    Class[] clazzes = {DotAIResource.class, EmbeddingsResource.class, SummarizeResource.class, SearchResource.class};
+    Class[] clazzes = {
+            DotAIResource.class,
+            EmbeddingsResource.class,
+            CompletionsResource.class,
+            SearchResource.class
+    };
     private LoggerContext pluginLoggerContext;
 
     public void start(BundleContext context) throws Exception {
@@ -73,17 +81,13 @@ public class Activator extends GenericBundleActivator {
         // Register Embedding Actionlet
         this.registerActionlet(context, new DotEmbeddingsActionlet());
 
+        //Initializing services...
+        initializeServices(context);
 
         // Add the Embedding Listener (this does nothing right now)
         subscribeEmbeddingsListener();
 
-        // Add the test AI portlet
-        String[] xmls = new String[]{"portlet.xml"};
-        registerPortlets( context, xmls );
-
-        //Initializing services...
-        initializeServices(context);
-
+        publishPortlet(context);
 
 
         for (Class clazz : clazzes) {
@@ -96,7 +100,7 @@ public class Activator extends GenericBundleActivator {
 
     public void stop(BundleContext context) throws Exception {
 
-        deleteYml();
+
 
         for (Class clazz : clazzes) {
             Logger.info(this.getClass(), "Removing new Restful Service:" + clazz.getSimpleName());
@@ -111,8 +115,8 @@ public class Activator extends GenericBundleActivator {
 
 
         unsubscribeEmbeddingsListener();
-        EmbeddingsAPI.impl().shutdown();
-
+        EmbeddingsAPI.impl(null).shutdown();
+        deleteYml();
         //Shutting down log4j in order to avoid memory leaks
         Log4jUtil.shutdown(pluginLoggerContext);
     }
@@ -154,12 +158,12 @@ public class Activator extends GenericBundleActivator {
         Logger.info(this, "Creating test Language Variable contents...");
 
         // Get system user and required APIs
-        User systemUser = APILocator.systemUser();
-        ContentletAPI contentletAPI = APILocator.getContentletAPI();
+
+
         LanguageAPI languageAPI = new LanguageAPIImpl();
 
         // Get the default language ID
-        int languageId = (int) languageAPI.getDefaultLanguage().getId();
+        long languageId = languageAPI.getDefaultLanguage().getId();
 
         // Define key-value pairs in a map
         Map<String, String> langVariableMap = Map.of("ai-text-box-key", "AI text box value", "ai-text-area-key", "AI text area value");
@@ -167,10 +171,10 @@ public class Activator extends GenericBundleActivator {
         // Iterate through the map and create language variables
         langVariableMap.forEach((key, value) -> {
             // Check if the language variable already exists
-            if (!languageVariableExists(key, languageId, systemUser)) {
+            if (!languageVariableExists(key, languageId, APILocator.systemUser())) {
                 // If not, create it
                 try {
-                    createLanguageVariable(key, value, languageId, contentletAPI, systemUser);
+                    createLanguageVariable(key, value, languageId);
                 } catch (DotDataException | DotSecurityException e) {
                     Logger.error(this.getClass(), "Error creating language variable: " + e.getMessage());
                 }
@@ -186,14 +190,42 @@ public class Activator extends GenericBundleActivator {
 
     }
 
-    private boolean languageVariableExists(String key, int languageId, User systemUser) {
+    private void publishPortlet(BundleContext context) throws Exception {
+
+        // Add the test AI portlet
+        registerPortlets(context, new String[]{"portlet.xml"});
+
+
+        // force a reload for the velocity portlet
+        CacheLocator.getVeloctyResourceCache().clearCache();
+
+        createLanguageVariable(com.dotcms.repackage.javax.portlet.Portlet.class.getPackage().getName() + ".title.dotAI", "dotAI", APILocator.getLanguageAPI().getDefaultLanguage().getId());
+
+
+        // Add language key
+        final Map<String, String> keys = Map.of(
+                com.dotcms.repackage.javax.portlet.Portlet.class.getPackage().getName() + ".title.dotAI",
+                "dotAI");
+        APILocator.getLanguageAPI().getLanguages().forEach(l -> {
+            Try.run(() -> APILocator.getLanguageAPI().saveLanguageKeys(l, keys, new HashMap<>(), Set.of()));
+        });
+
+
+    }
+
+    private boolean languageVariableExists(String key, long languageId, User systemUser) {
         LanguageVariableAPI languageVariableAPI = new LanguageVariableAPIImpl();
         String langVar = languageVariableAPI.getLanguageVariable(key, languageId, systemUser);
         return langVar != null && !langVar.equals(key);
     }
 
-    private void createLanguageVariable(String key, String value, int languageId, ContentletAPI contentletAPI, User systemUser) throws DotDataException, DotSecurityException {
-        ContentType languageVariableContentType = APILocator.getContentTypeAPI(systemUser).find(LanguageVariableAPI.LANGUAGEVARIABLE);
+    private void createLanguageVariable(String key, String value, long languageId) throws DotDataException, DotSecurityException {
+
+        if(languageVariableExists(key, languageId,APILocator.systemUser())){
+            return;
+        }
+
+        ContentType languageVariableContentType = APILocator.getContentTypeAPI(APILocator.systemUser()).find(LanguageVariableAPI.LANGUAGEVARIABLE);
         Map<String, Field> fields = languageVariableContentType.fieldMap();
 
         Contentlet languageVariable = new Contentlet();
@@ -205,21 +237,22 @@ public class Activator extends GenericBundleActivator {
         Logger.info(this, "Creating AI Language Variable content: " + key);
 
         // Set key and value fields
-        languageVariable.setStringProperty(fields.get(KeyValueContentType.KEY_VALUE_KEY_FIELD_VAR), key);
-        languageVariable.setStringProperty(fields.get(KeyValueContentType.KEY_VALUE_VALUE_FIELD_VAR), value);
+        languageVariable.setStringProperty(KeyValueContentType.KEY_VALUE_KEY_FIELD_VAR, key);
+        languageVariable.setStringProperty(KeyValueContentType.KEY_VALUE_VALUE_FIELD_VAR, value);
 
         // Set index policy and disable workflow
         languageVariable.setIndexPolicy(IndexPolicy.FORCE);
         languageVariable.setBoolProperty(Contentlet.DISABLE_WORKFLOW, true);
 
         // Check in the language variable
-        languageVariable = contentletAPI.checkin(languageVariable, systemUser, Boolean.FALSE);
+        languageVariable = APILocator.getContentletAPI().checkin(languageVariable, APILocator.systemUser(), Boolean.FALSE);
 
         // Publish the language variable
         languageVariable.setIndexPolicy(IndexPolicy.FORCE);
         languageVariable.setBoolProperty(Contentlet.DISABLE_WORKFLOW, true);
-        contentletAPI.publish(languageVariable, systemUser, Boolean.FALSE);
+        APILocator.getContentletAPI().publish(languageVariable, APILocator.systemUser(), Boolean.FALSE);
         Logger.info(this, "Key/Value has been created for key: " + key);
     }
+
 
 }

@@ -7,25 +7,33 @@ import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
+import com.google.common.hash.Hashing;
 import com.pgvector.PGvector;
 import io.vavr.Lazy;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.control.Try;
 import org.apache.commons.lang3.ArrayUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class EmbeddingsDB {
 
 
     public static final Lazy<EmbeddingsDB> impl = Lazy.of(EmbeddingsDB::new);
+
 
 
     private EmbeddingsDB() {
@@ -73,6 +81,37 @@ public class EmbeddingsDB {
     }
 
 
+    public String hashText(String text) {
+
+        return Hashing.sha256()
+                .hashString(text, StandardCharsets.UTF_8)
+                .toString();
+    }
+
+
+    public Tuple2<Integer, List<Float>> searchExistingEmbeddings(String extractedText) {
+        try (Connection conn = getPGVectorConnection();  PreparedStatement statement = conn.prepareStatement(EmbeddingsSQL.SELECT_EMBEDDING_BY_TEXT_HASH)) {
+            String hash = hashText(extractedText);
+            statement.setObject(1, hash);
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                int tokenCount = rs.getInt("token_count");
+                float[] vector = rs.getObject("embeddings", PGvector.class).toArray();
+                List<Float> list = Arrays.asList(ArrayUtils.toObject(vector));
+                return Tuple.of(tokenCount, list);
+            }
+            return Tuple.of(0,List.of());
+
+
+
+        } catch (SQLException e) {
+            throw new DotRuntimeException(e);
+        }
+
+    }
+
+
+
 
 
     public void saveEmbeddings(EmbeddingsDTO embeddings) {
@@ -89,6 +128,7 @@ public class EmbeddingsDB {
             statement.setObject(++i, embeddings.field);
             statement.setObject(++i, embeddings.title);
             statement.setObject(++i, embeddings.extractedText);
+            statement.setObject(++i, hashText(embeddings.extractedText));
             statement.setObject(++i, embeddings.host);
             statement.setObject(++i, embeddings.indexName);
             statement.setObject(++i, embeddings.tokenCount);
@@ -152,53 +192,7 @@ public class EmbeddingsDB {
 
     }
 
-    public int deleteEmbeddings(EmbeddingsDTO dto) {
-
-
-        StringBuilder sql = new StringBuilder("delete from dot_embeddings where true ");
-        List<Object> params = appendParams(sql, dto);
-        Logger.info(EmbeddingsDB.class, "deleting embeddings:" + dto);
-
-        try (Connection conn = getPGVectorConnection();
-             PreparedStatement statement = conn.prepareStatement(sql.toString())) {
-
-            for (int i = 0; i < params.size(); i++) {
-                statement.setObject((i + 1), params.get(i));
-            }
-
-            return statement.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new DotRuntimeException(e);
-        }
-    }
-
-    public Map<String,Long> countEmbeddings(EmbeddingsDTO dto) {
-        StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_PREFIX);
-        List<Object> params = appendParams(sql, dto);
-        sql.append(" group by index_name");
-
-        try (Connection conn = getPGVectorConnection();
-             PreparedStatement statement = conn.prepareStatement(sql.toString())) {
-
-            for (int i = 0; i < params.size(); i++) {
-                statement.setObject((i + 1), params.get(i));
-            }
-            Map<String,Long> results = new HashMap<>();
-            ResultSet rs = statement.executeQuery();
-            while(rs.next()) {
-                results.put(rs.getString("index_name"), rs.getLong("test"));
-            }
-            return results;
-        } catch (SQLException e) {
-            throw new DotRuntimeException(e);
-        }
-
-
-    }
-
-
-    List<Object> appendParams(StringBuilder sql, EmbeddingsDTO dto){
+    List<Object> appendParams(StringBuilder sql, EmbeddingsDTO dto) {
         List<Object> params = new ArrayList<>();
 
         if (UtilMethods.isSet(dto.inode)) {
@@ -231,6 +225,69 @@ public class EmbeddingsDB {
         }
         return params;
 
+
+    }
+
+    public int deleteEmbeddings(EmbeddingsDTO dto) {
+
+
+        StringBuilder sql = new StringBuilder("delete from dot_embeddings where true ");
+        List<Object> params = appendParams(sql, dto);
+        Logger.info(EmbeddingsDB.class, "deleting embeddings:" + dto);
+
+        try (Connection conn = getPGVectorConnection();
+             PreparedStatement statement = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                statement.setObject((i + 1), params.get(i));
+            }
+
+            return statement.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new DotRuntimeException(e);
+        }
+    }
+
+    public Map<String, Long> countEmbeddings(EmbeddingsDTO dto) {
+        StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_PREFIX);
+        List<Object> params = appendParams(sql, dto);
+        sql.append(" group by index_name");
+
+        try (Connection conn = getPGVectorConnection();
+             PreparedStatement statement = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                statement.setObject((i + 1), params.get(i));
+            }
+            Map<String, Long> results = new TreeMap<>();
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                results.put(rs.getString("index_name"), rs.getLong("test"));
+            }
+            return results;
+        } catch (SQLException e) {
+            throw new DotRuntimeException(e);
+        }
+
+
+    }
+
+    public Map<String, Long> countEmbeddingsByIndex() {
+        StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_BY_INDEX);
+
+        try (Connection conn = getPGVectorConnection();
+             PreparedStatement statement = conn.prepareStatement(sql.toString())) {
+
+            Map<String, Long> results = new TreeMap<>();
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                results.put(rs.getString("index_name"), rs.getLong("test"));
+            }
+            return results;
+        } catch (SQLException e) {
+            throw new DotRuntimeException(e);
+        }
 
 
     }

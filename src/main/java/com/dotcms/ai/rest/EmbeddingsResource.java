@@ -3,14 +3,13 @@ package com.dotcms.ai.rest;
 import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.db.EmbeddingsDTO;
-import com.dotcms.ai.rest.forms.SummarizeForm;
+import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.rest.WebResource;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.Role;
 import com.dotmarketing.common.model.ContentletSearch;
 import com.dotmarketing.exception.DotDataException;
-import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
@@ -22,7 +21,6 @@ import org.glassfish.jersey.server.JSONP;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -196,7 +194,7 @@ public class EmbeddingsResource {
                                 @QueryParam("inode") String inode,
                                 @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
 
-        SummarizeForm form = new SummarizeForm.Builder().contentType(contentType).site(site).language(language).fieldVar(fieldVar).indexName(indexName).query("NOT USED").build();
+        CompletionsForm form = new CompletionsForm.Builder().contentType(contentType).site(site).language(language).fieldVar(fieldVar).indexName(indexName).query("NOT USED").build();
         return count(request, response, form);
 
 
@@ -207,18 +205,34 @@ public class EmbeddingsResource {
     @Path("/count")
     @Produces(MediaType.APPLICATION_JSON)
     public final Response count(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                SummarizeForm form) throws DotDataException, DotSecurityException {
+                                CompletionsForm form) throws DotDataException, DotSecurityException {
         new WebResource.InitBuilder(request, response)
                 .requiredBackendUser(true)
                 .requiredRoles(Role.CMS_ADMINISTRATOR_ROLE)
                 .requestAndResponse(request, response)
                 .rejectWhenNoUser(true)
                 .init();
-        form = (form==null) ? new SummarizeForm.Builder().query("NOT USED").build() : form;
+        form = (form==null) ? new CompletionsForm.Builder().query("NOT USED").build() : form;
         EmbeddingsDTO dto = EmbeddingsDTO.from(form).build();
 
 
         return Response.ok(Map.of("embeddingsCount", EmbeddingsDB.impl.get().countEmbeddings(dto))).build();
+
+    }
+
+    @GET
+    @JSONP
+    @Path("/indexCount")
+    @Produces(MediaType.APPLICATION_JSON)
+    public final Response indexCount(@Context final HttpServletRequest request, @Context final HttpServletResponse response) throws DotDataException, DotSecurityException {
+        new WebResource.InitBuilder(request, response)
+                .requiredBackendUser(true)
+                .requiredRoles(Role.CMS_ADMINISTRATOR_ROLE)
+                .requestAndResponse(request, response)
+                .rejectWhenNoUser(true)
+                .init();
+        final User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+        return Response.ok(Map.of("indexCount", EmbeddingsDB.impl.get().countEmbeddingsByIndex())).build();
 
     }
 }

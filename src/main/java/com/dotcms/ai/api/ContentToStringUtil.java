@@ -1,6 +1,8 @@
 package com.dotcms.ai.api;
 
-import com.dotcms.ai.util.ConfigProperties;
+
+import com.dotcms.ai.app.AppKeys;
+import com.dotcms.ai.app.ConfigService;
 import com.dotcms.contenttype.model.field.BinaryField;
 import com.dotcms.contenttype.model.field.DataTypes;
 import com.dotcms.contenttype.model.field.Field;
@@ -55,8 +57,6 @@ public class ContentToStringUtil {
     private static final Lazy<List<Pattern>> MARKDOWN_PATTERNS = Lazy.of(() -> Arrays.stream(MARKDOWN_STRING_PATTERNS).map(Pattern::compile).collect(Collectors.toList()));
     private static final Pattern HTML_PATTERN = Pattern.compile(".*\\<[^>]+>.*");
     static MarkdownTool markdown = new MarkdownTool();
-    final Set<String> indexFileExtensions = Set.of(ConfigProperties.getArrayProperty("BUILD_EMBEDDINGS_FOR_FILE_EXTENSIONS", new String[]{"pdf", "doc", "docx", "txt", "html"}));
-    final int minimumTextLength = ConfigProperties.getIntProperty("MINIMIUM_TEXT_LENGTH_TO_EMBED", 1024);
 
 
 
@@ -182,6 +182,11 @@ public class ContentToStringUtil {
     }
 
     private boolean indexMe(File file) {
+
+        final Set<String> indexFileExtensions = Set.of(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_FILE_EXTENSIONS_TO_EMBED, new String[]{"pdf", "doc", "docx", "txt", "html"}));
+        final int minimumTextLength = ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_MINIMUM_FILE_SIZE_TO_INDEX, 1024);
+
+
 
         return file != null && indexFileExtensions.contains(UtilMethods.getFileExtension(file.toString()));
     }
