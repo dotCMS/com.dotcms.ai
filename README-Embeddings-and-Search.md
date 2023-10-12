@@ -1,8 +1,3 @@
-
-
-experiments.enabled=true
-experiments.auto.js.injection=true
-
 ## Semantic Search
 ### Embeddings
 
@@ -25,7 +20,7 @@ curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api
 -d '{
 "query": "+contentType:blog +variant:default +live:true",
 "fieldVar": "blogContent",
-"indexName": "blog",
+"indexName": "blogIndex",
 "site": "SYSTEM_HOST"
 }'
 ```
@@ -69,7 +64,7 @@ curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api
 -H "Content-Type: application/json" \
 -d '{
 "query": "where can I find the best beaches",
-"indexName": "blog",
+"indexName": "blogIndex",
 "operator": "cosine"
 }'
 ```
@@ -86,7 +81,7 @@ curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api
 -H "Content-Type: application/json" \
 -d '{
 "query": "what are some of the the best beaches?",
-"indexName": "blog",
+"indexName": "blogIndex",
 "operator": "cosine"
 }'
 ```

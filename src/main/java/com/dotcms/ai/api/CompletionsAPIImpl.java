@@ -6,6 +6,7 @@ import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotcms.ai.util.EncodingUtil;
+import com.dotcms.ai.util.OpenAIModel;
 import com.dotcms.ai.util.OpenAIRequest;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotmarketing.business.web.WebAPILocator;
@@ -29,7 +30,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
     final Lazy<AppConfig> config;
 
     final Lazy<AppConfig> defaultConfig = Lazy.of(() -> Try.of(() -> ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()))).getOrElseThrow(DotRuntimeException::new));
-    final Map<String, Integer> maxTokensPerModel = Map.of("gpt-4", 8192, "gpt-4-32k", 32768, "gpt-4-32k-0613", 32768, "gpt-3.5-turbo", 4096, "gpt-3.5-turbo-16k", 16384, "gpt-3.5-turbo-0613", 4096, "gpt-3.5-turbo-16k-0613", 16384, "text-davinci-003", 4097, "text-davinci-002", 4097, "code-davinci-002", 8001);
+
 
 
     public CompletionsAPIImpl() {
@@ -54,7 +55,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
         JSONObject json = buildRequestDataJson(summaryRequest, localResults);
 
 
-        String responseString = Try.of(() -> OpenAIRequest.doRequest(config.get().getApiUrl(), "post", config.get().getApiKey(), json.toString())).getOrElseThrow(DotRuntimeException::new);
+        String responseString = Try.of(() -> OpenAIRequest.doRequest(config.get().getApiUrl(), "post", config.get().getApiKey(), json)).getOrElseThrow(DotRuntimeException::new);
         return new JSONObject(responseString);
 
 
@@ -63,7 +64,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
     private JSONObject buildRequestDataJson(CompletionsForm form, List<EmbeddingsDTO> searchResults) {
 
 
-        int maxTokenSize = maxTokensPerModel.getOrDefault(config.get().getModel(), 4096);
+        int maxTokenSize = OpenAIModel.resolveModel(config.get().getModel()).maxTokens;
         // aggregate matching results into text
         StringBuilder supportingText = new StringBuilder();
         searchResults.forEach(s -> supportingText.append(s.extractedText + " "));
@@ -170,7 +171,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         JSONObject json = buildRequestDataJson(summaryRequest, localResults);
         json.put("stream", true);
-        Try.run(() -> OpenAIRequest.streamRequest(config.get().getApiUrl(), config.get().getApiKey(), json.toString(), out)).getOrElseThrow(DotRuntimeException::new);
+        Try.run(() -> OpenAIRequest.doPost(config.get().getApiUrl(), config.get().getApiKey(), json, out)).getOrElseThrow(DotRuntimeException::new);
 
 
     }

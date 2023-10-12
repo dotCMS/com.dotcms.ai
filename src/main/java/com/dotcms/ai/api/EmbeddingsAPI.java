@@ -6,6 +6,7 @@ import com.dotcms.contenttype.model.field.Field;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.json.JSONObject;
+import io.vavr.Tuple2;
 
 import java.util.List;
 import java.util.Map;
@@ -32,17 +33,23 @@ public interface EmbeddingsAPI {
 
     void generateEmbeddingsforContent(Contentlet contentlet, Optional<Field> field, String index);
 
-    List<Float> generateEmbeddingsforString(String stringToEncode);
 
     JSONObject searchEmbedding(EmbeddingsDTO searcher);
 
     List<EmbeddingsDTO> getEmbeddingResults(EmbeddingsDTO searcher);
 
-    Map<String,Long> countEmbeddings(EmbeddingsDTO searcher);
+    long countEmbeddings(EmbeddingsDTO searcher);
 
     Map<String,Long> countEmbeddingsByIndex();
 
     void dropEmbeddingsTable();
 
     void initEmbeddingsTable();
+
+    /**
+     * Returns
+     * @param content
+     * @return
+     */
+    Tuple2<Integer, List<Float>> pullOrGenerateEmbeddings(String content);
 }

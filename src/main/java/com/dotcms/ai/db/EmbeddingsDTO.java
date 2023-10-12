@@ -1,16 +1,20 @@
 package com.dotcms.ai.db;
 
 import com.dotcms.ai.rest.forms.CompletionsForm;
+import com.dotmarketing.business.APILocator;
 import com.dotmarketing.util.UtilMethods;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.liferay.portal.model.User;
+import io.vavr.control.Try;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @JsonDeserialize(builder = EmbeddingsDTO.Builder.class)
-public class EmbeddingsDTO {
+public class EmbeddingsDTO implements Serializable {
     public final Float[] embeddings;
     public final String identifier;
     public final String inode;
@@ -48,31 +52,10 @@ public class EmbeddingsDTO {
         this.operator = (Arrays.asList(operators).contains(builder.operator)) ? builder.operator : "<=>";
         this.indexName = UtilMethods.isSet(builder.indexName) ? builder.indexName : "default";
         this.tokenCount = builder.tokenCount;
-        this.query=builder.query;
-        this.user=builder.user;
-        this.showFields=builder.showFields;
+        this.query = builder.query;
+        this.user = builder.user;
+        this.showFields = builder.showFields == null ? new String[0] : builder.showFields;
     }
-
-    @Override
-    public String toString() {
-        return "EmbeddingsDTO{" +
-                "identifier='" + identifier + '\'' +
-                ", inode='" + inode + '\'' +
-                ", language=" + language +
-                ", title='" + title + '\'' +
-                ", contentType='" + contentType + '\'' +
-                ", field='" + field + '\'' +
-                ", extractedText='" + extractedText + '\'' +
-                ", host='" + host + '\'' +
-                ", indexName='" + indexName + '\'' +
-                ", operator='" + operator + '\'' +
-                ", limit=" + limit +
-                ", tokenCount=" + tokenCount +
-                ", offset=" + offset +
-                ", threshold=" + threshold +
-                '}';
-    }
-
 
     public static Builder from(CompletionsForm form) {
         return new Builder()
@@ -89,6 +72,23 @@ public class EmbeddingsDTO {
                 .withTokenCount(form.responseLengthTokens);
 
     }
+
+    public static Builder from(Map<String, Object> form) {
+
+        return new Builder()
+                .withField((String) form.get("fieldVar"))
+                .withContentType((String) form.get("contentType"))
+                .withLanguage(Try.of(() -> Long.parseLong((String) form.get("language"))).getOrElse(APILocator.getLanguageAPI().getDefaultLanguage().getId()))
+                .withHost((String) form.get("host"))
+                .withQuery((String) form.get("query"))
+                .withIndexName((String) form.get("indexName"))
+                .withLimit(Try.of(() -> Integer.parseInt((String) form.get("limit"))).getOrElse(100))
+                .withOffset(Try.of(() -> Integer.parseInt((String) form.get("offset"))).getOrElse(0))
+                .withOperator((String) form.get("operator"))
+                .withThreshold((Try.of(() -> Float.parseFloat((String) form.get("threshold"))).getOrElse(.25f)));
+
+    }
+
     public static Builder copy(EmbeddingsDTO values) {
         return new Builder()
 
@@ -114,13 +114,32 @@ public class EmbeddingsDTO {
 
     }
 
+    @Override
+    public String toString() {
+        return "EmbeddingsDTO{" +
+                "identifier='" + identifier + '\'' +
+                ", inode='" + inode + '\'' +
+                ", language=" + language +
+                ", title='" + title + '\'' +
+                ", contentType='" + contentType + '\'' +
+                ", field='" + field + '\'' +
+                ", extractedText='" + extractedText + '\'' +
+                ", host='" + host + '\'' +
+                ", indexName='" + indexName + '\'' +
+                ", operator='" + operator + '\'' +
+                ", limit=" + limit +
+                ", tokenCount=" + tokenCount +
+                ", offset=" + offset +
+                ", threshold=" + threshold +
+                '}';
+    }
 
-    public static final class Builder {
+    public static final class Builder implements Serializable {
 
-        @JsonProperty(defaultValue = ".5f")
-        public float threshold;
+        @JsonProperty(defaultValue = ".25f")
+        public float threshold = .25f;
         @JsonProperty(defaultValue = "<=>")
-        public String operator;
+        public String operator = "<=>";
         @JsonProperty
         int tokenCount = 0;
         @JsonProperty
@@ -138,19 +157,20 @@ public class EmbeddingsDTO {
         @JsonProperty
         private String field;
         @JsonProperty(defaultValue = "default")
-        private String indexName;
+        private String indexName = "default";
         @JsonProperty
         private String extractedText;
         @JsonProperty
         private String host;
         @JsonProperty(defaultValue = "100")
-        private int limit;
+        private int limit = 100;
         @JsonProperty(defaultValue = "0")
         private int offset = 0;
         @JsonProperty
         private String query;
 
         private User user;
+        @JsonProperty(defaultValue = "")
         private String[] showFields;
 
 
@@ -168,10 +188,12 @@ public class EmbeddingsDTO {
             this.host = host;
             return this;
         }
+
         public Builder withQuery(String query) {
             this.query = query;
             return this;
         }
+
         public Builder withIndexName(String indexName) {
             this.indexName = UtilMethods.isSet(indexName) ? indexName : "default";
             return this;
@@ -181,14 +203,17 @@ public class EmbeddingsDTO {
             this.operator = distanceOperator;
             return this;
         }
+
         public Builder withShowFields(String[] showFields) {
             this.showFields = showFields;
             return this;
         }
+
         public Builder withUser(User user) {
             this.user = user;
             return this;
         }
+
         public Builder withThreshold(float threshold) {
             this.threshold = threshold;
             return this;

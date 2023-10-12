@@ -1,11 +1,18 @@
 package com.dotcms.ai.util;
 
 
-import com.dotcms.http.CircuitBreakerUrl;
+import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.util.Logger;
+import com.dotmarketing.util.json.JSONObject;
 import io.vavr.control.Try;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -15,19 +22,21 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class OpenAIRequest {
 
     static final long OPENAI_RATE_LIMIT_PER_MINUTE = ConfigProperties.getIntProperty("OPENAI_RATE_LIMIT_PER_MINUTE", 60);
-    static final long MIN_INTERVAL = 60000 / OPENAI_RATE_LIMIT_PER_MINUTE;
-    static final AtomicLong lastRestCall = new AtomicLong();
+
+    static final ConcurrentHashMap<OpenAIModel,Long> lastRestCall = new ConcurrentHashMap<>();
+
+
+
 
     private OpenAIRequest() {
     }
 
-    public static String doRequest(String url, String method, String openAiAPIKey, String json) throws IOException {
+    public static String doRequest(String url, String method, String openAiAPIKey, JSONObject json)  {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         doRequest(url, method, openAiAPIKey, json, out);
@@ -36,77 +45,80 @@ public class OpenAIRequest {
 
     }
 
-    public static void doRequest(String url, String method, String openAiAPIKey, String json, OutputStream out) throws IOException {
 
-
-        final Map<String, String> headers = Map.of("Authorization", "Bearer " + openAiAPIKey, "Content-Type", "application/json");
-
-        synchronized (OpenAIRequest.class) {
-            try {
-                long now = System.currentTimeMillis();
-                long sleep = now - lastRestCall.get() >= MIN_INTERVAL ? 0 : lastRestCall.get() + MIN_INTERVAL - now;
-                if (sleep > 0) {
-                    Logger.info(OpenAIRequest.class, "Rate limit:" + OPENAI_RATE_LIMIT_PER_MINUTE + "/minute, or 1 every " + (60000 / OPENAI_RATE_LIMIT_PER_MINUTE) + "ms. Sleeping:" + sleep);
-                    Try.run(() -> Thread.sleep(sleep));
-                }
-
-                CircuitBreakerUrl.builder().setUrl(url).setRawData(json).setHeaders(headers).setMethod(resolveMethod(method)).setTimeout(600000).build().doOut(out);
-            } finally {
-                lastRestCall.set(System.currentTimeMillis());
-            }
-        }
-
-
-    }
-
-
-    private static CircuitBreakerUrl.Method resolveMethod(String method) {
+    private static HttpUriRequest resolveMethod(String method, String urlIn) {
         if ("post" .equalsIgnoreCase(method)) {
-            return CircuitBreakerUrl.Method.POST;
+            return new HttpPost(urlIn);
         }
         if ("put" .equalsIgnoreCase(method)) {
-            return CircuitBreakerUrl.Method.PUT;
+            return new HttpPut(urlIn);
         }
         if ("delete" .equalsIgnoreCase(method)) {
-            return CircuitBreakerUrl.Method.DELETE;
+            return new HttpDelete(urlIn);
         }
         if ("patch" .equalsIgnoreCase(method)) {
-            return CircuitBreakerUrl.Method.PATCH;
+            return new HttpPatch(urlIn);
         }
 
-        return CircuitBreakerUrl.Method.GET;
+        return  new HttpGet(urlIn);
 
+    }
+    public static void doPost(String urlIn,  String openAiAPIKey, JSONObject json, OutputStream out) {
+       doRequest(urlIn,"post",openAiAPIKey,json,out);
+    }
+
+    public static void doGet(String urlIn,  String openAiAPIKey, JSONObject json, OutputStream out) {
+        doRequest(urlIn,"get",openAiAPIKey,json,out);
     }
 
 
+    /**
+     * this allows for a streaming response.  It also attempts to rate limit requests based on OpenAI limits
+     * @param urlIn
+     * @param method
+     * @param openAiAPIKey
+     * @param json
+     * @param out
+     */
+    public static void doRequest(String urlIn, String method, String openAiAPIKey, JSONObject json, OutputStream out) {
 
-    public static void streamRequest(String urlIn, String openAiAPIKey, String json, OutputStream out) {
+        Logger.info(OpenAIRequest.class, "posting:" + json);
+        final OpenAIModel model = OpenAIModel.resolveModel(json.optString("model"));
 
-        System.out.println("posting:" + json);
-        try {
-            try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
 
-                StringEntity jsonEntity = new StringEntity(json, ContentType.APPLICATION_JSON);
-                HttpPost httpPost = new HttpPost(urlIn);
-                httpPost.setHeader("Content-Type", "application/json");
-                httpPost.setHeader("Authorization", "Bearer " + openAiAPIKey);
-                httpPost.setHeader("Accept", "application/json");
-                httpPost.setEntity(jsonEntity);
-                try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
-                    BufferedInputStream in = new BufferedInputStream(response.getEntity().getContent());
-                    byte[] buffer = new byte[1024];
-                    int len;
-                    while ((len = in.read(buffer)) != -1) {
-                        out.write(buffer, 0, len);
-                        out.flush();
-                    }
+        long sleep = lastRestCall.computeIfAbsent(model, m -> 0L) + model.minIntervalBetweenCalls() - System.currentTimeMillis();
+        if (sleep > 0) {
+            Logger.info(OpenAIRequest.class, "Rate limit:" + model.apiPerMinute + "/minute, or 1 every " + (60000 / model.apiPerMinute) + "ms. Sleeping:" + sleep);
+            Try.run(() -> Thread.sleep(sleep));
+        }
+        lastRestCall.put(model, System.currentTimeMillis());
 
-                }
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+
+
+            StringEntity jsonEntity = new StringEntity(json.toString(), ContentType.APPLICATION_JSON);
+            HttpUriRequest httpRequest = resolveMethod(method, urlIn);
+            httpRequest.setHeader("Content-Type", "application/json");
+            httpRequest.setHeader("Authorization", "Bearer " + openAiAPIKey);
+            if (null !=json && !json.getAsMap().isEmpty()) {
+                Try.run(() -> ((HttpEntityEnclosingRequestBase) httpRequest).setEntity(jsonEntity));
             }
+            try (CloseableHttpResponse response = httpClient.execute(httpRequest)) {
+                BufferedInputStream in = new BufferedInputStream(response.getEntity().getContent());
+                byte[] buffer = new byte[1024];
+                int len;
+                while ((len = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, len);
+                    out.flush();
+                }
+
+            }
+
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new DotRuntimeException(e);
         }
 
-
     }
+
+
 }

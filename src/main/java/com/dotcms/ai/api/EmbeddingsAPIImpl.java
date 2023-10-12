@@ -23,6 +23,7 @@ import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.liferay.portal.model.User;
 import io.vavr.Lazy;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -45,32 +46,36 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 
-
 public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
 
-    final AppConfig config;
-    final Cache<String,Tuple2<Integer, List<Float>>> embeddingCache ;
-    static Lazy<DotSubmitter> dotSubmitter ;
+    static final Cache<String, Tuple2<Integer, List<Float>>> embeddingCache = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofSeconds(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_CACHE_TTL_SECONDS, 1000)))
+            .maximumSize(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_CACHE_SIZE, 1000))
+            .build();
 
+    static final Lazy<DotSubmitter> dotSubmitter = Lazy.of(() -> DotConcurrentFactory.getInstance().getSubmitter("embeddingsSubmitter", new DotConcurrentFactory.SubmitterConfigBuilder()
+            .poolSize(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_THREADS, 1))
+            .maxPoolSize(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_THREADS_MAX, 10))
+            .queueCapacity(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_THREADS_QUEUE, 10000))
+            .rejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy())
+            .build()));
+
+    static final String MATCHES = "matches";
+    final AppConfig config;
 
     EmbeddingsAPIImpl(Host host) {
 
         this.config = ConfigService.INSTANCE.config(host);
-        embeddingCache = Caffeine.newBuilder()
-                .expireAfterWrite(Duration.ofSeconds(this.config.getConfig(AppKeys.EMBEDDINGS_CACHE_TTL_SECONDS, 1000)))
-                .maximumSize(this.config.getConfig(AppKeys.EMBEDDINGS_CACHE_SIZE, 1000))
-                .build();
 
-        dotSubmitter =getDotSubmitter();
     }
 
-    private EmbeddingsAPIImpl(){
+
+    private EmbeddingsAPIImpl() {
         throw new DotRuntimeException("unable to initialize EmbeddingsAPIImpl");
     }
 
-
-    private Lazy<DotSubmitter> getDotSubmitter(){
+    private Lazy<DotSubmitter> getDotSubmitter() {
         return Lazy.of(() -> DotConcurrentFactory.getInstance().getSubmitter("embeddingsSubmitter", new DotConcurrentFactory.SubmitterConfigBuilder()
                 .poolSize(this.config.getConfig(AppKeys.EMBEDDINGS_THREADS, 1))
                 .maxPoolSize(this.config.getConfig(AppKeys.EMBEDDINGS_THREADS_MAX, 10))
@@ -79,10 +84,9 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
                 .build()));
     }
 
-
     @Override
     public void shutdown() {
-        Try.run(()->dotSubmitter.get().shutdown());
+        Try.run(() -> dotSubmitter.get().shutdown());
     }
 
     @Override
@@ -98,70 +102,6 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
 
     }
-
-    final static String MATCHES = "dotMatches";
-    @Override
-    public JSONObject searchEmbedding(EmbeddingsDTO searcher){
-
-        long startTime = System.currentTimeMillis();
-
-        List<EmbeddingsDTO> searchResults = getEmbeddingResults(searcher);
-        Map<String, Object> reducedResults = new LinkedHashMap<>();
-        Set<String> fields = Arrays.stream(searcher.showFields).collect(Collectors.toSet());
-
-
-        for (EmbeddingsDTO result : searchResults) {
-
-            JSONObject contentObject = (JSONObject) Try.of(()->
-                            ContentResource.contentletToJSON(
-                                    APILocator.getContentletAPI().find(result.inode, searcher.user, true),
-                                    HttpServletRequestThreadLocal.INSTANCE.getRequest(),
-                                    HttpServletResponseThreadLocal.INSTANCE.getResponse(),
-                                    "false",
-                                    searcher.user,
-                                    false)
-                    ).andThenTry(()->
-                    new JSONObject(APILocator.getContentletAPI().find(result.inode, searcher.user, true).getMap())
-            ).getOrNull();
-            if(contentObject==null){
-                continue;
-            }
-
-            if (fields.size() > 1) {
-                contentObject.keySet().removeIf(k -> !fields.contains(k));
-            }
-
-
-            JSONArray matches = contentObject.optJSONArray(MATCHES) == null ? new JSONArray() : contentObject.optJSONArray(MATCHES);
-            JSONObject match = new JSONObject();
-            match.put("distance", result.threshold);
-            match.put("extractedText", result.extractedText);
-            matches.add(match);
-            contentObject.put(MATCHES, matches);
-
-            if (!reducedResults.containsKey(result.inode)) {
-                reducedResults.put(result.inode, contentObject);
-            }
-
-        }
-
-
-        long totalTime = System.currentTimeMillis() - startTime;
-        Map<String, Long> countMatches = EmbeddingsAPI.impl().countEmbeddings(searcher);
-
-        JSONObject map = new JSONObject();
-        map.put("timeToEmbeddings", totalTime + "ms");
-        map.put("total", searchResults.size());
-        map.put("threshold", searcher.threshold);
-        map.put("results", reducedResults.values());
-        map.put("operator", searcher.operator);
-        map.put("count", countMatches);
-
-        return map;
-
-
-    }
-
 
     @Override
     public void generateEmbeddingsforContent(@NotNull Contentlet contentlet, Optional<Field> tryField, String indexName) {
@@ -214,21 +154,96 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         });
     }
 
+
+
     @Override
-    public List<Float> generateEmbeddingsforString(String stringToEncode) {
-        if(UtilMethods.isEmpty(stringToEncode)){
-            return List.of();
+    public JSONObject searchEmbedding(EmbeddingsDTO searcher) {
+
+        long startTime = System.currentTimeMillis();
+
+        List<EmbeddingsDTO> searchResults = getEmbeddingResults(searcher);
+        Map<String, Object> reducedResults = new LinkedHashMap<>();
+        Set<String> fields = (searcher.showFields!=null)
+                ? Arrays.stream(searcher.showFields).collect(Collectors.toSet())
+                : Set.of();
+
+        for (EmbeddingsDTO result : searchResults) {
+
+            JSONObject contentObject = dtoToContentJson(result, searcher.user);
+            contentObject.getAsMap().computeIfAbsent("title", k-> result.title);
+
+            if (contentObject == null) {
+                continue;
+            }
+
+            if (fields.size() > 1) {
+                contentObject.keySet().removeIf(k -> !fields.contains(k));
+            }
+
+            JSONArray matches = contentObject.optJSONArray(MATCHES) == null ? new JSONArray() : contentObject.optJSONArray(MATCHES);
+            JSONObject match = new JSONObject();
+            match.put("distance", result.threshold);
+            match.put("extractedText", result.extractedText);
+            matches.add(match);
+            contentObject.put(MATCHES, matches);
+
+            if (!reducedResults.containsKey(result.inode)) {
+                reducedResults.put(result.inode, contentObject);
+            }
+
         }
-        List<Integer> encodedList = EncodingUtil.encoding.get().encode(stringToEncode);
-        List<Float> embeddings = new ArrayList<>();
-        batches(encodedList, 8000).forEach(l -> embeddings.addAll(generateEmbeddingsforTokens(l)));
-        return embeddings;
+
+
+        long totalTime = System.currentTimeMillis() - startTime;
+        long count = EmbeddingsAPI.impl().countEmbeddings(searcher);
+
+        JSONObject map = new JSONObject();
+        map.put("timeToEmbeddings", totalTime + "ms");
+        map.put("total", searchResults.size());
+        map.put("query", searcher.query);
+        map.put("threshold", searcher.threshold);
+        map.put("results", reducedResults.values());
+        map.put("operator", searcher.operator);
+        map.put("offset", searcher.offset);
+        map.put("limit", searcher.limit);
+        map.put("count", count);
+
+        return map;
+
+
     }
+    private JSONObject dtoToContentJson(EmbeddingsDTO dto, User user){
+        JSONObject contentObject = (JSONObject) Try.of(() ->
+                ContentResource.contentletToJSON(
+                        APILocator.getContentletAPI().find(dto.inode, user, true),
+                        HttpServletRequestThreadLocal.INSTANCE.getRequest(),
+                        HttpServletResponseThreadLocal.INSTANCE.getResponse(),
+                        "false",
+                        user,
+                        false)
+        ).andThenTry(() ->
+                new JSONObject(APILocator.getContentletAPI().find(dto.inode, user, true).getMap())
+        ).andThenTry(()->
+                new JSONObject(Map.of( "inode", dto.inode,
+                        "identifier", dto.identifier,
+                        "title", dto.title,
+                        "language", dto.language,
+                        "field",dto.field,
+                        "index", dto.indexName,
+                        "contentType", dto.contentType))
+
+        ).getOrElse(JSONObject::new);
+        return contentObject;
+
+
+    }
+
+
 
     @Override
     public List<EmbeddingsDTO> getEmbeddingResults(EmbeddingsDTO searcher) {
 
-        List<Float> queryEmbeddings = generateEmbeddingsforString(searcher.query);
+        List<Float> queryEmbeddings = pullOrGenerateEmbeddings(searcher.query)._2;
 
 
         EmbeddingsDTO newSearcher = EmbeddingsDTO.copy(searcher).withEmbeddings(queryEmbeddings)
@@ -239,9 +254,9 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     }
 
     @Override
-    public Map<String,Long> countEmbeddings(EmbeddingsDTO searcher) {
+    public long countEmbeddings(EmbeddingsDTO searcher) {
 
-        List<Float> queryEmbeddings = generateEmbeddingsforString(searcher.query);
+        List<Float> queryEmbeddings = pullOrGenerateEmbeddings(searcher.query)._2;
 
 
         EmbeddingsDTO newSearcher = EmbeddingsDTO.copy(searcher).withEmbeddings(queryEmbeddings)
@@ -252,11 +267,10 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     }
 
     @Override
-    public Map<String,Long> countEmbeddingsByIndex() {
+    public Map<String, Long> countEmbeddingsByIndex() {
         return EmbeddingsDB.impl.get().countEmbeddingsByIndex();
 
     }
-
 
 
     @Override
@@ -316,10 +330,6 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
 
     }
-    private String hashText(String text) {
-
-        return EmbeddingsDB.impl.get().hashText(text);
-    }
 
     /**
      * this method takes a snippet of content and will try to see if we have already generated embeddings for it.
@@ -328,9 +338,10 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
      * remote request $$$ to OpenAI for new Embeddings
      *
      * @param content
-     * @return
+     * @return Tuple(Count of Tokens Input, List of Embeddings Output)
      */
-    private Tuple2<Integer, List<Float>> pullOrGenerateEmbeddings(String content) {
+    @Override
+    public Tuple2<Integer, List<Float>> pullOrGenerateEmbeddings(String content) {
         String hashed = hashText(content);
         Tuple2<Integer, List<Float>> alreadyHaveEmbeddings = embeddingCache.getIfPresent(hashed);
         if (alreadyHaveEmbeddings == null || alreadyHaveEmbeddings._2.isEmpty()) {
@@ -342,25 +353,29 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
                     Logger.debug(this.getClass(), "NO TOKENS for " + content);
                     return Tuple.of(0, List.of());
                 }
-                alreadyHaveEmbeddings = Tuple.of(tokens.size(), generateEmbeddingsforTokens(tokens));
+                alreadyHaveEmbeddings = Tuple.of(tokens.size(), sendTokensToOpenAI(tokens));
             }
             embeddingCache.put(hashed, alreadyHaveEmbeddings);
         }
         return alreadyHaveEmbeddings;
     }
 
+    private String hashText(String text) {
+
+        return EmbeddingsDB.impl.get().hashText(text);
+    }
 
 
 
-    private List<Float> generateEmbeddingsforTokens(@NotNull List<Integer> tokens) {
+    private List<Float> sendTokensToOpenAI(@NotNull List<Integer> tokens) {
 
         JSONObject json = new JSONObject();
 
-        json.put("model", config.getConfig(AppKeys.EMBEDDINGS_MODEL,"text-embedding-ada-002"));
+        json.put("model", config.getConfig(AppKeys.EMBEDDINGS_MODEL, "text-embedding-ada-002"));
         json.put("input", tokens);
 
 
-        String responseString = Try.of(() -> OpenAIRequest.doRequest("https://api.openai.com/v1/embeddings", "post", getAPIKey(), json.toString())).getOrElseThrow(() -> new DotRuntimeException("No API Key Available"));
+        String responseString = Try.of(() -> OpenAIRequest.doRequest("https://api.openai.com/v1/embeddings", "post", getAPIKey(), json)).getOrElseThrow(() -> new DotRuntimeException("No API Key Available"));
         JSONObject response = new JSONObject(responseString);
 
         JSONObject data = (JSONObject) response.getJSONArray("data").get(0);

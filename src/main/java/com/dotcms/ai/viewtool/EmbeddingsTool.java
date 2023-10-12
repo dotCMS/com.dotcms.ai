@@ -14,6 +14,7 @@ import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.ai.util.Constants;
 import com.dotcms.ai.util.EncodingUtil;
+import com.dotcms.ai.util.OpenAIModel;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.util.Logger;
 import com.knuddels.jtokkit.api.Encoding;
@@ -86,10 +87,11 @@ public class EmbeddingsTool implements ViewTool {
 
 	public List<Float> generateEmbeddings(String prompt){
 		int tokens = countTokens(prompt);
-		if (tokens > this.app.getConfig(AppKeys.EMBEDDINGS_MAX_TOKENS, 4000)) {
-			Logger.warn(EmbeddingsTool.class, "Prompt is too long.  Maximum prompt size is 4000 tokens (roughly ~3000 words).  Your prompt was " + tokens + " tokens ");
+		int maxTokens = OpenAIModel.resolveModel(ConfigService.INSTANCE.config(host).getConfig(AppKeys.EMBEDDINGS_MODEL,OpenAIModel.TEXT_EMBEDDING_ADA_002.name())).maxTokens;
+		if (tokens > maxTokens) {
+			Logger.warn(EmbeddingsTool.class, "Prompt is too long.  Maximum prompt size is "+maxTokens+" tokens (roughly ~" + maxTokens*.75 +" words).  Your prompt was " + tokens + " tokens ");
 		}
-		return EmbeddingsAPI.impl().generateEmbeddingsforString(prompt);
+		return EmbeddingsAPI.impl().pullOrGenerateEmbeddings(prompt)._2;
 	}
 
 	public Map<String,Long> indexCount(){

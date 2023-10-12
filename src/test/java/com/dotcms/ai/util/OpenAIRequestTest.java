@@ -43,7 +43,7 @@ class OpenAIRequestTest {
 
         data.put("messages", messages);
 
-        OpenAIRequest.streamRequest(url, apiKey, data.toString(), System.out);
+        OpenAIRequest.doPost(url,  apiKey, data, System.out);
 
 
 

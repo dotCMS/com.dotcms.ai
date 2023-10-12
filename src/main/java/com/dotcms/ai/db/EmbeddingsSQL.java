@@ -28,9 +28,9 @@ class EmbeddingsSQL {
                     ");  ";
 
     static final String[] CREATE_TABLE_INDEXES = {
-            "create index if not exists dot_embeddings_idx_index_name on dot_embeddings(index_name)",
+            "create index if not exists dot_embeddings_idx_index_name on dot_embeddings(lower(index_name))",
             "create index if not exists dot_embeddings_idx_inode on dot_embeddings(inode)",
-            "create index if not exists dot_embeddings_idx_type_field on dot_embeddings(inode,content_type,field_var)",
+            "create index if not exists dot_embeddings_idx_type_field on dot_embeddings(inode,lower(content_type),lower(field_var))",
             "create index if not exists dot_embeddings_idx_id_lang on dot_embeddings(identifier,language)",
             "create index if not exists dot_embeddings_idx_host on dot_embeddings(host)",
             "create index if not exists dot_embeddings_idx_text_hash on dot_embeddings(extracted_text_hash)"
@@ -86,8 +86,8 @@ class EmbeddingsSQL {
             "from dot_embeddings where true ";
 
     static final String COUNT_EMBEDDINGS_PREFIX=
-            "select test, index_name " +
-                    "from (select count(*) as test, index_name " +
+            "select count(distinct inode) as test " +
+                    "from (select inode, title, language, identifier,host, content_type,extracted_text, field_var,index_name, token_count, (embeddings {operator} ?) AS distance " +
                     "from dot_embeddings where true ";
 
 

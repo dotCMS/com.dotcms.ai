@@ -34,7 +34,6 @@ import java.util.regex.Pattern;
 @Path("/v1/ai/completions")
 public class CompletionsResource {
 
-    private final WebResource webResource = new WebResource();
 
 
     private final Pattern allowedPattern = Pattern.compile("^[a-zA-Z0-9 \\-,.()]*$");
@@ -92,7 +91,7 @@ public class CompletionsResource {
         long startTime = System.currentTimeMillis();
 
 
-        List<Float> queryEmbeddings = EmbeddingsAPI.impl().generateEmbeddingsforString(form.query);
+        List<Float> queryEmbeddings = EmbeddingsAPI.impl().pullOrGenerateEmbeddings(form.query)._2;
 
 
         if (!form.stream) {

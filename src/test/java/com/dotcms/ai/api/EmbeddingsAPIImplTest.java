@@ -18,7 +18,7 @@ class EmbeddingsAPIImplTest {
     public void test_embeddings() {
 
         AppConfig config = new AppConfig(Map.of());
-        List<Float> embeddings = new EmbeddingsAPIImpl(null).generateEmbeddingsforString(testPrompt);
+        List<Float> embeddings = new EmbeddingsAPIImpl(null).pullOrGenerateEmbeddings(testPrompt)._2;
 
 
         assert (embeddings.size() > 100);

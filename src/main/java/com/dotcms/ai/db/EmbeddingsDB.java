@@ -48,13 +48,23 @@ public class EmbeddingsDB {
     }
 
     public void initVectorDbTable() {
-        Logger.info(EmbeddingsDB.class, "Adding table dot_embeddings to database");
-        runSQL(EmbeddingsSQL.CREATE_EMBEDDINGS_TABLE);
 
-        Logger.info(EmbeddingsDB.class, "Adding indexes to dot_embedding table");
-        for (String index : EmbeddingsSQL.CREATE_TABLE_INDEXES) {
-            runSQL(index);
 
+        try {
+            Logger.info(EmbeddingsDB.class, "Adding table dot_embeddings to database");
+            runSQL(EmbeddingsSQL.CREATE_EMBEDDINGS_TABLE);
+            Logger.info(EmbeddingsDB.class, "Adding indexes to dot_embedding table");
+            for (String index : EmbeddingsSQL.CREATE_TABLE_INDEXES) {
+                runSQL(index);
+            }
+        } catch (Exception e) {
+            String newTableName = "dot_embeddings_" + System.currentTimeMillis();
+            Logger.info(EmbeddingsDB.class, "Create Table Failed + " + e.getMessage() + " trying to rename:" + newTableName);
+            runSQL("ALTER TABLE IF EXISTS dot_embeddings RENAME TO " + newTableName);
+            runSQL(EmbeddingsSQL.CREATE_EMBEDDINGS_TABLE);
+            for (String index : EmbeddingsSQL.CREATE_TABLE_INDEXES) {
+                runSQL(index);
+            }
         }
 
 
@@ -111,9 +121,6 @@ public class EmbeddingsDB {
     }
 
 
-
-
-
     public void saveEmbeddings(EmbeddingsDTO embeddings) {
 
         PGvector vector = new PGvector(ArrayUtils.toPrimitive(embeddings.embeddings));
@@ -146,16 +153,21 @@ public class EmbeddingsDB {
         StringBuilder sql = new StringBuilder(EmbeddingsSQL.SEARCH_EMBEDDINGS_SELECT_PREFIX.replace("{operator}", dto.operator));
 
         List<Object> params = appendParams(sql, dto);
+        sql.append(" ) data ");
 
-        params.add(0, new PGvector(ArrayUtils.toPrimitive(dto.embeddings)));
-
-
-        sql.append(" ) data where distance <= ? ");
-        params.add(dto.threshold);
+        if(dto.threshold!=0) {
+            sql.append(" where distance <= ? ");
+            params.add(dto.threshold);
+        }
 
         sql.append(" order by distance limit ? offset ? ");
         params.add(dto.limit);
         params.add(dto.offset);
+
+        params.add(0, new PGvector(ArrayUtils.toPrimitive(dto.embeddings)));
+
+
+
 
 
         try (Connection conn = getPGVectorConnection();
@@ -208,11 +220,11 @@ public class EmbeddingsDB {
             params.add(dto.language);
         }
         if (UtilMethods.isSet(dto.contentType)) {
-            sql.append(" and content_type=? ");
+            sql.append(" and lower(content_type)=lower(?) ");
             params.add(dto.contentType);
         }
         if (UtilMethods.isSet(dto.field)) {
-            sql.append(" and field_var=? ");
+            sql.append(" and lower(field_var)=lower(?) ");
             params.add(dto.field);
         }
         if (UtilMethods.isSet(dto.host)) {
@@ -220,9 +232,12 @@ public class EmbeddingsDB {
             params.add(dto.host);
         }
         if (UtilMethods.isSet(dto.indexName)) {
-            sql.append(" and index_name=? ");
+            sql.append(" and lower(index_name)=lower(?) ");
             params.add(dto.indexName);
         }
+
+
+
         return params;
 
 
@@ -249,10 +264,20 @@ public class EmbeddingsDB {
         }
     }
 
-    public Map<String, Long> countEmbeddings(EmbeddingsDTO dto) {
-        StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_PREFIX);
+    public long countEmbeddings(EmbeddingsDTO dto) {
+        StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_PREFIX.replace("{operator}", dto.operator));
+
         List<Object> params = appendParams(sql, dto);
-        sql.append(" group by index_name");
+        sql.append(" ) data ");
+
+        if(dto.threshold!=0) {
+            sql.append(" where distance <= ? ");
+            params.add(dto.threshold);
+        }
+        params.add(0, new PGvector(ArrayUtils.toPrimitive(dto.embeddings)));
+
+
+
 
         try (Connection conn = getPGVectorConnection();
              PreparedStatement statement = conn.prepareStatement(sql.toString())) {
@@ -263,10 +288,11 @@ public class EmbeddingsDB {
             Map<String, Long> results = new TreeMap<>();
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
-                results.put(rs.getString("index_name"), rs.getLong("test"));
+                return rs.getLong("test");
             }
-            return results;
+            return 0;
         } catch (SQLException e) {
+            Logger.warnAndDebug(this.getClass(),e.getMessage(),e);
             throw new DotRuntimeException(e);
         }
 
