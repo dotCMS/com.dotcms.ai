@@ -98,13 +98,13 @@ public class CompletionsForm extends Validated {
         private int responseLengthTokens = 0;
         @JsonSetter(nulls = Nulls.SKIP)
         private boolean stream = false;
-        @JsonProperty
+        @JsonSetter(nulls = Nulls.SKIP)
         private String fieldVar;
-        @JsonProperty
+        @JsonSetter(nulls = Nulls.SKIP)
         private String indexName = "default";
-        @JsonProperty
+        @JsonSetter(nulls = Nulls.SKIP)
         private String model = ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL);
-        @JsonProperty
+        @JsonSetter(nulls = Nulls.SKIP)
         private String contentType;
         @JsonSetter(nulls = Nulls.SKIP)
         private float threshold = .25f;
