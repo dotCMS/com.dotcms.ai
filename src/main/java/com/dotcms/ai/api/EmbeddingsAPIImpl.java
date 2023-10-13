@@ -50,14 +50,14 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
 
     static final Cache<String, Tuple2<Integer, List<Float>>> embeddingCache = Caffeine.newBuilder()
-            .expireAfterWrite(Duration.ofSeconds(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_CACHE_TTL_SECONDS, 1000)))
-            .maximumSize(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_CACHE_SIZE, 1000))
+            .expireAfterWrite(Duration.ofSeconds(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_CACHE_TTL_SECONDS)))
+            .maximumSize(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_CACHE_SIZE))
             .build();
 
     static final Lazy<DotSubmitter> dotSubmitter = Lazy.of(() -> DotConcurrentFactory.getInstance().getSubmitter("embeddingsSubmitter", new DotConcurrentFactory.SubmitterConfigBuilder()
-            .poolSize(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_THREADS, 1))
-            .maxPoolSize(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_THREADS_MAX, 10))
-            .queueCapacity(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_THREADS_QUEUE, 10000))
+            .poolSize(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS))
+            .maxPoolSize(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_MAX))
+            .queueCapacity(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_QUEUE))
             .rejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy())
             .build()));
 
@@ -77,9 +77,9 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
     private Lazy<DotSubmitter> getDotSubmitter() {
         return Lazy.of(() -> DotConcurrentFactory.getInstance().getSubmitter("embeddingsSubmitter", new DotConcurrentFactory.SubmitterConfigBuilder()
-                .poolSize(this.config.getConfig(AppKeys.EMBEDDINGS_THREADS, 1))
-                .maxPoolSize(this.config.getConfig(AppKeys.EMBEDDINGS_THREADS_MAX, 10))
-                .queueCapacity(this.config.getConfig(AppKeys.EMBEDDINGS_THREADS_QUEUE, 10000))
+                .poolSize(this.config.getConfigInteger(AppKeys.EMBEDDINGS_THREADS))
+                .maxPoolSize(this.config.getConfigInteger(AppKeys.EMBEDDINGS_THREADS_MAX))
+                .queueCapacity(this.config.getConfigInteger(AppKeys.EMBEDDINGS_THREADS_QUEUE))
                 .rejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy())
                 .build()));
     }
@@ -121,7 +121,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
                 }
 
                 final String cleanContent = String.join(" ", content.get().trim().split("\\s+"));
-                final int SPLIT_AT_WORDS = config.getConfig(AppKeys.EMBEDDINGS_SPLIT_AT_WORDS, 65);
+                final int SPLIT_AT_WORDS = config.getConfigInteger(AppKeys.EMBEDDINGS_SPLIT_AT_WORDS);
 
                 // split into sentences
                 BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.getDefault());
@@ -155,13 +155,10 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     }
 
 
-
     @Override
-    public JSONObject searchEmbedding(EmbeddingsDTO searcher) {
-
+    public JSONObject reduceChunksToContent(EmbeddingsDTO searcher, final List<EmbeddingsDTO> searchResults){
         long startTime = System.currentTimeMillis();
 
-        List<EmbeddingsDTO> searchResults = getEmbeddingResults(searcher);
         Map<String, Object> reducedResults = new LinkedHashMap<>();
         Set<String> fields = (searcher.showFields!=null)
                 ? Arrays.stream(searcher.showFields).collect(Collectors.toSet())
@@ -194,21 +191,42 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         }
 
 
-        long totalTime = System.currentTimeMillis() - startTime;
+
         long count = EmbeddingsAPI.impl().countEmbeddings(searcher);
 
         JSONObject map = new JSONObject();
-        map.put("timeToEmbeddings", totalTime + "ms");
+        map.put("timeToEmbeddings", System.currentTimeMillis() - startTime + "ms");
         map.put("total", searchResults.size());
         map.put("query", searcher.query);
         map.put("threshold", searcher.threshold);
-        map.put("results", reducedResults.values());
+        map.put("dotCMSResults", reducedResults.values());
         map.put("operator", searcher.operator);
         map.put("offset", searcher.offset);
         map.put("limit", searcher.limit);
         map.put("count", count);
 
         return map;
+
+
+    }
+
+
+
+
+
+
+    @Override
+    public JSONObject searchForContent(EmbeddingsDTO searcher) {
+
+        long startTime = System.currentTimeMillis();
+
+        List<EmbeddingsDTO> searchResults = getEmbeddingResults(searcher);
+        JSONObject reducedResults = reduceChunksToContent(searcher, searchResults);
+
+        long totalTime = System.currentTimeMillis() - startTime;
+
+        reducedResults.put("timeToEmbeddings", totalTime + "ms");
+        return reducedResults;
 
 
     }
@@ -267,7 +285,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     }
 
     @Override
-    public Map<String, Long> countEmbeddingsByIndex() {
+    public Map<String, Map<String,Long>> countEmbeddingsByIndex() {
         return EmbeddingsDB.impl.get().countEmbeddingsByIndex();
 
     }
@@ -371,11 +389,11 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
         JSONObject json = new JSONObject();
 
-        json.put("model", config.getConfig(AppKeys.EMBEDDINGS_MODEL, "text-embedding-ada-002"));
+        json.put("model", config.getConfig(AppKeys.EMBEDDINGS_MODEL));
         json.put("input", tokens);
 
 
-        String responseString = Try.of(() -> OpenAIRequest.doRequest("https://api.openai.com/v1/embeddings", "post", getAPIKey(), json)).getOrElseThrow(() -> new DotRuntimeException("No API Key Available"));
+        String responseString = OpenAIRequest.doRequest("https://api.openai.com/v1/embeddings", "post", getAPIKey(), json);
         JSONObject response = new JSONObject(responseString);
 
         JSONObject data = (JSONObject) response.getJSONArray("data").get(0);

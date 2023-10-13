@@ -80,7 +80,7 @@ public class SearchResource {
         EmbeddingsDTO searcher = EmbeddingsDTO.from(form).withUser(user).build();
 
 
-        return Response.ok(EmbeddingsAPI.impl().searchEmbedding(searcher).toString(), MediaType.APPLICATION_JSON).build();
+        return Response.ok(EmbeddingsAPI.impl().searchForContent(searcher).toString(), MediaType.APPLICATION_JSON).build();
 
 
     }

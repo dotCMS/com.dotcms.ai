@@ -1,6 +1,5 @@
 package com.dotcms.ai.api;
 
-import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotmarketing.beans.Host;
@@ -34,13 +33,15 @@ public interface EmbeddingsAPI {
     void generateEmbeddingsforContent(Contentlet contentlet, Optional<Field> field, String index);
 
 
-    JSONObject searchEmbedding(EmbeddingsDTO searcher);
+    JSONObject reduceChunksToContent(EmbeddingsDTO searcher, List<EmbeddingsDTO> searchResults);
+
+    JSONObject searchForContent(EmbeddingsDTO searcher);
 
     List<EmbeddingsDTO> getEmbeddingResults(EmbeddingsDTO searcher);
 
     long countEmbeddings(EmbeddingsDTO searcher);
 
-    Map<String,Long> countEmbeddingsByIndex();
+    Map<String, Map<String,Long>> countEmbeddingsByIndex();
 
     void dropEmbeddingsTable();
 

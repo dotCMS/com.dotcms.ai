@@ -23,7 +23,7 @@ public class AppConfig implements Serializable {
     private final Map<String, Secret> configValues;
 
     public AppConfig(Map<String, Secret> secrets) {
-        this.configValues = secrets.entrySet().stream().filter(e->e.getKey().startsWith("com.dotcms.ai")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        this.configValues = secrets.entrySet().stream().filter(e -> e.getKey().startsWith("com.dotcms.ai")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         apiUrl = Try.of(() -> secrets.get(AppKeys.API_URL.key).getString()).getOrElse(StringPool.BLANK);
         apiImageUrl = Try.of(() -> secrets.get(AppKeys.API_IMAGE_URL.key).getString()).getOrElse(StringPool.BLANK);
         apiKey = Try.of(() -> secrets.get(AppKeys.API_KEY.key).getString()).getOrElse(StringPool.BLANK);
@@ -77,6 +77,41 @@ public class AppConfig implements Serializable {
         return model;
     }
 
+    public int getConfigInteger(AppKeys appKey) {
+        if (blacklisted(appKey)) {
+            return 0;
+        }
+
+
+        return Try.of(() -> Integer.parseInt(configValues.get(appKey.key).getString()))
+                .andThenTry(() -> Integer.parseInt(appKey.defaultValue))
+                .getOrElse(0);
+
+    }
+
+    private boolean blacklisted(AppKeys key) {
+        return !key.key.startsWith("com.dotcms.ai");
+    }
+
+    public boolean getConfigBoolean(AppKeys appKey) {
+        if (blacklisted(appKey)) {
+            return false;
+        }
+
+
+        return Try.of(() -> Boolean.parseBoolean(configValues.get(appKey.key).getString()))
+                .andThenTry(() -> Boolean.parseBoolean(appKey.defaultValue))
+                .getOrElse(false);
+
+
+    }
+
+    public String[] getConfigArray(AppKeys appKey) {
+        String returnValue = getConfig(appKey);
+        return returnValue != null ? returnValue.trim().split("\\s+,") : new String[0];
+
+    }
+
     /**
      * this is needed to allow for custom config properties to be added to the APP
      * defaults for the values can
@@ -86,53 +121,22 @@ public class AppConfig implements Serializable {
      */
 
     public String getConfig(AppKeys key) {
-        return getConfig(key, StringPool.BLANK);
+        return getConfigString(key, key.defaultValue);
     }
 
-    public String getConfig(AppKeys appKey, String defaultValue) {
+    public String getConfigString(AppKeys appKey, String defaultValue) {
         if (blacklisted(appKey)) {
             return defaultValue;
         }
 
         if (configValues.containsKey(appKey.key)) {
-            return Try.of(() -> configValues.get(appKey.key).getString()).getOrNull();
+            return Try.of(() -> configValues.get(appKey.key).getString()).getOrElse(appKey.defaultValue);
         }
+        return appKey.defaultValue;
 
-        return ConfigProperties.getProperty(appKey.key, defaultValue);
+
 
     }
-
-    private boolean blacklisted(AppKeys key) {
-        return !key.key.startsWith("com.dotcms.ai");
-    }
-
-    public int getConfig(AppKeys appKey, int defaultValue) {
-        if (blacklisted(appKey)) {
-            return defaultValue;
-        }
-        if (configValues.containsKey(appKey.key)) {
-            return Try.of(() -> Integer.parseInt(configValues.get(appKey.key).getString())).getOrElse(defaultValue);
-        }
-        return ConfigProperties.getIntProperty(appKey.key, defaultValue);
-    }
-
-    public boolean getConfig(AppKeys appKey, boolean defaultValue) {
-        if (blacklisted(appKey)) {
-            return defaultValue;
-        }
-        if (configValues.containsKey(appKey.key)) {
-            return Try.of(() -> configValues.get(appKey.key).getBoolean()).getOrElse(defaultValue);
-        }
-        return ConfigProperties.getBooleanProperty(appKey.key, defaultValue);
-
-    }
-
-    public String[] getConfig(AppKeys appKey, String[] arrayValue) {
-        String returnValue = getConfig(appKey, String.join(",",arrayValue));
-        return returnValue != null ? returnValue.trim().split("\\s+,") : arrayValue;
-
-    }
-
 
 
 }

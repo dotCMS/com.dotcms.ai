@@ -32,7 +32,6 @@ public class CompletionsAPIImpl implements CompletionsAPI {
     final Lazy<AppConfig> defaultConfig = Lazy.of(() -> Try.of(() -> ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()))).getOrElseThrow(DotRuntimeException::new));
 
 
-
     public CompletionsAPIImpl() {
         this(null);
     }
@@ -47,18 +46,23 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
     @Override
     public JSONObject summarize(CompletionsForm summaryRequest) {
-        EmbeddingsDTO searcher = EmbeddingsDTO.from(summaryRequest)
-                .build();
+        EmbeddingsDTO searcher = EmbeddingsDTO.from(summaryRequest).build();
+
         List<EmbeddingsDTO> localResults = EmbeddingsAPI.impl().getEmbeddingResults(searcher);
 
         // send all this as a json blob to OpenAI
         JSONObject json = buildRequestDataJson(summaryRequest, localResults);
+        if(json.optBoolean("stream", false)){
+            throw new DotRuntimeException("Please use the summarizeStream method to stream results");
+        }
+        json.put("stream", false);
 
+        String openAiResponse = Try.of(() -> OpenAIRequest.doRequest(config.get().getApiUrl(), "post", config.get().getApiKey(), json)).getOrElseThrow(DotRuntimeException::new);
 
-        String responseString = Try.of(() -> OpenAIRequest.doRequest(config.get().getApiUrl(), "post", config.get().getApiKey(), json)).getOrElseThrow(DotRuntimeException::new);
-        return new JSONObject(responseString);
+        JSONObject dotCMSResponse = EmbeddingsAPI.impl().reduceChunksToContent(searcher,localResults);
 
-
+        dotCMSResponse.put("openAiResponse", new JSONObject(openAiResponse));
+        return dotCMSResponse;
     }
 
     private JSONObject buildRequestDataJson(CompletionsForm form, List<EmbeddingsDTO> searchResults) {
@@ -77,16 +81,19 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         JSONArray messages = new JSONArray();
         textPrompt = reduceStringToTokenSize(textPrompt, maxTokenSize - form.responseLengthTokens - systemPromptTokens);
-
-        messages.add(Map.of("role", "user", "content", textPrompt));
         messages.add(Map.of("role", "system", "content", systemPrompt));
+        messages.add(Map.of("role", "user", "content", textPrompt));
+
         JSONObject json = new JSONObject();
         json.put("messages", messages);
-        json.put("model", config.get().getModel());
-        json.put("temperature", 0);
-        json.put("max_tokens", form.responseLengthTokens);
-
-        json.put("stream", false);
+        if (!json.containsKey("model")) {
+            json.put("model", config.get().getModel());
+        }
+        json.put("temperature", form.temperature);
+        if (form.responseLengthTokens > 0) {
+            json.put("max_tokens", form.responseLengthTokens);
+        }
+        json.put("stream", form.stream);
 
         return json;
     }
@@ -96,7 +103,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
             throw new DotRuntimeException("no query or supportingText to summarize found");
 
         }
-        String systemPrompt = config.get().getConfig(AppKeys.COMPLETION_ROLE_PROMPT, "You concisely answer questions based on text that is provided to you.");
+        String systemPrompt = config.get().getConfig(AppKeys.COMPLETION_ROLE_PROMPT);
 
 
         return systemPrompt.replace("${query}", query).replace("${supportingText}", supportingText).replace("??", "?");
@@ -108,7 +115,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
             throw new DotRuntimeException("no query or supportingText to summarize found");
 
         }
-        String textPrompt  = config.get().getConfig(AppKeys.COMPLETION_TEXT_PROMPT, "Answer this question\\n\\\"${query}?\\\"\\n\\nby summarizing the following text:\\n\\n${supportingText}");
+        String textPrompt = config.get().getConfig(AppKeys.COMPLETION_TEXT_PROMPT);
 
 
         return textPrompt.replace("${query}", query).replace("${supportingText}", supportingText).replace("??", "?");
@@ -168,12 +175,25 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         List<EmbeddingsDTO> localResults = EmbeddingsAPI.impl().getEmbeddingResults(searcher);
 
-
         JSONObject json = buildRequestDataJson(summaryRequest, localResults);
         json.put("stream", true);
-        Try.run(() -> OpenAIRequest.doPost(config.get().getApiUrl(), config.get().getApiKey(), json, out)).getOrElseThrow(DotRuntimeException::new);
-
+        OpenAIRequest.doPost(config.get().getApiUrl(), config.get().getApiKey(), json, out);
 
     }
+
+    @Override
+    public JSONObject raw(JSONObject jsonObject) {
+        jsonObject.put("stream", false);
+
+        String response = OpenAIRequest.doRequest(config.get().getApiUrl(), "POST", config.get().getApiKey(), jsonObject);
+        return new JSONObject(response);
+    }
+
+    @Override
+    public void rawStream(JSONObject jsonObject, OutputStream out) {
+        jsonObject.put("stream", true);
+        OpenAIRequest.doPost(config.get().getApiUrl(), config.get().getApiKey(), jsonObject, out);
+    }
+
 
 }

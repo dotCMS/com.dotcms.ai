@@ -39,12 +39,16 @@ public class SearchTool implements ViewTool {
     }
 
 
+
+
+
+
     public JSONObject query(Map<String, Object> mapIn) {
         User user = PortalUtil.getUser(request);
         EmbeddingsDTO searcher = EmbeddingsDTO.from(mapIn).withUser(user).build();
 
 
-        return EmbeddingsAPI.impl(host).searchEmbedding(searcher);
+        return EmbeddingsAPI.impl(host).searchForContent(searcher);
     }
 
     public JSONObject query(String query) {
@@ -64,7 +68,7 @@ public class SearchTool implements ViewTool {
                 .build();
 
 
-        return EmbeddingsAPI.impl(host).searchEmbedding(searcher);
+        return EmbeddingsAPI.impl(host).searchForContent(searcher);
 
     }
 
@@ -86,11 +90,12 @@ public class SearchTool implements ViewTool {
         EmbeddingsDTO searcher = new EmbeddingsDTO.Builder()
                 .withQuery(contentToRelate.get())
                 .withIndexName(indexName)
+                .withExcludeIndentifiers(new String[]{contentlet.getIdentifier()})
                 .withUser(user)
                 .withLimit(50)
                 .withThreshold(.25f)
                 .build();
-        return EmbeddingsAPI.impl(host).searchEmbedding(searcher);
+        return EmbeddingsAPI.impl(host).searchForContent(searcher);
 
 
     }

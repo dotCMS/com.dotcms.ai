@@ -69,7 +69,7 @@ params:
       - label: "256x256"
         value: "256x256"
   model:
-    value: "gpt-3.5-turbo"
+    value: "gpt-3.5-turbo-16k"
     hidden: false
     type: "STRING"
     label: "Model"

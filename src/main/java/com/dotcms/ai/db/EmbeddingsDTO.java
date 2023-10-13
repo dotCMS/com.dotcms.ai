@@ -4,10 +4,14 @@ import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.util.UtilMethods;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.liferay.portal.model.User;
 import io.vavr.control.Try;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
@@ -33,7 +37,10 @@ public class EmbeddingsDTO implements Serializable {
     public final String query;
     public final String[] showFields;
     public final User user;
-
+    public final String[] excludeIdentifiers;
+    @Min(0)
+    @Max(2)
+    public final float temperature;
     private final String[] operators = {"<->", "<=>", "<#>"};
 
     private EmbeddingsDTO(Builder builder) {
@@ -45,6 +52,8 @@ public class EmbeddingsDTO implements Serializable {
         this.contentType = builder.contentType;
         this.field = builder.field;
         this.extractedText = builder.extractedText;
+        this.temperature = builder.temperature >0 ? 0 : builder.temperature >2 ? 2 : builder.temperature;
+
         this.host = builder.host;
         this.limit = builder.limit;
         this.offset = builder.offset;
@@ -55,6 +64,7 @@ public class EmbeddingsDTO implements Serializable {
         this.query = builder.query;
         this.user = builder.user;
         this.showFields = builder.showFields == null ? new String[0] : builder.showFields;
+        this.excludeIdentifiers = builder.excludeIdentifiers == null ? new String[0] : builder.excludeIdentifiers;
     }
 
     public static Builder from(CompletionsForm form) {
@@ -69,11 +79,16 @@ public class EmbeddingsDTO implements Serializable {
                 .withOffset(form.searchOffset)
                 .withOperator(form.operator)
                 .withThreshold(form.threshold)
+                .withTemperature(form.temperature)
                 .withTokenCount(form.responseLengthTokens);
 
     }
 
     public static Builder from(Map<String, Object> form) {
+
+
+
+
 
         return new Builder()
                 .withField((String) form.get("fieldVar"))
@@ -85,6 +100,8 @@ public class EmbeddingsDTO implements Serializable {
                 .withLimit(Try.of(() -> Integer.parseInt((String) form.get("limit"))).getOrElse(100))
                 .withOffset(Try.of(() -> Integer.parseInt((String) form.get("offset"))).getOrElse(0))
                 .withOperator((String) form.get("operator"))
+                .withExcludeIndentifiers(Try.of(()->((String)form.get("excludeIdentifiers")).split("\\s+,")).getOrNull())
+                .withTemperature(Try.of(()->Float.parseFloat(form.get("temperature").toString())).getOrElse(1f))
                 .withThreshold((Try.of(() -> Float.parseFloat((String) form.get("threshold"))).getOrElse(.25f)));
 
     }
@@ -109,6 +126,8 @@ public class EmbeddingsDTO implements Serializable {
                 .withIndexName(values.indexName)
                 .withTokenCount(values.tokenCount)
                 .withShowFields(values.showFields)
+                .withExcludeIndentifiers(values.excludeIdentifiers)
+                .withTemperature(values.temperature)
                 .withUser(values.user)
                 .withQuery(values.query);
 
@@ -131,6 +150,7 @@ public class EmbeddingsDTO implements Serializable {
                 ", tokenCount=" + tokenCount +
                 ", offset=" + offset +
                 ", threshold=" + threshold +
+                ", temperature=" + temperature +
                 '}';
     }
 
@@ -168,6 +188,10 @@ public class EmbeddingsDTO implements Serializable {
         private int offset = 0;
         @JsonProperty
         private String query;
+        @JsonSetter(nulls = Nulls.SKIP)
+        private float temperature   = 1f;
+        @JsonProperty(defaultValue = "")
+        private String[] excludeIdentifiers;
 
         private User user;
         @JsonProperty(defaultValue = "")
@@ -189,6 +213,17 @@ public class EmbeddingsDTO implements Serializable {
             return this;
         }
 
+        public Builder withExcludeIndentifiers(String[] exclude) {
+            if(exclude!=null && exclude.length>0) {
+                this.excludeIdentifiers = exclude;
+            }
+            return this;
+        }
+
+        public Builder withTemperature(float temperature) {
+            this.temperature = temperature >0 ? 0 : temperature >2 ? 2 : temperature;
+            return this;
+        }
         public Builder withQuery(String query) {
             this.query = query;
             return this;

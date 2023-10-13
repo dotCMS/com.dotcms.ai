@@ -183,8 +183,8 @@ public class ContentToStringUtil {
 
     private boolean indexMe(File file) {
 
-        final Set<String> indexFileExtensions = Set.of(ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_FILE_EXTENSIONS_TO_EMBED, new String[]{"pdf", "doc", "docx", "txt", "html"}));
-        final int minimumTextLength = ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_MINIMUM_FILE_SIZE_TO_INDEX, 1024);
+        final Set<String> indexFileExtensions = Set.of(ConfigService.INSTANCE.config().getConfigArray(AppKeys.EMBEDDINGS_FILE_EXTENSIONS_TO_EMBED));
+        final int minimumTextLength = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_FILE_SIZE_TO_INDEX);
 
 
 

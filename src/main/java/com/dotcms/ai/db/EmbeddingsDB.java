@@ -215,6 +215,16 @@ public class EmbeddingsDB {
             sql.append(" and identifier=? ");
             params.add(dto.identifier);
         }
+
+        if (UtilMethods.isSet(dto.excludeIdentifiers)) {
+            for(String id : dto.excludeIdentifiers) {
+                sql.append(" and identifier <> ? ");
+                params.add(id);
+            }
+        }
+
+
+
         if (dto.language > 0) {
             sql.append(" and language=? ");
             params.add(dto.language);
@@ -235,6 +245,10 @@ public class EmbeddingsDB {
             sql.append(" and lower(index_name)=lower(?) ");
             params.add(dto.indexName);
         }
+
+
+
+
 
 
 
@@ -299,16 +313,16 @@ public class EmbeddingsDB {
 
     }
 
-    public Map<String, Long> countEmbeddingsByIndex() {
+    public Map<String, Map<String,Long>> countEmbeddingsByIndex() {
         StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_BY_INDEX);
 
         try (Connection conn = getPGVectorConnection();
              PreparedStatement statement = conn.prepareStatement(sql.toString())) {
 
-            Map<String, Long> results = new TreeMap<>();
+            Map<String, Map<String,Long>> results = new TreeMap<>();
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
-                results.put(rs.getString("index_name"), rs.getLong("test"));
+                results.put(rs.getString("index_name"), Map.of("fragments", rs.getLong("embeddings"), "contents", rs.getLong("contents")));
             }
             return results;
         } catch (SQLException e) {

@@ -21,4 +21,10 @@ public interface CompletionsAPI {
     JSONObject summarize(CompletionsForm searcher);
 
     void summarizeStream(CompletionsForm searcher, OutputStream out);
+
+
+    JSONObject raw(JSONObject jsonObject);
+
+
+    void rawStream(JSONObject jsonObject, OutputStream out);
 }

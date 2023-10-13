@@ -1,0 +1,279 @@
+{
+  "entity": {
+    "bayesianResult": {
+      "differenceData": {
+        "controlData": [ ],
+        "differences": [ ],
+        "relativeDifference": 0.0,
+        "testData": [ ]
+      },
+      "distributionPdfs": {
+        "samples": {
+          "DEFAULT": [ ],
+          "dotexperiment-b7e691dd79-variant-1": [ ]
+        }
+      },
+      "quantiles": { },
+      "results": [
+        {
+          "conversionRate": 0.004088307440719542,
+          "credibilityInterval": {
+            "lower": 0.002246108620094709,
+            "upper": 0.007502588403305441
+          },
+          "expectedLoss": 0.9956526974025092,
+          "isControl": true,
+          "medianGrowth": null,
+          "probability": 0.08916418104838653,
+          "risk": -0.002985680292142539,
+          "variant": "DEFAULT"
+        },
+        {
+          "conversionRate": 0.006993006993006993,
+          "credibilityInterval": {
+            "lower": 0.004392215110709089,
+            "upper": 0.011168359570084866
+          },
+          "expectedLoss": 0.9956526974025092,
+          "isControl": false,
+          "medianGrowth": 0.41537203597710554,
+          "probability": 0.9108358189516135,
+          "risk": 0.003043953983376383,
+          "variant": "dotexperiment-b7e691dd79-variant-1"
+        }
+      ],
+      "suggestedWinner": "dotexperiment-b7e691dd79-variant-1",
+      "value": 0.9108358189516135
+    },
+    "goals": {
+      "primary": {
+        "goal": {
+          "metric": {
+            "conditions": [
+              {
+                "operator": "CONTAINS",
+                "parameter": "url",
+                "value": "/best-cms-for/"
+              },
+              {
+                "operator": "REGEX",
+                "parameter": "visitBefore",
+                "value": "^(http|https):\\/\\/(localhost|127.0.0.1|\\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,})(:\\d{1,5})?(\\/index|\\/)?(\\/?\\?.*)?$"
+              }
+            ],
+            "name": "Maximize Reaching a Page",
+            "type": "REACH_PAGE"
+          }
+        },
+        "variants": {
+          "DEFAULT": {
+            "details": {
+              "09/11/2023": {
+                "conversionRate": 33.333332,
+                "multiBySession": 1,
+                "totalSessions": 3.0,
+                "uniqueBySession": 1
+              },
+              "09/12/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/13/2023": {
+                "conversionRate": 0.6289308,
+                "multiBySession": 1,
+                "totalSessions": 159.0,
+                "uniqueBySession": 1
+              },
+              "09/14/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/19/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/22/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/24/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/25/2023": {
+                "conversionRate": 0.78125,
+                "multiBySession": 1,
+                "totalSessions": 128.0,
+                "uniqueBySession": 1
+              },
+              "09/26/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/27/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/29/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "10/03/2023": {
+                "conversionRate": 1.0471205,
+                "multiBySession": 2,
+                "totalSessions": 191.0,
+                "uniqueBySession": 2
+              },
+              "10/04/2023": {
+                "conversionRate": 1.4084507,
+                "multiBySession": 2,
+                "totalSessions": 142.0,
+                "uniqueBySession": 2
+              },
+              "10/05/2023": {
+                "conversionRate": 2.1126761,
+                "multiBySession": 4,
+                "totalSessions": 142.0,
+                "uniqueBySession": 3
+              }
+            },
+            "multiBySession": 11,
+            "totalPageViews": 16920,
+            "uniqueBySession": {
+              "conversionRate": 0.40883073,
+              "count": 10
+            },
+            "variantDescription": "Original",
+            "variantName": "DEFAULT",
+            "weight": 50.0
+          },
+          "dotexperiment-b7e691dd79-variant-1": {
+            "details": {
+              "09/11/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/12/2023": {
+                "conversionRate": 10.256411,
+                "multiBySession": 4,
+                "totalSessions": 39.0,
+                "uniqueBySession": 4
+              },
+              "09/13/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/14/2023": {
+                "conversionRate": 0.625,
+                "multiBySession": 2,
+                "totalSessions": 160.0,
+                "uniqueBySession": 1
+              },
+              "09/19/2023": {
+                "conversionRate": 0.98039216,
+                "multiBySession": 1,
+                "totalSessions": 102.0,
+                "uniqueBySession": 1
+              },
+              "09/22/2023": {
+                "conversionRate": 1.25,
+                "multiBySession": 1,
+                "totalSessions": 80.0,
+                "uniqueBySession": 1
+              },
+              "09/24/2023": {
+                "conversionRate": 4.347826,
+                "multiBySession": 2,
+                "totalSessions": 46.0,
+                "uniqueBySession": 2
+              },
+              "09/25/2023": {
+                "conversionRate": 0.0,
+                "multiBySession": 0,
+                "totalSessions": 0.0,
+                "uniqueBySession": 0
+              },
+              "09/26/2023": {
+                "conversionRate": 1.6260163,
+                "multiBySession": 3,
+                "totalSessions": 123.0,
+                "uniqueBySession": 2
+              },
+              "09/27/2023": {
+                "conversionRate": 1.6666666,
+                "multiBySession": 2,
+                "totalSessions": 120.0,
+                "uniqueBySession": 2
+              },
+              "09/29/2023": {
+                "conversionRate": 0.7633588,
+                "multiBySession": 1,
+                "totalSessions": 131.0,
+                "uniqueBySession": 1
+              },
+              "10/03/2023": {
+                "conversionRate": 0.65789473,
+                "multiBySession": 2,
+                "totalSessions": 152.0,
+                "uniqueBySession": 1
+              },
+              "10/04/2023": {
+                "conversionRate": 0.98039216,
+                "multiBySession": 1,
+                "totalSessions": 102.0,
+                "uniqueBySession": 1
+              },
+              "10/05/2023": {
+                "conversionRate": 0.98039216,
+                "multiBySession": 1,
+                "totalSessions": 102.0,
+                "uniqueBySession": 1
+              }
+            },
+            "multiBySession": 20,
+            "totalPageViews": 17179,
+            "uniqueBySession": {
+              "conversionRate": 0.6993007,
+              "count": 17
+            },
+            "variantDescription": "Card View",
+            "variantName": "dotexperiment-b7e691dd79-variant-1",
+            "weight": 50.0
+          }
+        }
+      }
+    },
+    "sessions": {
+      "total": 4877,
+      "variants": {
+        "DEFAULT": 2446,
+        "dotexperiment-b7e691dd79-variant-1": 2431
+      }
+    }
+  },
+  "errors": [ ],
+  "i18nMessagesMap": { },
+  "messages": [ ],
+  "pagination": null,
+  "permissions": [ ]
+}

@@ -3,18 +3,18 @@
 
 The search tool can be accessed using `$ai.search`
 
-
+### Search an index with a content/query 
 This example searches the blog index for matching content:
 ```vtl
 ## Run a semantic query
-#set($searchResults = $ai.search.query("Where can I find the Best beaches?", "blogIndex"))
-total: $searchResults.count
-limit: $searchResults.limit
-offset: $searchResults.offset
-threshold: $searchResults.threshold
+#set($results = $ai.search.query("Where can I find the Best beaches?", "blogIndex"))
+total: $results.count
+limit: $results.limit
+offset: $results.offset
+threshold: $results.threshold
 
-$searchResults.query
-#foreach($result in $searchResults.results)
+$results.query
+#foreach($result in $results.dotCMSResults)
     $result.title
     #foreach($m in $result.matches)
         - $m.distance : $m.extractedText
@@ -23,7 +23,7 @@ $searchResults.query
 
 ```
 
-### Semantic Search with a bunch of parameters
+### Search with parameters
 You can also build a search map by hand:
 
 ```vtl
@@ -37,15 +37,15 @@ $!query.put("offset", "0")
 ## $!query.put("host", "SYSTEM_HOST")
 ## $!query.put("language", "1")
 ## $!query.put("fieldVar", "content")
-#set($searchResults = $ai.search.query($query ))
-total: $searchResults.count
-limit: $searchResults.limit
-offset: $searchResults.offset
-threshold: $searchResults.threshold
+#set($results = $ai.search.query($query ))
+total: $results.count
+limit: $results.limit
+offset: $results.offset
+threshold: $results.threshold
 
-$searchResults.query
-#foreach($result in $searchResults.results)
-    $result.title : $result.inode
+$results.query
+#foreach($result in $results.dotCMSResults)
+    $result.title
     #foreach($m in $result.matches)
         - $m.distance : $m.extractedText
     #end
@@ -53,7 +53,10 @@ $searchResults.query
 ```
 
 ### Find Related Content
-You can easily use this to automatically find related content
+You can easily use this to automatically find related content based on an existing content. 
+The method will try to find the most "content-rich" field from the content you have passed 
+in and use it to find other content that is semantically related to the original.
+
 ```vtl
 
 ##  Finding related Content
@@ -62,11 +65,54 @@ You can easily use this to automatically find related content
 ## send in a contentlet to find related content in the index "blog"
 #set($relatedContent = $ai.search.related($content, "blogIndex"))
 
-#foreach($result in $relatedContent.results)
+#foreach($result in $relatedContent.dotCMSResults)
     $result.title : $result.inode
     #foreach($m in $result.matches)
         - $m.distance : $m.extractedText
     #end
 #end
+
+```
+
+
+## Embedding Utils
+
+### Count the tokens in a string 
+```vtl
+$ai.embeddings.countTokens("this should be about 7 tokens")
+```
+
+### Generate the Embeddings
+This checks cache to see if we have already generated the embeddings for 
+this string and if not, makes a call to openai to get the embeddings 
+```vtl
+$ai.embeddings.generateEmbeddings("this should be about 7 tokens")
+```
+
+### See existing content index information
+```vtl
+$ai.embeddings.indexCount
+```
+
+
+## Completions
+
+
+### Config
+Show the current config for completions, including the model and the prompt templates
+
+$ai.completions.config
+
+### Summarize
+
+This method takes a prompt, and using the configured model and prompt templates, will return a summary object as json.
+
+```vtl
+#set($summary = $ai.completions.summarize("Where can I find the Best beaches?", "blogIndex")))
+
+model: $summary.model
+prompt: $summary.usage.prompt_tokens
+tokens: $summary.usage.total_tokens
+$summary.choices.get(0).message.content
 
 ```

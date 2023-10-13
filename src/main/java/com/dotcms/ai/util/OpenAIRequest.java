@@ -115,6 +115,8 @@ public class OpenAIRequest {
             }
 
         } catch (Exception e) {
+            Logger.warnAndDebug(OpenAIRequest.class, "INVALID REQUEST: " + e.getMessage(), e);
+            Logger.warn(OpenAIRequest.class, " -  " + method + " : " +json.toString());
             throw new DotRuntimeException(e);
         }
 

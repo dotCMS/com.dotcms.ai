@@ -2,12 +2,21 @@ package com.dotcms.ai.rest;
 
 import com.dotcms.ai.api.CompletionsAPI;
 import com.dotcms.ai.api.EmbeddingsAPI;
+import com.dotcms.ai.app.AppConfig;
+import com.dotcms.ai.app.AppKeys;
+import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.rest.forms.CompletionsForm;
+import com.dotcms.ai.util.OpenAIModel;
 import com.dotcms.rest.AnonymousAccess;
 import com.dotcms.rest.WebResource;
+import com.dotmarketing.beans.Host;
+import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
+import com.dotmarketing.util.Logger;
+import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONObject;
+import com.google.common.collect.ImmutableMap;
 import com.liferay.portal.model.User;
 import org.glassfish.jersey.server.JSONP;
 
@@ -24,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -33,7 +43,6 @@ import java.util.regex.Pattern;
  */
 @Path("/v1/ai/completions")
 public class CompletionsResource {
-
 
 
     private final Pattern allowedPattern = Pattern.compile("^[a-zA-Z0-9 \\-,.()]*$");
@@ -51,9 +60,10 @@ public class CompletionsResource {
                                       @DefaultValue("1000") @QueryParam("searchLimit") int searchLimit,
                                       @QueryParam("site") String site,
                                       @QueryParam("contentType") String contentType,
+                                      @DefaultValue("gpt-3.5-turbo-16k") @QueryParam("model") String model,
                                       @DefaultValue(".5") @QueryParam("threshold") float threshold,
                                       @DefaultValue("false") @QueryParam("stream") boolean stream,
-                                      @DefaultValue("1024") @QueryParam("responseLength") int responseLength,
+                                      @QueryParam("responseLength") int responseLength,
                                       @DefaultValue("cosine") @QueryParam("operator") String operator,
                                       @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
 
@@ -65,6 +75,7 @@ public class CompletionsResource {
                 .fieldVar(fieldVar)
                 .threshold(threshold)
                 .operator(operator)
+                .model(model)
                 .stream(stream)
                 .responseLengthTokens(responseLength)
                 .build();
@@ -96,15 +107,8 @@ public class CompletionsResource {
 
         if (!form.stream) {
             JSONObject jsonResponse = CompletionsAPI.impl().summarize(form);
-            JSONObject map = new JSONObject();
-            map.put("timeToEmbeddings", System.currentTimeMillis() - startTime + "ms");
-            map.put("total", jsonResponse.size());
-            map.put("threshold", form.threshold);
-            map.put("results", jsonResponse);
-            map.put("operator", form.operator);
-            map.put("searchLimit", form.searchLimit);
-
-            return Response.ok(map.toString(), MediaType.APPLICATION_JSON).build();
+            jsonResponse.put("totalTime", System.currentTimeMillis() - startTime + "ms");
+            return Response.ok(jsonResponse.toString(), MediaType.APPLICATION_JSON).build();
         }
 
         final StreamingOutput streaming = output -> {
@@ -116,5 +120,35 @@ public class CompletionsResource {
 
         return Response.ok(streaming).build();
     }
+
+    @GET
+    @JSONP
+    @Path("/config")
+    @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+    public final Response getConfig(@Context final HttpServletRequest request, @Context final HttpServletResponse response) throws DotDataException, DotSecurityException, IOException {
+        User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+
+        Host host = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(request);
+
+        AppConfig app = ConfigService.INSTANCE.config(host);
+
+
+        Map<String,String> map = new HashMap<>();
+        map.put("configHost", host.getHostname() + " (falls back to system host)");
+        for(AppKeys config : AppKeys.values()){
+            String key = config.key;
+
+            String value = config==AppKeys.API_KEY ? "******" :  app.getConfig(config);
+
+            map.put(config.key, value);
+        }
+
+
+
+
+        return Response.ok(map).build();
+    }
+
+
 
 }

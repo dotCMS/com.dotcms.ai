@@ -2,19 +2,24 @@ package com.dotcms.ai.util;
 
 import com.dotmarketing.exception.DotRuntimeException;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 public enum OpenAIModel {
 
-    GPT_3_5_TURBO(3000, 3500, 4096),
-    GPT_3_5_TURBO_INSTRUCT(250000, 3000, 16384),
-    TEXT_EMBEDDING_ADA_002(1000000, 3000, 8191),
-    GPT_4(10000, 200, 8191);
+    GPT_3_5_TURBO("gpt-3.5-turbo", 3000, 3500, 4096),
+    GPT_3_5_TURBO_16k("gpt-3.5-turbo-16k", 180000, 3500, 16384),
+    GPT_4("gpt-4", 10000, 200, 8191),
+    TEXT_EMBEDDING_ADA_002("text-embedding-ada-002", 1000000, 3000, 8191);
 
 
     public final int tokensPerMinute;
     public final int apiPerMinute;
     public final int maxTokens;
+    public final String modelName;
 
-    OpenAIModel(int tokensPerMinute, int apiPerMinute, int maxTokens) {
+    OpenAIModel(String modelName, int tokensPerMinute, int apiPerMinute, int maxTokens) {
+        this.modelName = modelName;
         this.tokensPerMinute = tokensPerMinute;
         this.apiPerMinute = apiPerMinute;
         this.maxTokens = maxTokens;
@@ -23,12 +28,15 @@ public enum OpenAIModel {
     public static OpenAIModel resolveModel(String modelIn) {
         String modelOut = modelIn.replace("-", "_").replace(".", "_").toUpperCase().trim();
         for (OpenAIModel openAiModel : OpenAIModel.values()) {
-            if (openAiModel.name().equalsIgnoreCase(modelOut)) {
+            if (openAiModel.modelName.equalsIgnoreCase(modelIn) || openAiModel.name().equalsIgnoreCase(modelOut)) {
                 return openAiModel;
             }
         }
-        throw new DotRuntimeException("Unable to parse model:" + modelIn + ".  Only gpt-3.5-turbo, gpt-3.5-turbo-instruct, gpt-4 and text_embedding_ada_002 are supported ");
+        throw new DotRuntimeException("Unable to parse model:'" + modelIn + "'.  Only " + supportedModels() + " are supported ");
+    }
 
+    private static String supportedModels() {
+        return String.join(", ", Arrays.asList(OpenAIModel.values()).stream().map(o -> o.modelName).collect(Collectors.toList()));
     }
 
     public long minIntervalBetweenCalls() {
