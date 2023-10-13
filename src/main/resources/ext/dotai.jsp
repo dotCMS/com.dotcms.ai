@@ -121,7 +121,7 @@
                         <tr>
                             <th>Search Text or Phrase:</th>
                             <td>
-                                <textarea class="prompt" name="query" placeholder="Search text or phrase">best beaches for travellers</textarea>
+                                <textarea class="prompt" name="query" placeholder="Search text or phrase"></textarea>
                             </td>
                         </tr>
                         <tr>
