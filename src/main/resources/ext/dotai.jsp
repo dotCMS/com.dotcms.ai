@@ -30,7 +30,7 @@
     <input id="tab-3" type="radio" name="tab-group" onclick="changeTabs()"/>
     <label for="tab-3">Manage Embeddings/Indexes</label>
 
-    <input id="tab-4" type="radio" name="tab-group" onclick="changeTabs();loadConfigs();"/>
+    <input id="tab-4" type="radio" name="tab-group" onclick="changeTabs();"/>
     <label for="tab-4">Config Values</label>
 
 </div>
@@ -46,7 +46,7 @@
                             Index to chat with:
                         </th>
                         <td>
-                            <select name="indexName" id="indexName">
+                            <select name="indexName" id="indexNameChat">
                                 <option disabled="true" placeholder="Select an Index">Select an Index</option>
                             </select>
                         </td>
@@ -69,7 +69,7 @@
                             Temperature:
                         </th>
                         <td>
-                            <input type="number" step="0.1" value="1" id="temperature" min="0" max="2"><br>
+                            <input type="number" step="0.1" value="1" id="temperatureChat" min="0" max="2"><br>
                             (determines the randomness of the response. 0 = deterministic, 2 = most random
                         </td>
                     </tr>
@@ -78,14 +78,16 @@
                     <tr>
                         <th>Search Text or Phrase:</th>
                         <td>
-                            <textarea class="prompt" name="prompt" placeholder="Search text or phrase"></textarea>
+                            <textarea class="prompt" name="promptChat" id="promptChat"
+                                      placeholder="Search text or phrase"></textarea>
                         </td>
                     </tr>
                     <tr>
                         <td colspan="2" style="text-align: center">
                             <div style="padding:10px;height:75px; text-align: center">
-                                <div class="loader" style="display:none;height:40px;padding:10px;" id="loader"></div>
-                                <button id="submit" class="button dijit dijitReset dijitInline dijitButton"
+                                <div class="loader" style="display:none;height:40px;padding:10px;"
+                                     id="loaderChat"></div>
+                                <button id="submitChat" class="button dijit dijitReset dijitInline dijitButton"
                                         onclick="getText()">
                                     Submit
                                 </button>
@@ -96,7 +98,7 @@
                 </table>
             </div>
             <div>
-                <pre id="answer" style="overflow: auto;white-space: pre-wrap;"></pre>
+                <pre id="answerChat" style="overflow: auto;white-space: pre-wrap;"></pre>
             </div>
         </div>
 
@@ -155,7 +157,7 @@
                                 Site:
                             </th>
                             <td>
-                                <input type="text" value="" name="site" ><br>
+                                <input type="text" value="" name="site"><br>
                                 (site id on which the content lives - leave blank for all)
                             </td>
                         </tr>
@@ -193,38 +195,35 @@
                 </form>
             </div>
             <div>
-                <div id="semanticSearchResults">
-
-
-                </div>
-
-
+                <div id="semanticSearchResults"></div>
             </div>
 
         </div>
+    </div>
 
 
-        <div id="content-3" style="padding:20px">
-            <h2>Manage Embeddings / Indexes</h2>
-        </div>
+    <div id="content-3">
+        <h2>Manage Embeddings / Indexes</h2>
+    </div>
 
 
-        <div id="content-4" style="padding:20px">
-            <div id="configTable" style="max-width: 800px">
+    <div id="content-4">
+        <h2>AI/Embeddings Config</h2>
+        <div id="configTable" style="max-width: 800px">
 
-
-            </div>
-
-            <div style="padding:20px;border:1px solid darkgray;max-width:800px;margin:30px;">
-                These values can be changed by adding/editing them in the <a
-                    href="/dotAdmin/#/apps/dotAI/edit/SYSTEM_HOST"
-                    target="_top">App screen</a> either as a
-                setting or
-                as a custom property.
-            </div>
 
         </div>
 
+        <div style="padding:20px;border:1px solid darkgray;max-width:800px;margin:30px;">
+            These values can be changed by adding/editing them in the <a
+                href="/dotAdmin/#/apps/dotAI/edit/SYSTEM_HOST"
+                target="_top">App screen</a> either as a
+            setting or
+            as a custom property.
+        </div>
+
+    </div>
+</div>
 
 </body>
 </html>

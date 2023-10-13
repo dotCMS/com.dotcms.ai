@@ -3,19 +3,22 @@ const changeTabs = async () => {
     for (i = 0; i < ele.length; i++) {
         document.getElementById('content-' + (i + 1)).style.display = ele[i].checked ? "block" : "none";
     }
+    if(ele[3].checked){
+        loadConfigs()
+    }
 };
 
 const getText = async (callback) => {
 
-    const prompt = document.getElementById("prompt").value
-    document.getElementById("submit").style.display = "none";
-    document.getElementById("loader").style.display = "block";
-    document.getElementById("answer").innerText = "";
+    const prompt = document.getElementById("promptChat").value
+    document.getElementById("submitChat").style.display = "none";
+    document.getElementById("loaderChat").style.display = "block";
+    document.getElementById("answerChat").innerText = "";
 
-    const temperature = document.getElementById("temperature").value;
+    const temperature = document.getElementById("temperatureChat").value;
 
     const streaming = document.getElementById("streamingResponseType").checked;
-    const indexName = document.getElementById("indexName").value;
+    const indexName = document.getElementById("indexNameChat").value;
 
     const response = await fetch('/api/v1/ai/completions', {
 
@@ -36,11 +39,11 @@ const getText = async (callback) => {
 
         response.json().then(json => {
             console.log("json", json)
-            document.getElementById("answer").innerText = json.openAiResponse.choices[0].message.content
+            document.getElementById("answerChat").innerText = json.openAiResponse.choices[0].message.content
                 + "\n\n------\nJSON Response\n------\n" + JSON.stringify(json, null, 2);
         });
-        document.getElementById("loader").style.display = "none";
-        document.getElementById("submit").style.display = "";
+        document.getElementById("loaderChat").style.display = "none";
+        document.getElementById("submitChat").style.display = "";
         return;
 
 
@@ -49,8 +52,8 @@ const getText = async (callback) => {
 
     const reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
 
-    document.getElementById("loader").style.display = "none";
-    document.getElementById("submit").style.display = "";
+    document.getElementById("loaderChat").style.display = "none";
+    document.getElementById("submitChat").style.display = "";
 
     if (!reader) return;
     // eslint-disable-next-line no-constant-condition
@@ -70,7 +73,7 @@ const getText = async (callback) => {
 
             const json = JSON.parse(data.substring(6));
             if (json.choices[0].delta.content == null) return;
-            document.getElementById("answer").innerText += json.choices[0].delta.content;
+            document.getElementById("answerChat").innerText += json.choices[0].delta.content;
         });
         if (dataDone) break;
     }
@@ -78,7 +81,7 @@ const getText = async (callback) => {
 
 
 const displayOption = async () => {
-    const indexName = document.getElementById("indexName");
+    const indexName = document.getElementById("indexNameChat");
     const indexToSearch = document.getElementById("indexToSearch");
 
 
@@ -112,13 +115,12 @@ const getTypesAndFields = () => {
 
 
 const loadConfigs = async () => {
+
     const configTable = document.getElementById("configTable")
 
 
     configTable.innerHTML = "";
-    const headerDiv = document.createElement("h2");
-    headerDiv.innerHTML = "OpenAi Configuration";
-    configTable.appendChild(headerDiv);
+
     const table = document.createElement("table");
     table.className = "propTable";
     configTable.appendChild(table);
@@ -142,6 +144,7 @@ const loadConfigs = async () => {
 
             }
         })
+
 };
 
 window.addEventListener('load', function () {
@@ -149,7 +152,8 @@ window.addEventListener('load', function () {
 });
 
 
-const tab4 = async () => {
+const tab4  =() => {
+
     loadConfigs();
 };
 
