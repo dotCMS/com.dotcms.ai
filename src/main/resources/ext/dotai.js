@@ -8,6 +8,9 @@ const changeTabs = async () => {
     }
 };
 
+const dotAiState ={} ;
+
+
 const getText = async (callback) => {
 
     const prompt = document.getElementById("promptChat").value
@@ -16,9 +19,8 @@ const getText = async (callback) => {
     document.getElementById("answerChat").innerText = "";
 
     const temperature = document.getElementById("temperatureChat").value;
-
-    const streaming = document.getElementById("streamingResponseType").checked;
-    const indexName = document.getElementById("indexNameChat").value;
+    const streaming   = document.getElementById("streamingResponseType").checked;
+    const indexName   = document.getElementById("indexNameChat").value;
 
     const response = await fetch('/api/v1/ai/completions', {
 
@@ -80,36 +82,72 @@ const getText = async (callback) => {
 };
 
 
-const displayOption = async () => {
-    const indexName = document.getElementById("indexNameChat");
-    const indexToSearch = document.getElementById("indexToSearch");
 
 
+
+const refreshIndexes = async () => {
+    dotAiState.indexes=[];
     fetch("/api/v1/ai/embeddings/indexCount")
         .then(response => response.json())
         .then(options => {
-
             for (const [key, value] of Object.entries(options.indexCount)) {
-                const newOption = document.createElement("option");
-                newOption.value = key;
-                newOption.text = `${key}   - (content:${value.contents}, fragments:${value.fragments})`
+                let entry = {}
+                entry.name=key;
+                entry.contents=value.contents;
+                entry.fragments=value.fragments;
+                dotAiState.indexes.push(entry);
+            }
+        })
+        .then(()=>{
+            writeIndexesToDropdowns()
+        })
 
-                indexToSearch.appendChild(newOption.cloneNode(true));
 
-                indexName.appendChild(newOption);
+};
 
+
+const writeIndexesToDropdowns = async () => {
+    const indexName = document.getElementById("indexNameChat");
+    const indexToSearch = document.getElementById("indexToSearch");
+
+    for (i=0;dotAiState.indexes.length;i++) {
+        const newOption = document.createElement("option");
+        newOption.value = dotAiState.indexes[i].name;
+        newOption.text = `${dotAiState.indexes[i].name}   - (content:${dotAiState.indexes[i].contents}, fragments:${dotAiState.indexes[i].fragments})`
+
+        indexToSearch.appendChild(newOption.cloneNode(true));
+
+        indexName.appendChild(newOption);
+
+    }
+
+};
+
+
+const getTypesAndFields = async () => {
+    const contentTypes = [];
+
+    fetch("/api/v1/contenttype?orderby=modDate&direction=DESC&per_page=40")
+        .then(response => response.json())
+        .then(options => {
+
+            for (i=0;i<options.entity.length;i++) {
+                let type = options.entity[i];
+                let entry={};
+                entry
 
             }
         })
+        .then(()=>{
+
+        })
+
+
 };
 
-var contentTypeFields;
-const getTypesAndFields = () => {
-    if (contentTypeFields) {
-        return contentTypeFields;
-    }
-    fetch("/api/v1/ai/embeddings/indexCount")
-}
+
+
+
 
 
 
@@ -148,7 +186,7 @@ const loadConfigs = async () => {
 };
 
 window.addEventListener('load', function () {
-    displayOption();
+    refreshIndexes();
 });
 
 
@@ -191,7 +229,8 @@ const doSearch = async () => {
         .then(data => {
 
             let tr = document.createElement("tr");
-
+            tr.style.fontWeight="bold";
+            tr.style.textAlign="left"
             let td1 = document.createElement("th");
             let td2 = document.createElement("th");
             let td3 = document.createElement("th");
@@ -203,12 +242,12 @@ const doSearch = async () => {
             td4.className="hTable"
 
             td1.innerHTML="Title"
-            td2.innerHTML="Inode"
-            td3.innerHTML="Matches"
+            td2.innerHTML="Matches"
+            td3.innerHTML="Distance"
             td4.innerHTML="Top Match"
 
             tr.append(td1);
-            //tr.append(td2);
+            tr.append(td2);
             tr.append(td3);
             tr.append(td4);
 
@@ -224,12 +263,12 @@ const doSearch = async () => {
                 td4 = document.createElement("td");
 
                 td1.innerHTML=`<a href="/dotAdmin/#/c/content/${row.inode}" target="_top">${row.title}</a>`;
-                td2.innerHTML=row.inode
-                td3.innerHTML=row.matches.length
+                td2.innerHTML= row.matches.length ;
+                td3.innerHTML= parseFloat(row.matches[0].distance).toFixed(2) ;
                 td4.innerHTML=row.matches[0].extractedText;
 
                 tr.append(td1);
-                //tr.append(td2);
+                tr.append(td2);
                 tr.append(td3);
                 tr.append(td4);
                 table.append(tr)

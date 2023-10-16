@@ -130,7 +130,7 @@
                             <th>Operator:</th>
                             <td>
 
-                                <input type="radio" name="operator" id="cosine" value="cosine">
+                                <input type="radio" name="operator" id="cosine" checked="true" value="cosine">
                                 <label for="cosine">Cosine Similarity</label>
                                 &nbsp; &nbsp;
                                 <input type="radio" name="operator" id="distance" value="distance">
@@ -148,7 +148,7 @@
                             <td>
                                 <input type="number" step="0.05" value=".25" name="threshold" id="threshold" min="0.05"
                                        max="100"><br>
-                                (the lower this number, the more semantically similar the results)
+                                the lower this number, the more semantically similar the results
                             </td>
                         </tr>
 
@@ -158,7 +158,7 @@
                             </th>
                             <td>
                                 <input type="text" value="" name="site"><br>
-                                (site id on which the content lives - leave blank for all)
+                                site id on which the content lives - leave blank for all
                             </td>
                         </tr>
 
@@ -168,7 +168,7 @@
                             </th>
                             <td>
                                 <input type="text" value="" name="contentType" id="contentTypeSearch"><br>
-                                (variable for the content type you would like to search - leave blank for all)
+                                content type var you would like to search - leave blank for all
                             </td>
                         </tr>
                         <tr>
@@ -177,7 +177,7 @@
                             </th>
                             <td>
                                 <input type="text" value="" name="fieldVar" id="fieldVarSearch"><br>
-                                (variable for the field var you would like to search - leave blank for all)
+                                field var you would like to search - leave blank for all
                             </td>
                         </tr>
                         <tr>
@@ -204,6 +204,16 @@
 
     <div id="content-3">
         <h2>Manage Embeddings / Indexes</h2>
+
+
+        <h3>Indexes</h3>
+        <table style="width:80%" id="">
+            <tr>
+                <th>Index</th>
+                <th>Chunks</th>
+                <th></th>
+            </tr>
+        </table>
     </div>
 
 
