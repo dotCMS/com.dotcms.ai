@@ -18,6 +18,7 @@ import com.dotmarketing.portlets.workflows.model.WorkflowActionletParameter;
 import com.dotmarketing.portlets.workflows.model.WorkflowProcessor;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
+import io.vavr.Tuple2;
 import io.vavr.control.Try;
 
 import javax.servlet.http.HttpServletRequest;
@@ -74,35 +75,47 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
             return;
         }
 
-        List<Field> fields = parseTypesAndFields(type, params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
+        final List<Map<String,Optional<Field>>> fields = parseTypesAndFields(params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
 
         if (fields.isEmpty()) {
-            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, indexName);
+            return;
         }
 
 
-        for (Field field : fields) {
-            Logger.info(DotEmbeddingsActionlet.class, "found field:" + type.variable() + "." + field.variable());
-            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, Optional.of(field), indexName);
+        for (Map<String,Optional<Field>> map : fields) {
+            if(!map.containsKey(type.variable())){
+                continue;
+            }
+
+            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, map.get(type.variable()), indexName);
         }
 
 
     }
 
 
-    private List<Field> parseTypesAndFields(@NotNull ContentType type, final String typeAndFieldParam) {
+    private List<Map<String, Optional<Field>>> parseTypesAndFields(final String typeAndFieldParam) {
 
         if (UtilMethods.isEmpty(typeAndFieldParam)) {
             return List.of();
         }
 
 
-        final List<Field> typesAndFields = new ArrayList<>();
+        final List<Map<String, Optional<Field>>> typesAndFields = new ArrayList<>();
         final String[] typeFieldArr = typeAndFieldParam.trim().split("\\s*,\\s*");
-        List<Field> fields = Arrays.stream(typeFieldArr).filter(s -> s.toLowerCase().startsWith(type.variable().toLowerCase())).map(s -> type.fieldMap().get(s.split(".")[1])).filter(Objects::nonNull).collect(Collectors.toList());
+
+        for (String typeField : typeFieldArr) {
+            String[] typeOptField = typeField.split("\\.");
+            Optional<ContentType> type = Try.of(() -> APILocator.getContentTypeAPI(APILocator.systemUser()).find(typeOptField[0])).toJavaOptional();
+            Optional<Field> field = Try.of(() -> type.get().fieldMap().get(typeOptField[1])).toJavaOptional();
+            if (type.isEmpty()) {
+                continue;
+            }
+            typesAndFields.add(Map.of(type.get().variable(), field));
+        }
 
 
-        return fields;
+        return typesAndFields;
     }
 
 
