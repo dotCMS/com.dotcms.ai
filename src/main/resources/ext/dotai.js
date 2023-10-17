@@ -301,7 +301,7 @@ const doBuildIndex = async () => {
         .then(data => {
             document.getElementById("buildResponse").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
             setTimeout(clearIndexMessage, 5000);
-            
+
         });
 }
 
