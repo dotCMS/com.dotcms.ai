@@ -161,6 +161,12 @@ public class ContentToStringUtil {
             return Optional.ofNullable(contentlet.getContentType().fieldMap().get("asset"));
         }
 
+        if (contentlet.isHTMLPage()) {
+            return Optional.empty();
+        }
+
+
+
         final String ignoreUrlMapFields = (contentlet.getContentType().urlMapPattern() != null) ? contentlet.getContentType().urlMapPattern() : "";
 
         Optional<Field> foundField= contentlet.getContentType()
@@ -254,7 +260,9 @@ public class ContentToStringUtil {
             if (Boolean.FALSE.equals(pageContentlet.isHTMLPage())) {
                 return Optional.empty();
             }
-            return Optional.ofNullable(APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(pageContentlet), "dot-user-agent"));
+            String pageHTML = APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(pageContentlet),true,null,APILocator.systemUser(), "dot-user-agent");
+
+            return parseHTML(pageHTML);
         } catch (Exception e) {
             Logger.warnAndDebug(this.getClass(), "parsePage:" + pageContentlet + " failed:" + e.getMessage(), e);
             return Optional.empty();

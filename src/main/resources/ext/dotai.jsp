@@ -171,15 +171,52 @@
     <div id="content-2">
         <h2>Manage Embeddings / Indexes</h2>
 
-        <h3>Indexes</h3>
-        <table style="width:80%" id="">
-            <tr>
-                <th>Index</th>
-                <th>Chunks</th>
-                <th>Content</th>
-                <th>Tokens</th>
-            </tr>
-        </table>
+        <div style="display: grid;grid-template-columns: 40% 60%;">
+            <div>
+                <h3>Indexes</h3>
+                <table id="indexManageTable" style="width:80%">
+
+                </table>
+            </div>
+            <div>
+                <h3>Create/Update Index</h3>
+                <form id="createUpdateIndex" onsubmit="return false;">
+                    <table>
+                        <tr>
+                            <th>
+                                Index Name
+                            </th>
+                            <td>
+                                <input type="text" value="" name="indexName"><br>
+                                index to create or append
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Content to index:</th>
+                            <td>
+                            <textarea class="prompt" name="query"
+                                      placeholder="lucene content search"></textarea>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th>
+                                Field Name
+                            </th>
+                            <td>
+                                <input type="text" value="" name="fieldVar"><br>
+                               specific field to index (optional)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align: center">
+                                <button onclick="doBuildIndex()" class="button dijit dijitReset dijitInline dijitButton">Build Index</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+            <div id="buildResponse"></div>
     </div>
 
 

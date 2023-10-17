@@ -148,6 +148,7 @@ public class EmbeddingsResource {
         new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
 
         EmbeddingsDTO dto = new EmbeddingsDTO.Builder()
+                .withIndexName(json.optString("indexName"))
                 .withIdentifier(json.optString("identifier"))
                 .withLanguage(json.optLong("language", 0))
                 .withInode(json.optString("inode"))
@@ -155,7 +156,7 @@ public class EmbeddingsResource {
                 .withField(json.optString("fieldVar"))
                 .withHost(json.optString("site"))
                 .build();
-        int deleted = EmbeddingsAPI.impl(null).deleteEmbedding(dto);
+        int deleted = EmbeddingsAPI.impl().deleteEmbedding(dto);
         return Response.ok(Map.of("deleted", deleted)).build();
 
     }

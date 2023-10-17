@@ -40,7 +40,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -54,12 +57,14 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             .maximumSize(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_CACHE_SIZE))
             .build();
 
-    static final Lazy<DotSubmitter> dotSubmitter = Lazy.of(() -> DotConcurrentFactory.getInstance().getSubmitter("embeddingsSubmitter", new DotConcurrentFactory.SubmitterConfigBuilder()
-            .poolSize(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS))
-            .maxPoolSize(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_MAX))
-            .queueCapacity(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_QUEUE))
-            .rejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy())
-            .build()));
+    static final Lazy<ExecutorService> threadPool = Lazy.of(() -> {
+
+        int threads = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS);
+        int maxThreads = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_MAX);
+        int queue = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_QUEUE);
+        return new ThreadPoolExecutor(threads, maxThreads, 20000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(queue));
+
+    });
 
     static final String MATCHES = "matches";
     final AppConfig config;
@@ -75,18 +80,10 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         throw new DotRuntimeException("unable to initialize EmbeddingsAPIImpl");
     }
 
-    private Lazy<DotSubmitter> getDotSubmitter() {
-        return Lazy.of(() -> DotConcurrentFactory.getInstance().getSubmitter("embeddingsSubmitter", new DotConcurrentFactory.SubmitterConfigBuilder()
-                .poolSize(this.config.getConfigInteger(AppKeys.EMBEDDINGS_THREADS))
-                .maxPoolSize(this.config.getConfigInteger(AppKeys.EMBEDDINGS_THREADS_MAX))
-                .queueCapacity(this.config.getConfigInteger(AppKeys.EMBEDDINGS_THREADS_QUEUE))
-                .rejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy())
-                .build()));
-    }
 
     @Override
     public void shutdown() {
-        Try.run(() -> dotSubmitter.get().shutdown());
+        Try.run(() -> threadPool.get().shutdown());
     }
 
     @Override
@@ -111,7 +108,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         final Optional<String> content = ContentToStringUtil.impl.get().parseField(contentlet, field);
 
 
-        this.dotSubmitter.get().submit(() -> {
+        this.threadPool.get().submit(() -> {
 
             try {
 

@@ -109,6 +109,61 @@ const writeConfigTable = async () => {
 
 };
 const writeIndexManagementTable = async () => {
+    const indexTable = document.getElementById("indexManageTable")
+    indexTable.innerHTML = "";
+
+    let tr = document.createElement("tr");
+    tr.style.fontWeight = "bold";
+    tr.style.textAlign = "left"
+    let td1 = document.createElement("th");
+    let td2 = document.createElement("th");
+    let td3 = document.createElement("th");
+    let td4 = document.createElement("th");
+    let td5 = document.createElement("th");
+
+    td1.className = "hTable"
+    td2.className = "hTable"
+    td3.className = "hTable"
+    td4.className = "hTable"
+    td5.className = "hTable"
+
+    td1.innerHTML = "Index"
+    td2.innerHTML = "Chunks"
+    td3.innerHTML = "Content"
+    td4.innerHTML = "Tokens"
+    td5.innerHTML = ""
+
+    tr.append(td1);
+    tr.append(td2);
+    tr.append(td3);
+    tr.append(td4);
+    tr.append(td5);
+
+    indexTable.append(tr)
+
+    dotAiState.indexes.map(row => {
+        console.log("row", row)
+
+        tr = document.createElement("tr");
+        td1 = document.createElement("td");
+        td2 = document.createElement("td");
+        td3 = document.createElement("td");
+        td4 = document.createElement("td");
+        td5 = document.createElement("td");
+        td1.innerHTML = row.name;
+        td2.innerHTML = row.fragments;
+        td3.innerHTML = row.contents;
+        td4.innerHTML = row.tokenTotal;
+        td5.innerHTML = `<a href="#" onclick="doDeleteIndex('${row.name}')">delete</a>`
+        tr.append(td1);
+        tr.append(td2);
+        tr.append(td3);
+        tr.append(td4);
+        tr.append(td5);
+        indexTable.append(tr)
+
+
+    })
 
 
 }
@@ -131,7 +186,13 @@ const tab1 = () => {
 
 }
 const tab2 = () => {
-    writeIndexManagementTable();
+    refreshIndexes()
+        .then(() => {
+            writeIndexesToDropdowns();
+            writeIndexManagementTable();
+        });
+
+
 };
 
 const tab3 = () => {
@@ -174,14 +235,61 @@ const doSearchChatJson = async (callback) => {
 
     } else if (responseType === "json") {
         return doJsonResponse(formData);
-    }
-    else{
+    } else {
         return doChatResponse(formData);
     }
-
-
-
 }
+
+const doDeleteIndex = async (indexName) => {
+    if (!confirm("Are you sure you want to delete " + indexName + "?")) {
+        return;
+    }
+    let formData = {};
+    formData.indexName = indexName;
+    console.log("formData", formData)
+    const response = await fetch('/api/v1/ai/embeddings', {
+        method: "DELETE", body: JSON.stringify(formData), headers: {
+            "Content-Type": "application/json"
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            refreshIndexes()
+                .then(() => {
+                    writeIndexesToDropdowns();
+                    writeIndexManagementTable();
+                });
+        });
+}
+
+const doBuildIndex = async () => {
+
+    const formDataRaw = new FormData(document.getElementById("createUpdateIndex"))
+    const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
+
+    if (formData.indexName === null || formData.indexName.trim().length == 0) {
+        alert("Index Name is required");
+        return;
+    }
+
+    if (formData.query === null || formData.query.trim().length == 0) {
+        alert("Query is required");
+        return;
+    }
+
+
+    console.log("formData", formData)
+    const response = await fetch('/api/v1/ai/embeddings', {
+        method: "POST", body: JSON.stringify(formData), headers: {
+            "Content-Type": "application/json"
+        }
+    }).then(response => response.json())
+        .then(data => {
+            console.log(data)
+            document.getElementById("buildResponse").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
+        });
+}
+
 
 const doJsonResponse = async (formData) => {
 
@@ -204,7 +312,7 @@ const doChatResponse = async (formData) => {
     const stream = document.getElementById("streamingResponseType").checked;
 
     console.log(JSON.stringify(formData));
-    formData.stream =true;
+    formData.stream = true;
     const response = await fetch('/api/v1/ai/completions', {
         method: "POST", body: JSON.stringify(formData), headers: {
             "Content-Type": "application/json"
@@ -246,7 +354,7 @@ const doSearch = async (formData) => {
 
     console.log("formData", formData)
     const semanticSearchResults = document.getElementById("semanticSearchResults");
-    semanticSearchResults.innerHTML="";
+    semanticSearchResults.innerHTML = "";
 
 
     const table = document.createElement("table");
@@ -312,7 +420,7 @@ const doSearch = async (formData) => {
         })
 };
 
-const resetLoader = ()=>{
+const resetLoader = () => {
 
     document.getElementById("submitChat").style.display = "";
     document.getElementById("loaderChat").style.display = "none";

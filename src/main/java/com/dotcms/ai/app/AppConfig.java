@@ -81,12 +81,8 @@ public class AppConfig implements Serializable {
         if (blacklisted(appKey)) {
             return 0;
         }
-
-
-        return Try.of(() -> Integer.parseInt(configValues.get(appKey.key).getString()))
-                .andThenTry(() -> Integer.parseInt(appKey.defaultValue))
-                .getOrElse(0);
-
+        String value =  Try.of(() -> configValues.get(appKey.key).getString()).getOrElse(appKey.defaultValue);
+        return Try.of(()->Integer.parseInt(value)).getOrElse(0);
     }
 
     private boolean blacklisted(AppKeys key) {
@@ -98,10 +94,9 @@ public class AppConfig implements Serializable {
             return false;
         }
 
+        String value =  Try.of(() -> configValues.get(appKey.key).getString()).getOrElse(appKey.defaultValue);
+        return Try.of(()->Boolean.parseBoolean(value)).getOrElse(false);
 
-        return Try.of(() -> Boolean.parseBoolean(configValues.get(appKey.key).getString()))
-                .andThenTry(() -> Boolean.parseBoolean(appKey.defaultValue))
-                .getOrElse(false);
 
 
     }

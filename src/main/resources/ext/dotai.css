@@ -100,7 +100,9 @@ input[type="radio"] {
 
 }
 
-
+.hTable{
+    text-align:left;
+}
 textarea {
     font-size: large;
     padding: 10px;
