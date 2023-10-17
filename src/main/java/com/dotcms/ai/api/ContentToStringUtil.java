@@ -287,7 +287,7 @@ public class ContentToStringUtil {
         if(UtilMethods.isEmpty(value)) {
             return false;
         }
-        if (HTML_PATTERN.matcher(value).matches()) {
+        if (HTML_PATTERN.matcher(value).find()) {
             return true;
         }
 

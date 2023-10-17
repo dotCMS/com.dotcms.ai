@@ -188,8 +188,7 @@
                         <tr>
                             <th>Content to index:</th>
                             <td>
-                            <textarea class="prompt" name="query"
-                                      placeholder="lucene content search"></textarea>
+                            <textarea class="prompt" name="query" placeholder="lucene search to embed "></textarea>
                             </td>
                         </tr>
 

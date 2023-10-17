@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -75,47 +76,54 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
             return;
         }
 
-        final List<Map<String,Optional<Field>>> fields = parseTypesAndFields(params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
+        final List<Optional<Field>> fields = parseTypesAndFields(params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
 
         if (fields.isEmpty()) {
             return;
         }
 
 
-        for (Map<String,Optional<Field>> map : fields) {
-            if(!map.containsKey(type.variable())){
-                continue;
-            }
-
-            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, map.get(type.variable()), indexName);
+        for (Optional<Field> field : fields){
+            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, field, indexName);
         }
 
 
     }
 
 
-    private List<Map<String, Optional<Field>>> parseTypesAndFields(final String typeAndFieldParam) {
+    private List<Optional<Field>> parseTypesAndFields(final String typeAndFieldParam) {
 
         if (UtilMethods.isEmpty(typeAndFieldParam)) {
             return List.of();
         }
 
 
-        final List<Map<String, Optional<Field>>> typesAndFields = new ArrayList<>();
-        final String[] typeFieldArr = typeAndFieldParam.trim().split("\\s*,\\s*");
-
+        final Map<String, List<Optional<Field>>> typesAndFields = new HashMap<>();
+        final String[] typeFieldArr = typeAndFieldParam.trim().split("\\r?\\n");
+        List<Optional<Field>> fields = List.of();
         for (String typeField : typeFieldArr) {
-            String[] typeOptField = typeField.split("\\.");
+            String[] typeOptField = typeField.trim().split("\\.");
             Optional<ContentType> type = Try.of(() -> APILocator.getContentTypeAPI(APILocator.systemUser()).find(typeOptField[0])).toJavaOptional();
-            Optional<Field> field = Try.of(() -> type.get().fieldMap().get(typeOptField[1])).toJavaOptional();
             if (type.isEmpty()) {
                 continue;
             }
-            typesAndFields.add(Map.of(type.get().variable(), field));
+            fields = typesAndFields.getOrDefault(type.get().variable(),new ArrayList<>());
+
+            if(typeOptField.length>1) {
+                Optional<Field> field = Try.of(() -> type.get().fieldMap().get(typeOptField[1])).toJavaOptional();
+                if(field.isPresent()) {
+                    fields.add(field);
+                }
+            }
+            else{
+                fields.add(Optional.empty());
+            }
+            typesAndFields.put(type.get().variable(), fields);
+
         }
 
 
-        return typesAndFields;
+        return fields;
     }
 
 

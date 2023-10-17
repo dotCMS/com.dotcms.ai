@@ -68,7 +68,12 @@ const refreshTypesAndFields = async () => {
 
 const writeIndexesToDropdowns = async () => {
     const indexName = document.getElementById("indexNameChat");
+    let options = select_item.getElementsByTagName('option');
 
+
+    for (i=1;i<options.length; i++) {
+        options.removeChild(options[i]);
+    }
 
     for (i = 0; i < dotAiState.indexes.length; i++) {
 

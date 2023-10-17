@@ -108,7 +108,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         final Optional<String> content = ContentToStringUtil.impl.get().parseField(contentlet, field);
 
 
-        this.threadPool.get().submit(() -> {
+        //this.threadPool.get().submit(() -> {
 
             try {
 
@@ -148,7 +148,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
             }
 
-        });
+        //});
     }
 
 
