@@ -91,10 +91,24 @@ class EmbeddingsSQL {
                     "from dot_embeddings where true ";
 
 
-    static final String COUNT_EMBEDDINGS_BY_INDEX="select embeddings, index_name, contents \n" +
-            "from (\n" +
-            "select count(*) as embeddings, index_name, count(distinct(inode)) as contents \n" +
-            "from dot_embeddings  group by index_name order by index_name\n" +
+    static final String COUNT_EMBEDDINGS_BY_INDEX=
+            "select " +
+                "embeddings, " +
+                "index_name, " +
+                "contents, " +
+                "token_total " +
+            "from (" +
+                "select " +
+                    "count(*) as embeddings, " +
+                    "index_name, " +
+                    "count(distinct(inode)) as contents, " +
+                    "sum(token_count) as token_total " +
+                "from " +
+                    "dot_embeddings  " +
+                "group by " +
+                    "index_name " +
+                "order by " +
+                    "index_name " +
             ") data";
 
     private EmbeddingsSQL() {

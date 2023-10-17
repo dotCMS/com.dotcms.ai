@@ -11,7 +11,7 @@ public enum AppKeys {
     MODEL("model", "gpt-3.5-turbo-16k"),
     COMPLETION_MODEL("com.dotcms.ai.completion.model", "gpt-3.5-turbo-16k"),
     COMPLETION_ROLE_PROMPT("com.dotcms.ai.completion.role.prompt", "Use Descriptive writting style."),
-    COMPLETION_TEXT_PROMPT("com.dotcms.ai.completion.text.prompt", "Answer this question\\n\\\"${query}?\\\"\\n\\nby summarizing the following text:\\n\\n${supportingText}"),
+    COMPLETION_TEXT_PROMPT("com.dotcms.ai.completion.text.prompt", "Answer this question\\n\\\"${query}?\\\"\\n\\nby summarizing the following text:\\n\\n${supportingContent}"),
     EMBEDDINGS_MODEL("com.dotcms.ai.embeddings.model", "text-embedding-ada-002"),
     EMBEDDINGS_SPLIT_AT_WORDS("com.dotcms.ai.embeddings.split.at.words", "65"),
     EMBEDDINGS_MINIMUM_FILE_SIZE_TO_INDEX("com.dotcms.ai.embeddings.minimum.file.size", "1024"),

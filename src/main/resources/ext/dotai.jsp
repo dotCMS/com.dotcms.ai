@@ -14,7 +14,6 @@
     <style>
         <%@include file = "dotai.css" %>
     </style>
-
 </head>
 
 
@@ -22,10 +21,7 @@
 
 <div id="container">
     <input id="tab-1" type="radio" name="tab-group" checked="checked" onclick="changeTabs()"/>
-    <label for="tab-1">Chatting with dotCMS</label>
-
-    <input id="tab-2" type="radio" name="tab-group" onclick="changeTabs()"/>
-    <label for="tab-2">Semantic Searching</label>
+    <label for="tab-1">Search and Chat with dotCMS</label>
 
     <input id="tab-3" type="radio" name="tab-group" onclick="changeTabs()"/>
     <label for="tab-3">Manage Embeddings/Indexes</label>
@@ -39,95 +35,59 @@
     <div id="content-1">
         <div style="display: grid;grid-template-columns: 50% 50%;">
             <div>
-                <h2>Chatting with dotCMS</h2>
+                <h2>Semantic Search and Chat with dotCMS</h2>
                 <table style="width:80%">
-                    <tr>
-                        <th>
-                            Index to chat with:
-                        </th>
-                        <td>
-                            <select name="indexName" id="indexNameChat">
-                                <option disabled="true" placeholder="Select an Index">Select an Index</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            <label>Response Type:</label>
-                        </th>
-                        <td>
-                            <input type="radio" checked="true" id="streamingResponseType" name="responseType">
-                            <label for="streamingResponseType">Streaming</label>
-                            &nbsp; &nbsp; &nbsp;
-                            <input type="radio" id="restJsonResponseType" name="responseType">
-                            <label for="restJsonResponseType">REST/JSON</label>
-
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            Temperature:
-                        </th>
-                        <td>
-                            <input type="number" step="0.1" value="1" id="temperatureChat" min="0" max="2"><br>
-                            (determines the randomness of the response. 0 = deterministic, 2 = most random
-                        </td>
-                    </tr>
-
-
-                    <tr>
-                        <th>Search Text or Phrase:</th>
-                        <td>
-                            <textarea class="prompt" name="promptChat" id="promptChat"
-                                      placeholder="Search text or phrase"></textarea>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2" style="text-align: center">
-                            <div style="padding:10px;height:75px; text-align: center">
-                                <div class="loader" style="display:none;height:40px;padding:10px;"
-                                     id="loaderChat"></div>
-                                <button id="submitChat" class="button dijit dijitReset dijitInline dijitButton"
-                                        onclick="getText()">
-                                    Submit
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-
-                </table>
-            </div>
-            <div>
-                <pre id="answerChat" style="overflow: auto;white-space: pre-wrap;"></pre>
-            </div>
-        </div>
-
-
-    </div>
-
-    <div id="content-2">
-
-        <h2>Semantic Searching</h2>
-        <div style="display: grid;grid-template-columns: 50% 50%;">
-            <div>
-                <form action="POST" id="searchForm" onsubmit="return false;">
-                    <table style="width:80%">
+                    <form action="POST" id="chatForm" onsubmit="return false;">
                         <tr>
-                            <th>Index to Search:</th>
+                            <th>
+                                Source content index to use:
+                            </th>
                             <td>
-                                <select name="indexName" id="indexToSearch">
+                                <select name="indexName" id="indexNameChat">
                                     <option disabled="true" placeholder="Select an Index">Select an Index</option>
                                 </select>
                             </td>
                         </tr>
                         <tr>
-                            <th>Search Text or Phrase:</th>
+                            <th>
+                                <label>Response Type:</label>
+                            </th>
                             <td>
-                                <textarea class="prompt" name="query" placeholder="Search text or phrase"></textarea>
+                                <div style="padding-bottom:10px;">
+                                    <input type="radio" checked="true" id="searchResponseType" name="responseType"
+                                           value="search" onchange="showResultTables()">
+                                    <label for="searchResponseType">Semantic Search &nbsp; &nbsp; (dotCMS Only)</label>
+                                </div>
+                                <div style="padding-bottom:10px;">
+                                    <input type="radio" id="streamingResponseType" name="responseType" value="stream" onchange="showResultTables()">
+                                    <label for="streamingResponseType">Streaming Chat &nbsp; &nbsp; (OpenAI + dotCMS Supporting Content)</label>
+                                </div>
+                                <div>
+                                    <input type="radio" id="restJsonResponseType" name="responseType" value="json" onchange="showResultTables()">
+                                    <label for="restJsonResponseType">REST/JSON Chat &nbsp; &nbsp; (OpenAI + dotCMS Supporting Content)</label>
+                                </div>
                             </td>
                         </tr>
                         <tr>
-                            <th>Operator:</th>
+                            <th>
+                                Temperature:
+                            </th>
+                            <td>
+                                <input name="temperature" type="number" step="0.1" value="1" min="0" max="2"><br>
+                                (determines the randomness of the response. 0 = deterministic, 2 = most random
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <th>Search Query:</th>
+                            <td>
+                            <textarea class="prompt" name="query"
+                                      placeholder="Search text or phrase">best beach</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Vector Operator:</th>
                             <td>
 
                                 <input type="radio" name="operator" id="cosine" checked="true" value="cosine">
@@ -138,15 +98,16 @@
                                 &nbsp; &nbsp;
                                 <input type="radio" name="operator" id="product" value="product">
                                 <label for="product">Inner Product</label>
-
+                                <br>
+                                Search stored embeddings using this operator. (probably best to leave it alone)
                             </td>
                         </tr>
                         <tr>
                             <th>
-                                Threshold:
+                                Distance Threshold:
                             </th>
                             <td>
-                                <input type="number" step="0.05" value=".25" name="threshold" id="threshold" min="0.05"
+                                <input type="number" step="0.05" value=".25" name="threshold" min="0.05"
                                        max="100"><br>
                                 the lower this number, the more semantically similar the results
                             </td>
@@ -182,42 +143,47 @@
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align: center">
-
-
-                                <button onclick="doSearch()" class="button dijit dijitReset dijitInline dijitButton">
-                                    Submit
-                                </button>
-
+                                <div style="padding:10px;height:75px; text-align: center">
+                                    <div class="loader" style="display:none;height:40px;padding:10px;" id="loaderChat"></div>
+                                    <button id="submitChat" class="button dijit dijitReset dijitInline dijitButton"
+                                            onclick="doSearchChatJson()">
+                                        Submit
+                                    </button>
+                                </div>
                             </td>
                         </tr>
-
-                    </table>
-                </form>
+                    </form>
+                </table>
             </div>
             <div>
-                <div id="semanticSearchResults"></div>
+                <div style="padding-bottom:10px">
+                    <h2>Results</h2>
+                </div>
+                <div>
+                    <textarea id="answerChat" style="overflow: auto;white-space: pre-wrap;"></textarea>
+                    <div id="semanticSearchResults"></div>
+                </div>
             </div>
-
         </div>
     </div>
 
 
-    <div id="content-3">
+    <div id="content-2">
         <h2>Manage Embeddings / Indexes</h2>
-
 
         <h3>Indexes</h3>
         <table style="width:80%" id="">
             <tr>
                 <th>Index</th>
                 <th>Chunks</th>
-                <th></th>
+                <th>Content</th>
+                <th>Tokens</th>
             </tr>
         </table>
     </div>
 
 
-    <div id="content-4">
+    <div id="content-3">
         <h2>AI/Embeddings Config</h2>
         <div id="configTable" style="max-width: 800px">
 

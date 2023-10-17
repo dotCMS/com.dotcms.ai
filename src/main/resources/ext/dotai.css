@@ -93,6 +93,13 @@ input[type="radio"] {
     padding: 10px;
 
 }
+#answerChat{
+    width:100%;
+    min-height: 500px;
+
+
+}
+
 
 textarea {
     font-size: large;

@@ -322,7 +322,7 @@ public class EmbeddingsDB {
             Map<String, Map<String,Long>> results = new TreeMap<>();
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
-                results.put(rs.getString("index_name"), Map.of("fragments", rs.getLong("embeddings"), "contents", rs.getLong("contents")));
+                results.put(rs.getString("index_name"), Map.of("fragments", rs.getLong("embeddings"), "contents", rs.getLong("contents"),"tokenTotal",rs.getLong("token_total")));
             }
             return results;
         } catch (SQLException e) {

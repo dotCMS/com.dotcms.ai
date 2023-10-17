@@ -70,12 +70,12 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         int maxTokenSize = OpenAIModel.resolveModel(config.get().getModel()).maxTokens;
         // aggregate matching results into text
-        StringBuilder supportingText = new StringBuilder();
-        searchResults.forEach(s -> supportingText.append(s.extractedText + " "));
+        StringBuilder supportingContent = new StringBuilder();
+        searchResults.forEach(s -> supportingContent.append(s.extractedText + " "));
 
 
-        String systemPrompt = getSystemPrompt(form.query, supportingText.toString());
-        String textPrompt = getTextPrompt(form.query, supportingText.toString());
+        String systemPrompt = getSystemPrompt(form.query, supportingContent.toString());
+        String textPrompt = getTextPrompt(form.query, supportingContent.toString());
 
         int systemPromptTokens = countTokens(systemPrompt);
 
@@ -98,27 +98,27 @@ public class CompletionsAPIImpl implements CompletionsAPI {
         return json;
     }
 
-    private String getSystemPrompt(String query, String supportingText) {
-        if (UtilMethods.isEmpty(query) || UtilMethods.isEmpty(supportingText)) {
-            throw new DotRuntimeException("no query or supportingText to summarize found");
+    private String getSystemPrompt(String query, String supportingContent) {
+        if (UtilMethods.isEmpty(query) || UtilMethods.isEmpty(supportingContent)) {
+            throw new DotRuntimeException("no query or supportingContent to summarize found");
 
         }
         String systemPrompt = config.get().getConfig(AppKeys.COMPLETION_ROLE_PROMPT);
 
 
-        return systemPrompt.replace("${query}", query).replace("${supportingText}", supportingText).replace("??", "?");
+        return systemPrompt.replace("${query}", query).replace("${supportingContent}", supportingContent).replace("??", "?");
 
     }
 
-    private String getTextPrompt(String query, String supportingText) {
-        if (UtilMethods.isEmpty(query) || UtilMethods.isEmpty(supportingText)) {
-            throw new DotRuntimeException("no query or supportingText to summarize found");
+    private String getTextPrompt(String query, String supportingContent) {
+        if (UtilMethods.isEmpty(query) || UtilMethods.isEmpty(supportingContent)) {
+            throw new DotRuntimeException("no query or supportingContent to summarize found");
 
         }
         String textPrompt = config.get().getConfig(AppKeys.COMPLETION_TEXT_PROMPT);
 
 
-        return textPrompt.replace("${query}", query).replace("${supportingText}", supportingText).replace("??", "?");
+        return textPrompt.replace("${query}", query).replace("${supportingContent}", supportingContent).replace("??", "?");
 
     }
 

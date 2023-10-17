@@ -1,61 +1,220 @@
 const changeTabs = async () => {
-    var ele = document.getElementsByName('tab-group');
+    let ele = document.getElementsByName('tab-group');
     for (i = 0; i < ele.length; i++) {
         document.getElementById('content-' + (i + 1)).style.display = ele[i].checked ? "block" : "none";
     }
-    if(ele[3].checked){
-        loadConfigs()
+    if (ele[0].checked) {
+        tab1()
+    } else if (ele[1].checked) {
+        tab2()
+    } else if (ele[2].checked) {
+        tab3()
+    } else if (ele[3].checked) {
+        tab4()
     }
 };
 
-const dotAiState ={} ;
+const dotAiState = {};
 
 
-const getText = async (callback) => {
+const refreshIndexes = async () => {
+    dotAiState.indexes = [];
+    return fetch("/api/v1/ai/embeddings/indexCount")
+        .then(response => response.json())
+        .then(options => {
+            for (const [key, value] of Object.entries(options.indexCount)) {
+                let entry = {}
+                entry.name = key;
+                entry.contents = value.contents;
+                entry.fragments = value.fragments;
+                entry.tokenTotal = value.tokenTotal
+                dotAiState.indexes.push(entry);
 
-    const prompt = document.getElementById("promptChat").value
-    document.getElementById("submitChat").style.display = "none";
-    document.getElementById("loaderChat").style.display = "block";
-    document.getElementById("answerChat").innerText = "";
+            }
+        })
 
-    const temperature = document.getElementById("temperatureChat").value;
-    const streaming   = document.getElementById("streamingResponseType").checked;
-    const indexName   = document.getElementById("indexNameChat").value;
+};
 
-    const response = await fetch('/api/v1/ai/completions', {
+const refreshConfigs = async () => {
+    dotAiState.config = {};
 
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            query: prompt,
-            indexName: indexName,
-            stream: streaming,
-            temperature: temperature
-        }),
-    });
-
-
-    if (!streaming) {
-
-        response.json().then(json => {
-            console.log("json", json)
-            document.getElementById("answerChat").innerText = json.openAiResponse.choices[0].message.content
-                + "\n\n------\nJSON Response\n------\n" + JSON.stringify(json, null, 2);
+    fetch("/api/v1/ai/completions/config")
+        .then(response => response.json())
+        .then(configProps => {
+            const entity = {}
+            for (const [key, value] of Object.entries(configProps)) {
+                entity[key] = value
+            }
+            dotAiState.config = entity;
         });
-        document.getElementById("loaderChat").style.display = "none";
-        document.getElementById("submitChat").style.display = "";
-        return;
+};
+
+const refreshTypesAndFields = async () => {
+    const contentTypes = [];
+
+    fetch("/api/v1/contenttype?orderby=modDate&direction=DESC&per_page=40")
+        .then(response => response.json())
+        .then(options => {
+
+            for (i = 0; i < options.entity.length; i++) {
+                let type = options.entity[i];
+                let entry = {};
+                entry
+
+            }
+        })
+};
+
+const writeIndexesToDropdowns = async () => {
+    const indexName = document.getElementById("indexNameChat");
+
+
+    for (i = 0; i < dotAiState.indexes.length; i++) {
+
+        const newOption = document.createElement("option");
+        newOption.value = dotAiState.indexes[i].name;
+        newOption.text = `${dotAiState.indexes[i].name}   - (content:${dotAiState.indexes[i].contents}, fragments:${dotAiState.indexes[i].fragments})`
+
+        indexName.appendChild(newOption);
+    }
+};
+
+
+const writeConfigTable = async () => {
+
+    const configTable = document.getElementById("configTable")
+
+
+    configTable.innerHTML = "";
+
+    const table = document.createElement("table");
+    table.className = "propTable";
+    configTable.appendChild(table);
+
+    for (const [key, value] of Object.entries(dotAiState.config)) {
+
+        const tr = document.createElement("tr");
+        const th = document.createElement("th");
+        th.className = "propTh";
+        const td = document.createElement("td");
+        td.className = "propTd";
+        table.appendChild(tr)
+        tr.appendChild(th);
+        tr.appendChild(td);
+        th.innerHTML = key;
+        td.innerHTML = value;
 
 
     }
+
+};
+const writeIndexManagementTable = async () => {
+
+
+}
+
+
+window.addEventListener('load', function () {
+    refreshIndexes()
+        .then(() => {
+            writeIndexesToDropdowns();
+        });
+
+    refreshConfigs().then(() => {
+        tab1();
+    });
+    showResultTables();
+});
+
+
+const tab1 = () => {
+
+}
+const tab2 = () => {
+    writeIndexManagementTable();
+};
+
+const tab3 = () => {
+    writeConfigTable();
+};
+
+
+const showResultTables = () => {
+    const searching = document.getElementById("searchResponseType").checked;
+    if (searching) {
+        document.getElementById("answerChat").style.display = "none";
+        document.getElementById("semanticSearchResults").style.display = "block";
+    } else {
+        document.getElementById("answerChat").placeholder = "Current Prompt: \n\n" + dotAiState.config["com.dotcms.ai.completion.text.prompt"]
+        document.getElementById("answerChat").style.display = "block";
+        document.getElementById("semanticSearchResults").style.display = "none";
+    }
+
+}
+
+
+const doSearchChatJson = async (callback) => {
+
+    const formDataRaw = new FormData(document.getElementById("chatForm"))
+    const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
+
+    const responseType = formData.responseType
+    delete formData.responseType;
+    if (formData.query == undefined || formData.query.trim().length == 0) {
+        alert("please enter a query/prompt");
+        return;
+    }
+
+    document.getElementById("submitChat").style.display = "none";
+    document.getElementById("loaderChat").style.display = "block";
+
+
+    if (responseType === "search") {
+        doSearch(formData)
+
+    } else if (responseType === "json") {
+        return doJsonResponse(formData);
+    }
+    else{
+        return doChatResponse(formData);
+    }
+
+
+
+}
+
+const doJsonResponse = async (formData) => {
+
+    const response = await fetch('/api/v1/ai/completions', {
+        method: "POST", body: JSON.stringify(formData), headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    response.json().then(json => {
+        console.log("json", json)
+        document.getElementById("answerChat").value = json.openAiResponse.choices[0].message.content + "\n\n------\nJSON Response\n------\n" + JSON.stringify(json, null, 2);
+    });
+    resetLoader();
+
+}
+
+
+const doChatResponse = async (formData) => {
+
+    const stream = document.getElementById("streamingResponseType").checked;
+
+    console.log(JSON.stringify(formData));
+    formData.stream =true;
+    const response = await fetch('/api/v1/ai/completions', {
+        method: "POST", body: JSON.stringify(formData), headers: {
+            "Content-Type": "application/json"
+        }
+    });
 
 
     const reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
 
-    document.getElementById("loaderChat").style.display = "none";
-    document.getElementById("submitChat").style.display = "";
+    resetLoader();
 
     if (!reader) return;
     // eslint-disable-next-line no-constant-condition
@@ -75,153 +234,27 @@ const getText = async (callback) => {
 
             const json = JSON.parse(data.substring(6));
             if (json.choices[0].delta.content == null) return;
-            document.getElementById("answerChat").innerText += json.choices[0].delta.content;
+            document.getElementById("answerChat").value += json.choices[0].delta.content;
         });
         if (dataDone) break;
     }
-};
-
-
-
-
-
-const refreshIndexes = async () => {
-    dotAiState.indexes=[];
-    fetch("/api/v1/ai/embeddings/indexCount")
-        .then(response => response.json())
-        .then(options => {
-            for (const [key, value] of Object.entries(options.indexCount)) {
-                let entry = {}
-                entry.name=key;
-                entry.contents=value.contents;
-                entry.fragments=value.fragments;
-                dotAiState.indexes.push(entry);
-            }
-        })
-        .then(()=>{
-            writeIndexesToDropdowns()
-        })
-
 
 };
 
 
-const writeIndexesToDropdowns = async () => {
-    const indexName = document.getElementById("indexNameChat");
-    const indexToSearch = document.getElementById("indexToSearch");
-
-    for (i=0;dotAiState.indexes.length;i++) {
-        const newOption = document.createElement("option");
-        newOption.value = dotAiState.indexes[i].name;
-        newOption.text = `${dotAiState.indexes[i].name}   - (content:${dotAiState.indexes[i].contents}, fragments:${dotAiState.indexes[i].fragments})`
-
-        indexToSearch.appendChild(newOption.cloneNode(true));
-
-        indexName.appendChild(newOption);
-
-    }
-
-};
-
-
-const getTypesAndFields = async () => {
-    const contentTypes = [];
-
-    fetch("/api/v1/contenttype?orderby=modDate&direction=DESC&per_page=40")
-        .then(response => response.json())
-        .then(options => {
-
-            for (i=0;i<options.entity.length;i++) {
-                let type = options.entity[i];
-                let entry={};
-                entry
-
-            }
-        })
-        .then(()=>{
-
-        })
-
-
-};
-
-
-
-
-
-
-
-
-const loadConfigs = async () => {
-
-    const configTable = document.getElementById("configTable")
-
-
-    configTable.innerHTML = "";
-
-    const table = document.createElement("table");
-    table.className = "propTable";
-    configTable.appendChild(table);
-    await fetch("/api/v1/ai/completions/config")
-        .then(response => response.json())
-        .then(configProps => {
-
-            for (const [key, value] of Object.entries(configProps)) {
-
-                const tr = document.createElement("tr");
-
-                const th = document.createElement("th");
-                th.className = "propTh";
-                const td = document.createElement("td");
-                td.className = "propTd";
-                table.appendChild(tr)
-                tr.appendChild(th);
-                tr.appendChild(td);
-                th.innerHTML = key;
-                td.innerHTML = value;
-
-            }
-        })
-
-};
-
-window.addEventListener('load', function () {
-    refreshIndexes();
-});
-
-
-const tab4  =() => {
-
-    loadConfigs();
-};
-
-
-const doSearch = async () => {
-    const semanticSearchResults = document.getElementById("semanticSearchResults")
-    const formDataRaw = new FormData(document.getElementById("searchForm"))
-
-    const formData = Object.fromEntries(
-        Array.from(formDataRaw.keys()).map(key => [
-            key, formDataRaw.getAll(key).length > 1 ?
-                formDataRaw.getAll(key) : formDataRaw.get(key)
-        ])
-    )
+const doSearch = async (formData) => {
 
     console.log("formData", formData)
+    const semanticSearchResults = document.getElementById("semanticSearchResults");
+    semanticSearchResults.innerHTML="";
 
-    semanticSearchResults.innerHTML = "";
-    const headerDiv = document.createElement("h2");
-    headerDiv.innerHTML = "Results";
-    semanticSearchResults.appendChild(headerDiv);
 
     const table = document.createElement("table");
     semanticSearchResults.appendChild(table);
 
 
     fetch("/api/v1/ai/search", {
-        method: "POST",
-        body: JSON.stringify(formData),
-        headers: {
+        method: "POST", body: JSON.stringify(formData), headers: {
             "Content-Type": "application/json"
         }
     })
@@ -229,22 +262,22 @@ const doSearch = async () => {
         .then(data => {
 
             let tr = document.createElement("tr");
-            tr.style.fontWeight="bold";
-            tr.style.textAlign="left"
+            tr.style.fontWeight = "bold";
+            tr.style.textAlign = "left"
             let td1 = document.createElement("th");
             let td2 = document.createElement("th");
             let td3 = document.createElement("th");
             let td4 = document.createElement("th");
 
-            td1.className="hTable"
-            td2.className="hTable"
-            td3.className="hTable"
-            td4.className="hTable"
+            td1.className = "hTable"
+            td2.className = "hTable"
+            td3.className = "hTable"
+            td4.className = "hTable"
 
-            td1.innerHTML="Title"
-            td2.innerHTML="Matches"
-            td3.innerHTML="Distance"
-            td4.innerHTML="Top Match"
+            td1.innerHTML = "Title"
+            td2.innerHTML = "Matches"
+            td3.innerHTML = "Distance"
+            td4.innerHTML = "Top Match"
 
             tr.append(td1);
             tr.append(td2);
@@ -254,7 +287,7 @@ const doSearch = async () => {
             table.append(tr)
 
 
-            data.dotCMSResults.map(row =>{
+            data.dotCMSResults.map(row => {
                 console.log("row", row)
                 tr = document.createElement("tr");
                 td1 = document.createElement("td");
@@ -262,10 +295,10 @@ const doSearch = async () => {
                 td3 = document.createElement("td");
                 td4 = document.createElement("td");
 
-                td1.innerHTML=`<a href="/dotAdmin/#/c/content/${row.inode}" target="_top">${row.title}</a>`;
-                td2.innerHTML= row.matches.length ;
-                td3.innerHTML= parseFloat(row.matches[0].distance).toFixed(2) ;
-                td4.innerHTML=row.matches[0].extractedText;
+                td1.innerHTML = `<a href="/dotAdmin/#/c/content/${row.inode}" target="_top">${row.title}</a>`;
+                td2.innerHTML = row.matches.length;
+                td3.innerHTML = parseFloat(row.matches[0].distance).toFixed(2);
+                td4.innerHTML = row.matches[0].extractedText;
 
                 tr.append(td1);
                 tr.append(td2);
@@ -274,8 +307,15 @@ const doSearch = async () => {
                 table.append(tr)
 
 
-
             })
-
+            resetLoader()
         })
 };
+
+const resetLoader = ()=>{
+
+    document.getElementById("submitChat").style.display = "";
+    document.getElementById("loaderChat").style.display = "none";
+
+
+}
