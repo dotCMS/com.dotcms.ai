@@ -38,7 +38,7 @@ const refreshIndexes = async () => {
 const refreshConfigs = async () => {
     dotAiState.config = {};
 
-    fetch("/api/v1/ai/completions/config")
+    return fetch("/api/v1/ai/completions/config")
         .then(response => response.json())
         .then(configProps => {
             const entity = {}
@@ -46,13 +46,14 @@ const refreshConfigs = async () => {
                 entity[key] = value
             }
             dotAiState.config = entity;
+
         });
 };
 
 const refreshTypesAndFields = async () => {
     const contentTypes = [];
 
-    fetch("/api/v1/contenttype?orderby=modDate&direction=DESC&per_page=40")
+    return fetch("/api/v1/contenttype?orderby=modDate&direction=DESC&per_page=40")
         .then(response => response.json())
         .then(options => {
 
@@ -83,7 +84,7 @@ const writeIndexesToDropdowns = async () => {
 const writeConfigTable = async () => {
 
     const configTable = document.getElementById("configTable")
-
+    console.log("config", dotAiState.config)
 
     configTable.innerHTML = "";
 
@@ -92,7 +93,7 @@ const writeConfigTable = async () => {
     configTable.appendChild(table);
 
     for (const [key, value] of Object.entries(dotAiState.config)) {
-
+        //console.log(key)
         const tr = document.createElement("tr");
         const th = document.createElement("th");
         th.className = "propTh";
@@ -110,11 +111,13 @@ const writeConfigTable = async () => {
 };
 const writeIndexManagementTable = async () => {
     const indexTable = document.getElementById("indexManageTable")
+
     indexTable.innerHTML = "";
 
     let tr = document.createElement("tr");
     tr.style.fontWeight = "bold";
     tr.style.textAlign = "left"
+    tr.style.borderBottom = "1px solid black"
     let td1 = document.createElement("th");
     let td2 = document.createElement("th");
     let td3 = document.createElement("th");
@@ -142,7 +145,7 @@ const writeIndexManagementTable = async () => {
     indexTable.append(tr)
 
     dotAiState.indexes.map(row => {
-        console.log("row", row)
+        //console.log("row", row)
 
         tr = document.createElement("tr");
         td1 = document.createElement("td");
@@ -173,16 +176,22 @@ window.addEventListener('load', function () {
     refreshIndexes()
         .then(() => {
             writeIndexesToDropdowns();
+            writeIndexManagementTable();
         });
 
     refreshConfigs().then(() => {
-        tab1();
+        writeConfigTable();
     });
     showResultTables();
 });
 
 
 const tab1 = () => {
+    refreshIndexes()
+        .then(() => {
+            writeIndexesToDropdowns();
+            writeIndexManagementTable();
+        });
 
 }
 const tab2 = () => {
@@ -196,7 +205,12 @@ const tab2 = () => {
 };
 
 const tab3 = () => {
-    writeConfigTable();
+
+    refreshConfigs().then(() => {
+        writeConfigTable();
+    });
+
+
 };
 
 
@@ -246,7 +260,7 @@ const doDeleteIndex = async (indexName) => {
     }
     let formData = {};
     formData.indexName = indexName;
-    console.log("formData", formData)
+    //console.log("formData", formData)
     const response = await fetch('/api/v1/ai/embeddings', {
         method: "DELETE", body: JSON.stringify(formData), headers: {
             "Content-Type": "application/json"
@@ -278,18 +292,30 @@ const doBuildIndex = async () => {
     }
 
 
-    console.log("formData", formData)
+    //console.log("formData", formData)
     const response = await fetch('/api/v1/ai/embeddings', {
         method: "POST", body: JSON.stringify(formData), headers: {
             "Content-Type": "application/json"
         }
     }).then(response => response.json())
         .then(data => {
-            console.log(data)
             document.getElementById("buildResponse").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
+            setTimeout(clearIndexMessage, 5000);
+            
         });
 }
 
+
+const clearIndexMessage = async () => {
+    document.getElementById("buildResponse").innerHTML = "";
+    refreshIndexes()
+        .then(() => {
+            writeIndexesToDropdowns();
+            writeIndexManagementTable();
+        });
+
+
+}
 
 const doJsonResponse = async (formData) => {
 
@@ -299,7 +325,7 @@ const doJsonResponse = async (formData) => {
         }
     });
     response.json().then(json => {
-        console.log("json", json)
+        //console.log("json", json)
         document.getElementById("answerChat").value = json.openAiResponse.choices[0].message.content + "\n\n------\nJSON Response\n------\n" + JSON.stringify(json, null, 2);
     });
     resetLoader();
@@ -311,7 +337,7 @@ const doChatResponse = async (formData) => {
 
     const stream = document.getElementById("streamingResponseType").checked;
 
-    console.log(JSON.stringify(formData));
+    //console.log(JSON.stringify(formData));
     formData.stream = true;
     const response = await fetch('/api/v1/ai/completions', {
         method: "POST", body: JSON.stringify(formData), headers: {
@@ -352,7 +378,7 @@ const doChatResponse = async (formData) => {
 
 const doSearch = async (formData) => {
 
-    console.log("formData", formData)
+    //console.log("formData", formData)
     const semanticSearchResults = document.getElementById("semanticSearchResults");
     semanticSearchResults.innerHTML = "";
 
@@ -396,7 +422,7 @@ const doSearch = async (formData) => {
 
 
             data.dotCMSResults.map(row => {
-                console.log("row", row)
+                //console.log("row", row)
                 tr = document.createElement("tr");
                 td1 = document.createElement("td");
                 td2 = document.createElement("td");

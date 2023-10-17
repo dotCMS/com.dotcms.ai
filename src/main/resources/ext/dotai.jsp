@@ -23,11 +23,11 @@
     <input id="tab-1" type="radio" name="tab-group" checked="checked" onclick="changeTabs()"/>
     <label for="tab-1">Search and Chat with dotCMS</label>
 
-    <input id="tab-3" type="radio" name="tab-group" onclick="changeTabs()"/>
-    <label for="tab-3">Manage Embeddings/Indexes</label>
+    <input id="tab-2" type="radio" name="tab-group" onclick="changeTabs()"/>
+    <label for="tab-2">Manage Embeddings/Indexes</label>
 
-    <input id="tab-4" type="radio" name="tab-group" onclick="changeTabs();"/>
-    <label for="tab-4">Config Values</label>
+    <input id="tab-3" type="radio" name="tab-group" onclick="changeTabs();"/>
+    <label for="tab-3">Config Values</label>
 
 </div>
 
@@ -83,7 +83,7 @@
                             <th>Search Query:</th>
                             <td>
                             <textarea class="prompt" name="query"
-                                      placeholder="Search text or phrase">best beach</textarea>
+                                      placeholder="Search text or phrase"></textarea>
                             </td>
                         </tr>
                         <tr>
@@ -173,12 +173,6 @@
 
         <div style="display: grid;grid-template-columns: 40% 60%;">
             <div>
-                <h3>Indexes</h3>
-                <table id="indexManageTable" style="width:80%">
-
-                </table>
-            </div>
-            <div>
                 <h3>Create/Update Index</h3>
                 <form id="createUpdateIndex" onsubmit="return false;">
                     <table>
@@ -215,8 +209,16 @@
                         </tr>
                     </table>
                 </form>
+                <div id="buildResponse"></div>
             </div>
-            <div id="buildResponse"></div>
+
+            <div>
+                <h3>Indexes</h3>
+                <table id="indexManageTable" style="width:80%">
+
+                </table>
+            </div>
+        </div>
     </div>
 
 
