@@ -9,6 +9,7 @@ import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIModel;
 import com.dotcms.ai.util.OpenAIRequest;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
+import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.util.UtilMethods;
@@ -29,7 +30,10 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
     final Lazy<AppConfig> config;
 
-    final Lazy<AppConfig> defaultConfig = Lazy.of(() -> Try.of(() -> ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()))).getOrElseThrow(DotRuntimeException::new));
+    final Lazy<AppConfig> defaultConfig = Lazy.of(() -> ConfigService.INSTANCE.config(Try.of(() ->
+            WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()))
+            .getOrElse(APILocator.systemHost()))
+    );
 
 
     public CompletionsAPIImpl() {

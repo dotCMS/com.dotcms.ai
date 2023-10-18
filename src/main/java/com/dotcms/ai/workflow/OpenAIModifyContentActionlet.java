@@ -20,6 +20,7 @@ import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
+import com.dotmarketing.portlets.workflows.actionlet.PublishContentActionlet;
 import com.dotmarketing.portlets.workflows.actionlet.SaveContentActionlet;
 import com.dotmarketing.portlets.workflows.actionlet.WorkFlowActionlet;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionClassParameter;
@@ -56,11 +57,11 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
         return List.of(
                 new WorkflowActionletParameter("fieldToRead", "The field with the content to use in your prompt", "", true),
                 new WorkflowActionletParameter("fieldToWrite", "The field where you want to write the results.  " +
-                        "<br>If your response is being returned as a json object, this field can be left blank<br>" +
-                        "and the keys of the json object will be used to update the content fields.", "", false),
+                        "<br>If your response is being returned as a json object, this field can be left blank" +
+                        "<br>and the keys of the json object will be used to update the content fields.", "", false),
                 new WorkflowActionletParameter("overwriteField", "Overwrite existing content (true|false)", "true", true),
                 new WorkflowActionletParameter("openAIPrompt", "The prompt that will be sent to OpenAI", "We need an attractive search result in Google. Return a json object that includes the fields \"pageTitle\" for a meta title of less than 55 characters and \"metaDescription\" for the meta description of less than 300 characters using this content:\\n\\n${fieldContent}\\n\\n", true),
-                new WorkflowActionletParameter("runAsync", "Update the content asynchronously (true|false)", "true", true)
+                new WorkflowActionletParameter("runDelay", "Update the content asynchronously, after X seconds. O means run in-process", "5", true)
         );
     }
 
@@ -71,16 +72,16 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
 
     @Override
     public String getHowTo() {
-        return "This actionlet will prompt OpenAI and will write the result in to a field of your choosing.  You can also ask OpenAI to return a JSON object, the values of which will be merged with your content if you do not specify a fieldToWrite to.";
+        return "This actionlet will send the value of the 'openAIPrompt' field to OpenAI and write the returned results to a field or fields of your choosing.  If OpenAI returns a JSON object, the key/values of that JSON will be merged with your content's fields.  The prompt can also take velocity (content can be referenced as $dotContentMap)";
     }
 
     @Override
     public void executePreAction(final WorkflowProcessor processor, final Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
 
-        final boolean async = Try.of(() -> Boolean.parseBoolean(params.get("runAsync").getValue())).getOrElse(true);
+        final int runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
 
-        if (async) {
-            scheduledExecutorService.schedule(new UpdateContent(processor, params), 10, TimeUnit.SECONDS);
+        if (runDelay>0) {
+            scheduledExecutorService.schedule(new UpdateContent(processor, params), runDelay, TimeUnit.SECONDS);
         } else {
             new UpdateContent(processor, params).run();
         }
@@ -92,7 +93,7 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
 
     }
 
-    private JSONObject buildRequestDataJson(String prompt) {
+    private JSONObject buildRequest(String prompt) {
         AppConfig config = ConfigService.INSTANCE.config();
 
         int maxTokenSize = OpenAIModel.resolveModel(config.getConfig(AppKeys.COMPLETION_MODEL)).maxTokens;
@@ -131,7 +132,7 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
             ContentType type = contentlet.getContentType();
 
 
-            final boolean async = Try.of(() -> Boolean.parseBoolean(params.get("runAsync").getValue())).getOrElse(true);
+            final int runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
             final boolean overwriteField = Try.of(() -> Boolean.parseBoolean(params.get("overwriteField").getValue())).getOrElse(true);
             final Optional<Field> fieldToRead = Try.of(() -> type.fieldMap().get(params.get("fieldToRead").getValue())).toJavaOptional();
             final Optional<Field> fieldToWrite = Try.of(() -> type.fieldMap().get(params.get("fieldToWrite").getValue())).toJavaOptional();
@@ -163,7 +164,7 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
                 String finalPrompt = VelocityUtil.eval(promptIn, ctx);
 
 
-                JSONObject openAIResponse = CompletionsAPI.impl().raw(buildRequestDataJson(finalPrompt));
+                JSONObject openAIResponse = CompletionsAPI.impl().raw(buildRequest(finalPrompt));
 
 
                 String response = openAIResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
@@ -197,16 +198,19 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
                 }
                 processor.setContentlet(contentlet);
 
-                if (async) {
-
+                if (runDelay>0) {
+                    boolean isPublished = APILocator.getVersionableAPI().isLive(contentlet);
                     new SaveContentActionlet().executeAction(processor, Map.of());
+                    if(isPublished){
+                        new PublishContentActionlet().executeAction(processor, Map.of());
+                    }
                 }
             } catch (Exception e) {
                 final SystemMessageBuilder message = new SystemMessageBuilder().setMessage("Error:" + e.getMessage())
                         .setLife(5000).setType(MessageType.SIMPLE_MESSAGE).setSeverity(MessageSeverity.ERROR);
 
                 SystemMessageEventUtil.getInstance().pushMessage(message.create(), List.of(processor.getUser().getUserId()));
-                Logger.warnAndDebug(this.getClass(), "Error:" + e.getMessage(), e);
+                Logger.warn(this.getClass(), "Error:" + e.getMessage(), e);
                 throw new DotRuntimeException(e);
             }
 
