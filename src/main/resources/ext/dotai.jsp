@@ -7,7 +7,7 @@
     <title>dotAI</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <link rel="icon" type="image/x-icon" href="favicon.ico"/>
+
     <script type="application/javascript">
         <%@include file = "dotai.js" %>
     </script>
@@ -79,13 +79,7 @@
                         </tr>
 
 
-                        <tr>
-                            <th>Search Query:</th>
-                            <td>
-                            <textarea class="prompt" name="query"
-                                      placeholder="Search text or phrase"></textarea>
-                            </td>
-                        </tr>
+
                         <tr>
                             <th>Vector Operator:</th>
                             <td>
@@ -141,21 +135,31 @@
                                 field var you would like to search - leave blank for all
                             </td>
                         </tr>
-                        <tr>
-                            <td colspan="2" style="text-align: center">
-                                <div style="padding:10px;height:75px; text-align: center">
-                                    <div class="loader" style="display:none;height:40px;padding:10px;" id="loaderChat"></div>
-                                    <button id="submitChat" class="button dijit dijitReset dijitInline dijitButton"
-                                            onclick="doSearchChatJson()">
-                                        Submit
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+
                     </form>
                 </table>
             </div>
             <div>
+                <table style="margin-top:50px;margin-bottom:20px;">
+                <tr>
+                    <th><h2>Query</h2></th>
+                    <td>
+                            <textarea class="prompt" name="query" id="searchQuery"
+                                      placeholder="Search text or phrase"></textarea>
+                    </td>
+                </tr>
+                    <tr>
+                        <td colspan="2" style="text-align: center">
+                            <div style="padding:10px;height:75px; text-align: center">
+                                <div class="loader" style="display:none;height:40px;padding:10px;" id="loaderChat"></div>
+                                <button id="submitChat" class="button dijit dijitReset dijitInline dijitButton"
+                                        onclick="doSearchChatJson()">
+                                    Submit
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
                 <div style="padding-bottom:10px">
                     <h2>Results</h2>
                 </div>
@@ -181,7 +185,7 @@
                                 Index Name
                             </th>
                             <td>
-                                <input type="text" value="" name="indexName"><br>
+                                <input type="text" value="" name="indexName" placeholder="default"><br>
                                 index to create or append
                             </td>
                         </tr>

@@ -52,14 +52,14 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         // send all this as a json blob to OpenAI
         JSONObject json = buildRequestDataJson(summaryRequest, localResults);
-        if(json.optBoolean("stream", false)){
+        if (json.optBoolean("stream", false)) {
             throw new DotRuntimeException("Please use the summarizeStream method to stream results");
         }
         json.put("stream", false);
 
         String openAiResponse = Try.of(() -> OpenAIRequest.doRequest(config.get().getApiUrl(), "post", config.get().getApiKey(), json)).getOrElseThrow(DotRuntimeException::new);
 
-        JSONObject dotCMSResponse = EmbeddingsAPI.impl().reduceChunksToContent(searcher,localResults);
+        JSONObject dotCMSResponse = EmbeddingsAPI.impl().reduceChunksToContent(searcher, localResults);
 
         dotCMSResponse.put("openAiResponse", new JSONObject(openAiResponse));
         return dotCMSResponse;

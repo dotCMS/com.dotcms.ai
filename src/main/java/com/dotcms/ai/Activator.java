@@ -2,7 +2,6 @@ package com.dotcms.ai;
 
 import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.app.AppKeys;
-import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.listener.EmbeddingContentListener;
 import com.dotcms.ai.rest.CompletionsResource;
@@ -11,6 +10,7 @@ import com.dotcms.ai.rest.EmbeddingsResource;
 import com.dotcms.ai.rest.SearchResource;
 import com.dotcms.ai.viewtool.AIToolInfo;
 import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
+import com.dotcms.ai.workflow.OpenAIModifyContentActionlet;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotcms.contenttype.model.type.KeyValueContentType;
@@ -27,6 +27,7 @@ import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.contentlet.model.IndexPolicy;
 import com.dotmarketing.portlets.languagesmanager.business.LanguageAPI;
 import com.dotmarketing.portlets.languagesmanager.business.LanguageAPIImpl;
+import com.dotmarketing.portlets.workflows.actionlet.WorkFlowActionlet;
 import com.dotmarketing.util.ConfigUtils;
 import com.dotmarketing.util.Logger;
 import com.liferay.portal.model.User;
@@ -42,19 +43,22 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class Activator extends GenericBundleActivator {
 
-    static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
+    private static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
     private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server" + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
-    Class[] clazzes = {
+    private Class[] clazzes = {
             DotAIResource.class,
             EmbeddingsResource.class,
             CompletionsResource.class,
             SearchResource.class
     };
+    private final List<WorkFlowActionlet> actionlets = List.of(new DotEmbeddingsActionlet(), new OpenAIModifyContentActionlet());
+
     private LoggerContext pluginLoggerContext;
 
     public void start(BundleContext context) throws Exception {
@@ -79,7 +83,10 @@ public class Activator extends GenericBundleActivator {
 
 
         // Register Embedding Actionlet
-        this.registerActionlet(context, new DotEmbeddingsActionlet());
+        actionlets.forEach(a->{
+            this.registerActionlet(context, a);
+        });
+
 
         //Initializing services...
         initializeServices(context);
@@ -101,12 +108,11 @@ public class Activator extends GenericBundleActivator {
     public void stop(BundleContext context) throws Exception {
 
 
-
         for (Class clazz : clazzes) {
             Logger.info(this.getClass(), "Removing new Restful Service:" + clazz.getSimpleName());
             RestServiceUtil.removeResource(clazz);
         }
-
+        OpenAIModifyContentActionlet.scheduledExecutorService.shutdown();
 
         //Unregister all the bundle services
         unregisterServices(context);
@@ -121,6 +127,10 @@ public class Activator extends GenericBundleActivator {
         Log4jUtil.shutdown(pluginLoggerContext);
     }
 
+    private void unsubscribeEmbeddingsListener() {
+        APILocator.getLocalSystemEventsAPI().unsubscribe(LISTENER);
+    }
+
     /**
      * Deletes the App yaml to the apps directory and refreshes the apps
      */
@@ -130,10 +140,6 @@ public class Activator extends GenericBundleActivator {
 
         installedAppYaml.delete();
         CacheLocator.getAppsCache().clearCache();
-    }
-
-    private void unsubscribeEmbeddingsListener() {
-        APILocator.getLocalSystemEventsAPI().unsubscribe(LISTENER);
     }
 
     /**
@@ -221,7 +227,7 @@ public class Activator extends GenericBundleActivator {
 
     private void createLanguageVariable(String key, String value, long languageId) throws DotDataException, DotSecurityException {
 
-        if(languageVariableExists(key, languageId,APILocator.systemUser())){
+        if (languageVariableExists(key, languageId, APILocator.systemUser())) {
             return;
         }
 

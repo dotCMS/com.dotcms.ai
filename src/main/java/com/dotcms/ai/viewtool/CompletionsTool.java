@@ -23,6 +23,11 @@ public class CompletionsTool implements ViewTool {
     final private AppConfig app;
     final private ViewContext context;
 
+
+    /**
+     * $ai.completions
+     * @param initData
+     */
     CompletionsTool(Object initData) {
         this.context = (ViewContext) initData;
         this.request = ((ViewContext) initData).getRequest();
@@ -75,11 +80,9 @@ public class CompletionsTool implements ViewTool {
     }
 
     public JSONObject prompt(Map<String,Object> prompt) {
-
         JSONObject json = new JSONObject(prompt);
-
         return CompletionsAPI.impl().raw(json);
-
     }
+
 
 }

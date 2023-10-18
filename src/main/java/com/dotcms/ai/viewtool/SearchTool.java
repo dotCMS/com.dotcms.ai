@@ -26,6 +26,11 @@ public class SearchTool implements ViewTool {
     final private Host host;
     final private AppConfig app;
 
+    /**
+     *
+     * $ai.search
+     * @param initData
+     */
     SearchTool(Object initData) {
         this.request = ((ViewContext) initData).getRequest();
         this.host = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(this.request);

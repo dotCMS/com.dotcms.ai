@@ -7,6 +7,7 @@ import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIRequest;
+import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.api.web.HttpServletResponseThreadLocal;
 import com.dotcms.concurrent.DotConcurrentFactory;
@@ -57,22 +58,13 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             .maximumSize(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_CACHE_SIZE))
             .build();
 
-    static final Lazy<ExecutorService> threadPool = Lazy.of(() -> {
 
-        int threads = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS);
-        int maxThreads = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_MAX);
-        int queue = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_QUEUE);
-        return new ThreadPoolExecutor(threads, maxThreads, 20000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(queue));
-
-    });
 
     static final String MATCHES = "matches";
     final AppConfig config;
 
     EmbeddingsAPIImpl(Host host) {
-
         this.config = ConfigService.INSTANCE.config(host);
-
     }
 
 
@@ -83,7 +75,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
     @Override
     public void shutdown() {
-        Try.run(() -> threadPool.get().shutdown());
+        Try.run(() -> OpenAIThreadPool.threadPool.get().shutdown());
     }
 
     @Override
@@ -108,12 +100,15 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         final Optional<String> content = ContentToStringUtil.impl.get().parseField(contentlet, field);
 
 
-        this.threadPool.get().submit(() -> {
+        OpenAIThreadPool.threadPool.get().submit(() -> {
+
+
 
             try {
 
                 if (content.isEmpty() || UtilMethods.isEmpty(content.get())) {
-                    Logger.info(EmbeddingsAPIImpl.class, "Skipping/No Content for contentlet:" + contentlet.getContentType().variable() + " id:" + contentlet.getIdentifier() + " title:" + contentlet.getTitle());
+                    String fieldVar = Try.of(()->field.get().variable()).getOrElse("unknown");
+                    Logger.info(EmbeddingsAPIImpl.class, "No content to embed for:" + contentlet.getContentType().variable() + "." + fieldVar + " id:" + contentlet.getIdentifier() + " title:" + contentlet.getTitle());
                     return;
                 }
 

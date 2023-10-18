@@ -110,7 +110,7 @@ public class ContentToStringUtil {
                 ? val.replaceAll("\\s+", " ")
                 : null;
 
-        if(UtilMethods.isEmpty(val) || val.length()<1024){
+        if(UtilMethods.isEmpty(val) || val.length()<ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_TEXT_LENGTH_TO_INDEX)){
             return Optional.empty();
         }
         return Optional.of(val);
@@ -222,7 +222,7 @@ public class ContentToStringUtil {
         }
         ContentType type = contentlet.getContentType();
 
-
+        // if no field is specified and it is an html page, send it
         if (fieldOpt.isEmpty() && contentlet.isHTMLPage() == Boolean.TRUE) {
             return parsePage(contentlet);
         }
@@ -287,17 +287,9 @@ public class ContentToStringUtil {
         if(UtilMethods.isEmpty(value)) {
             return false;
         }
-        if (HTML_PATTERN.matcher(value).find()) {
-            return true;
-        }
+        return HTML_PATTERN.matcher(value).find() ;
 
-        try {
-            String textOfHtmlString = Jsoup.parse(value).text();
-            return !textOfHtmlString.equals(value);
-        } catch (Exception e) {
-            Logger.warnAndDebug(EmbeddingsAPIImpl.class, e);
-        }
-        return false;
+
     }
 
 

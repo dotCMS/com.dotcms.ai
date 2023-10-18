@@ -68,10 +68,10 @@ const refreshTypesAndFields = async () => {
 
 const writeIndexesToDropdowns = async () => {
     const indexName = document.getElementById("indexNameChat");
-    let options = select_item.getElementsByTagName('option');
+    let options = indexName.getElementsByTagName('option');
 
 
-    for (i=1;i<options.length; i++) {
+    for (i = 1; i < options.length; i++) {
         options.removeChild(options[i]);
     }
 
@@ -169,10 +169,7 @@ const writeIndexManagementTable = async () => {
         tr.append(td4);
         tr.append(td5);
         indexTable.append(tr)
-
-
     })
-
 
 }
 
@@ -237,6 +234,10 @@ const doSearchChatJson = async (callback) => {
 
     const formDataRaw = new FormData(document.getElementById("chatForm"))
     const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
+
+    const query = document.getElementById("searchQuery").value;
+    formData.query=query;
+
 
     const responseType = formData.responseType
     delete formData.responseType;

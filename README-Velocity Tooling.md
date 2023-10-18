@@ -116,3 +116,15 @@ tokens: $summary.usage.total_tokens
 $summary.choices.get(0).message.content
 
 ```
+
+### Prompt
+
+This method takes an arbitrary  prompt, and will return the openai response object as json.
+
+
+
+
+#set($summary = $ai.completions.summarize("Where can I find the Best beaches?", "blogIndex")))
+
+
+

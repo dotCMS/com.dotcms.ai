@@ -22,17 +22,12 @@ import java.io.IOException;
 import java.net.URL;
 
 public class AIViewTool implements ViewTool {
-    private ViewContext context ;
+    private ViewContext context;
 
 
     @Override
     public void init(Object obj) {
         context = (ViewContext) obj;
-    }
-
-
-    HttpServletRequest getRequest(){
-        return context.getRequest();
     }
 
     /**
@@ -43,7 +38,6 @@ public class AIViewTool implements ViewTool {
     public AIVelocityTextResponseDTO textGenerate(final String prompt) throws IOException {
         return generateTextResponse(prompt, false);
     }
-
 
     /**
      * Processes image request by calling TextService.
@@ -59,7 +53,7 @@ public class AIViewTool implements ViewTool {
 
         try {
             ChatGPTTextService service = new ChatGPTTextServiceImpl(config);
-            AITextResponseDTO resp = service.sendChatGPTRequest(prompt,  raw);
+            AITextResponseDTO resp = service.sendChatGPTRequest(prompt, raw);
             return new AIVelocityTextResponseDTO(resp.getModel(), "200", resp.getPrompt(), resp.getResponse());
         } catch (Exception e) {
             return new AIVelocityTextResponseDTO(null, "500", prompt, e.getMessage());
@@ -115,6 +109,10 @@ public class AIViewTool implements ViewTool {
         }
     }
 
+    HttpServletRequest getRequest() {
+        return context.getRequest();
+    }
+
     /**
      * Generate a response from the AI image service  service w/o adding data from config to prompt. Image size is set in configuration file. Temp File id is
      * being returned in response
@@ -132,6 +130,7 @@ public class AIViewTool implements ViewTool {
     public SearchTool getSearch() {
         return new SearchTool(context);
     }
+
     public CompletionsTool getCompletions() {
         return new CompletionsTool(context);
     }

@@ -85,6 +85,15 @@ public class AppConfig implements Serializable {
         return Try.of(()->Integer.parseInt(value)).getOrElse(0);
     }
 
+    public float getConfigFloat(AppKeys appKey) {
+        if (blacklisted(appKey)) {
+            return 0;
+        }
+        String value =  Try.of(() -> configValues.get(appKey.key).getString()).getOrElse(appKey.defaultValue);
+        return Try.of(()->Float.parseFloat(value)).getOrElse(0f);
+    }
+
+
     private boolean blacklisted(AppKeys key) {
         return !key.key.startsWith("com.dotcms.ai");
     }
