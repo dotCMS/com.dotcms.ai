@@ -118,7 +118,7 @@ $summary.choices.get(0).message.content
 ```
 
 ### Prompt
-
+#set($contentMap = $dotcont
 This method takes an arbitrary  prompt, and will return the openai response object as json.
 
 

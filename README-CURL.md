@@ -2,7 +2,8 @@
 curl -XPOST -k -H"Authorization: Bearer $AUTH_TOK" https://auth.dotcms.com/api/v1/ai/embeddings \
 -H "Content-Type: application/json" \
 -d '{
-"query": "+contentType:(Blog OR Partners OR course OR DotcmsDocumentation OR Testimonial OR feature OR caseStudy OR Dotcmsbuilds)"
+"query": "+contentType:(Blog OR Partners OR course OR DotcmsDocumentation OR Testimonial OR feature OR caseStudy OR Dotcmsbuilds)",
+"indexName": "contentIndex"
 }'
 
 curl -XPOST -k -H"Authorization: Bearer $AUTH_TOK" https://auth.dotcms.com/api/v1/ai/search \

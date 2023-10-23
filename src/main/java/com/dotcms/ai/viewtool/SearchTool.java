@@ -27,8 +27,8 @@ public class SearchTool implements ViewTool {
     final private AppConfig app;
 
     /**
-     *
      * $ai.search
+     *
      * @param initData
      */
     SearchTool(Object initData) {
@@ -42,10 +42,6 @@ public class SearchTool implements ViewTool {
     public void init(Object initData) {
         /* unneeded because of constructor */
     }
-
-
-
-
 
 
     public JSONObject query(Map<String, Object> mapIn) {
@@ -64,13 +60,7 @@ public class SearchTool implements ViewTool {
     public JSONObject query(String query, String indexName) {
         User user = PortalUtil.getUser(request);
 
-        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder()
-                .withQuery(query)
-                .withIndexName(indexName)
-                .withUser(user)
-                .withLimit(50)
-                .withThreshold(.25f)
-                .build();
+        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder().withQuery(query).withIndexName(indexName).withUser(user).withLimit(50).withThreshold(.25f).build();
 
 
         return EmbeddingsAPI.impl(host).searchForContent(searcher);
@@ -92,14 +82,7 @@ public class SearchTool implements ViewTool {
         if (contentToRelate.isEmpty()) {
             return new JSONObject();
         }
-        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder()
-                .withQuery(contentToRelate.get())
-                .withIndexName(indexName)
-                .withExcludeIndentifiers(new String[]{contentlet.getIdentifier()})
-                .withUser(user)
-                .withLimit(50)
-                .withThreshold(.25f)
-                .build();
+        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder().withQuery(contentToRelate.get()).withIndexName(indexName).withExcludeIndentifiers(new String[]{contentlet.getIdentifier()}).withUser(user).withLimit(50).withThreshold(.25f).build();
         return EmbeddingsAPI.impl(host).searchForContent(searcher);
 
 

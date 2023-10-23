@@ -1,7 +1,6 @@
 package com.dotcms.ai.viewtool;
 
 import com.dotcms.ai.api.CompletionsAPI;
-import com.dotcms.ai.api.CompletionsAPIImpl;
 import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
@@ -26,6 +25,7 @@ public class CompletionsTool implements ViewTool {
 
     /**
      * $ai.completions
+     *
      * @param initData
      */
     CompletionsTool(Object initData) {
@@ -60,9 +60,12 @@ public class CompletionsTool implements ViewTool {
         return CompletionsAPI.impl().summarize(form);
     }
 
-
+    public JSONObject summarize(String prompt) {
+        return summarize(prompt, "default");
+    }
     /**
      * Note this does not really stream the output as Velocity Buffers the response.
+     *
      * @param prompt
      * @param indexName
      * @return
@@ -71,15 +74,12 @@ public class CompletionsTool implements ViewTool {
         CompletionsForm form = new CompletionsForm.Builder().stream(true).indexName(indexName).query(prompt).build();
         try {
             CompletionsAPI.impl().summarizeStream(form, this.context.getResponse().getOutputStream());
-        }
-        catch(Exception e){
+        } catch (Exception e) {
             Logger.warnAndDebug(this.getClass(), e);
         }
-
-
     }
 
-    public JSONObject prompt(Map<String,Object> prompt) {
+    public JSONObject prompt(Map<String, Object> prompt) {
         JSONObject json = new JSONObject(prompt);
         return CompletionsAPI.impl().raw(json);
     }

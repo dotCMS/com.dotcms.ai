@@ -59,7 +59,6 @@ public class ContentToStringUtil {
     static MarkdownTool markdown = new MarkdownTool();
 
 
-
     private final Lazy<TikaProxyService> tikaService = Lazy.of(() -> {
         try {
             return OSGISystem.getInstance().getService(TikaServiceBuilder.class, "com.dotcms.tika").createTikaService();
@@ -110,7 +109,7 @@ public class ContentToStringUtil {
                 ? val.replaceAll("\\s+", " ")
                 : null;
 
-        if(UtilMethods.isEmpty(val) || val.length()<ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_TEXT_LENGTH_TO_INDEX)){
+        if (UtilMethods.isEmpty(val) || val.length() < ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_TEXT_LENGTH_TO_INDEX)) {
             return Optional.empty();
         }
         return Optional.of(val);
@@ -166,16 +165,15 @@ public class ContentToStringUtil {
         }
 
 
-
         final String ignoreUrlMapFields = (contentlet.getContentType().urlMapPattern() != null) ? contentlet.getContentType().urlMapPattern() : "";
 
-        Optional<Field> foundField= contentlet.getContentType()
+        Optional<Field> foundField = contentlet.getContentType()
                 .fields()
                 .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
                 .filter(f -> f instanceof StoryBlockField || f instanceof WysiwygField
                 ).findFirst();
 
-        if(foundField.isPresent()){
+        if (foundField.isPresent()) {
             return foundField;
         }
 
@@ -183,7 +181,7 @@ public class ContentToStringUtil {
                 .fields()
                 .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
                 .filter(f ->
-                        f instanceof TextAreaField  || f.dataType().equals(DataTypes.LONG_TEXT)
+                        f instanceof TextAreaField || f.dataType().equals(DataTypes.LONG_TEXT)
                 ).findFirst();
     }
 
@@ -191,7 +189,6 @@ public class ContentToStringUtil {
 
         final Set<String> indexFileExtensions = Set.of(ConfigService.INSTANCE.config().getConfigArray(AppKeys.EMBEDDINGS_FILE_EXTENSIONS_TO_EMBED));
         final int minimumTextLength = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_FILE_SIZE_TO_INDEX);
-
 
 
         return file != null && indexFileExtensions.contains(UtilMethods.getFileExtension(file.toString()));
@@ -217,7 +214,7 @@ public class ContentToStringUtil {
     }
 
     public Optional<String> parseField(@NotNull Contentlet contentlet, @NotNull Optional<Field> fieldOpt) {
-        if(UtilMethods.isEmpty(()->contentlet.getIdentifier())) {
+        if (UtilMethods.isEmpty(() -> contentlet.getIdentifier())) {
             return Optional.empty();
         }
         ContentType type = contentlet.getContentType();
@@ -253,14 +250,14 @@ public class ContentToStringUtil {
     }
 
     private Optional<String> parsePage(Contentlet pageContentlet) {
-        if(UtilMethods.isEmpty(()->pageContentlet.getIdentifier())) {
+        if (UtilMethods.isEmpty(() -> pageContentlet.getIdentifier())) {
             return Optional.empty();
         }
         try {
             if (Boolean.FALSE.equals(pageContentlet.isHTMLPage())) {
                 return Optional.empty();
             }
-            String pageHTML = APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(pageContentlet),true,null,APILocator.systemUser(), "dot-user-agent");
+            String pageHTML = APILocator.getHTMLPageAssetAPI().getHTML(APILocator.getHTMLPageAssetAPI().fromContentlet(pageContentlet), true, null, APILocator.systemUser(), "dot-user-agent");
 
             return parseHTML(pageHTML);
         } catch (Exception e) {
@@ -270,7 +267,7 @@ public class ContentToStringUtil {
     }
 
     private boolean isMarkdown(@NotNull String value) {
-        if(UtilMethods.isEmpty(value)) {
+        if (UtilMethods.isEmpty(value)) {
             return false;
         }
 
@@ -284,10 +281,10 @@ public class ContentToStringUtil {
 
     // it is HTML if parsing it returns a different value than it
     private boolean isHtml(@NotNull String value) {
-        if(UtilMethods.isEmpty(value)) {
+        if (UtilMethods.isEmpty(value)) {
             return false;
         }
-        return HTML_PATTERN.matcher(value).find() ;
+        return HTML_PATTERN.matcher(value).find();
 
 
     }

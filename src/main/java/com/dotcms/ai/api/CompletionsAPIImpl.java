@@ -9,17 +9,25 @@ import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIModel;
 import com.dotcms.ai.util.OpenAIRequest;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
+import com.dotcms.mock.request.FakeHttpRequest;
+import com.dotcms.mock.response.BaseResponse;
+import com.dotcms.rendering.velocity.viewtools.content.ContentMap;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.exception.DotRuntimeException;
+import com.dotmarketing.util.PageMode;
 import com.dotmarketing.util.UtilMethods;
+import com.dotmarketing.util.VelocityUtil;
 import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
 import com.knuddels.jtokkit.api.Encoding;
 import io.vavr.Lazy;
 import io.vavr.control.Try;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.velocity.context.Context;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
@@ -85,9 +93,11 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         JSONArray messages = new JSONArray();
         textPrompt = reduceStringToTokenSize(textPrompt, maxTokenSize - form.responseLengthTokens - systemPromptTokens);
-        messages.add(Map.of("role", "system", "content", systemPrompt));
-        messages.add(Map.of("role", "user", "content", textPrompt));
 
+        messages.add(Map.of("role", "user", "content", textPrompt));
+        if(UtilMethods.isSet(systemPrompt)) {
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+        }
         JSONObject json = new JSONObject();
         json.put("messages", messages);
         if (!json.containsKey("model")) {
@@ -110,19 +120,31 @@ public class CompletionsAPIImpl implements CompletionsAPI {
         String systemPrompt = config.get().getConfig(AppKeys.COMPLETION_ROLE_PROMPT);
 
 
-        return systemPrompt.replace("${query}", query).replace("${supportingContent}", supportingContent).replace("??", "?");
+
+        HttpServletRequest requestProxy = new FakeHttpRequest("localhost", "/").request();
+        HttpServletResponse responseProxy = new BaseResponse().response();
+        Context ctx = VelocityUtil.getWebContext(requestProxy, responseProxy);
+        ctx.put("query", query);
+        ctx.put("supportingContent", supportingContent);
+
+        return Try.of(()->VelocityUtil.eval(systemPrompt, ctx)).getOrElseThrow(DotRuntimeException::new);
+
 
     }
 
     private String getTextPrompt(String query, String supportingContent) {
         if (UtilMethods.isEmpty(query) || UtilMethods.isEmpty(supportingContent)) {
             throw new DotRuntimeException("no query or supportingContent to summarize found");
-
         }
+
         String textPrompt = config.get().getConfig(AppKeys.COMPLETION_TEXT_PROMPT);
+        HttpServletRequest requestProxy = new FakeHttpRequest("localhost", "/").request();
+        HttpServletResponse responseProxy = new BaseResponse().response();
+        Context ctx = VelocityUtil.getWebContext(requestProxy, responseProxy);
+        ctx.put("query", query);
+        ctx.put("supportingContent", supportingContent);
 
-
-        return textPrompt.replace("${query}", query).replace("${supportingContent}", supportingContent).replace("??", "?");
+        return Try.of(()->VelocityUtil.eval(textPrompt, ctx)).getOrElseThrow(DotRuntimeException::new);
 
     }
 

@@ -111,6 +111,24 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
                     Logger.info(EmbeddingsAPIImpl.class, "No content to embed for:" + contentlet.getContentType().variable() + "." + fieldVar + " id:" + contentlet.getIdentifier() + " title:" + contentlet.getTitle());
                     return;
                 }
+                final String fieldVar = field.isPresent() ? field.get().variable() : contentlet.getContentType().variable();
+
+
+
+                if(config.getConfigBoolean(AppKeys.EMBEDDINGS_DB_DELETE_OLD_ON_UPDATE)) {
+
+                    EmbeddingsDTO deleteOldVersions = new EmbeddingsDTO.Builder()
+                            .withIdentifier(contentlet.getIdentifier())
+                            .withLanguage(contentlet.getLanguageId())
+                            .withIndexName(indexName)
+                            .withField(fieldVar)
+                            .withContentType(contentlet.getContentType().variable())
+                            .build();
+                    EmbeddingsDB.impl.get().deleteEmbeddings(deleteOldVersions);
+                }
+
+
+
 
                 final String cleanContent = String.join(" ", content.get().trim().split("\\s+"));
                 final int SPLIT_AT_WORDS = config.getConfigInteger(AppKeys.EMBEDDINGS_SPLIT_AT_WORDS);
@@ -314,6 +332,12 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         if (UtilMethods.isEmpty(content)) {
             return;
         }
+
+
+
+
+
+
         Tuple2<Integer, List<Float>> embeddings = pullOrGenerateEmbeddings(content);
 
         if (embeddings._2.isEmpty()) {
