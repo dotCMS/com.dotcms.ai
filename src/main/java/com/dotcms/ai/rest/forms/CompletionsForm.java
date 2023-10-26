@@ -9,7 +9,6 @@ import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.util.UtilMethods;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -25,14 +24,13 @@ public class CompletionsForm extends Validated {
 
     static final Map<String, String> OPERATORS = Map.of("distance", "<->", "cosine", "<=>", "innerProduct", "<#>");
     @Size(min = 1, max = 4096)
-    public final String query;
+    public final String prompt;
     @Min(1)
     @Max(1000)
     public final int searchLimit;
     @Min(0)
     public final int searchOffset;
     @Min(128)
-    @Max(10240)
     public final int responseLengthTokens;
     public final long language;
     public final boolean stream;
@@ -50,7 +48,7 @@ public class CompletionsForm extends Validated {
 
 
     private CompletionsForm(CompletionsForm.Builder builder) {
-        this.query = validateBuilderQuery(builder.query);
+        this.prompt = validateBuilderQuery(builder.prompt);
         this.searchLimit = builder.searchLimit;
         this.fieldVar = builder.fieldVar;
         this.responseLengthTokens = builder.responseLengthTokens;
@@ -64,7 +62,11 @@ public class CompletionsForm extends Validated {
         this.searchOffset = builder.searchOffset;
         this.fields = builder.fields != null ? builder.fields.trim().split("[\\s+,]") : new String[0];
 
-        this.temperature = builder.temperature < 0 ? 0 : builder.temperature > 2 ? 2 : builder.temperature;
+        this.temperature = builder.temperature < 0
+                ? 0
+                : builder.temperature > 2
+                    ? 2
+                    : builder.temperature;
         this.model = builder.model;
     }
 
@@ -87,7 +89,7 @@ public class CompletionsForm extends Validated {
         @JsonSetter(nulls = Nulls.SKIP)
         public String fields;
         @JsonSetter(nulls = Nulls.SKIP)
-        private String query;
+        private String prompt;
         @JsonSetter(nulls = Nulls.SKIP)
         private int searchLimit = 1000;
         @JsonSetter(nulls = Nulls.SKIP)
@@ -115,8 +117,8 @@ public class CompletionsForm extends Validated {
         @JsonSetter(nulls = Nulls.SKIP)
         private String site = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()).getIdentifier();
 
-        public Builder query(String query) {
-            this.query = query;
+        public Builder prompt(String queryOrPrompt) {
+            this.prompt = queryOrPrompt;
             return this;
         }
 

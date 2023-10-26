@@ -20,7 +20,8 @@ repositories {
 dependencies {
     implementation 'com.knuddels:jtokkit:0.6.1'
     implementation 'com.dotcms:dotcms:23.06'
-
+    implementation 'dev.langchain4j:langchain4j-open-ai:0.23.0'
+    implementation 'dev.langchain4j:langchain4j:0.23.0'
     //implementation fileTree(include: ["*.jar"], dir: "/Users/will/git/dotcms/core/dotcms-war/target/dotcms-war-1.0.0-SNAPSHOT/WEB-INF/lib")
 
 

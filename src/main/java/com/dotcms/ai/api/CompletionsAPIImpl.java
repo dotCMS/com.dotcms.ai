@@ -11,11 +11,9 @@ import com.dotcms.ai.util.OpenAIRequest;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.mock.request.FakeHttpRequest;
 import com.dotcms.mock.response.BaseResponse;
-import com.dotcms.rendering.velocity.viewtools.content.ContentMap;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.exception.DotRuntimeException;
-import com.dotmarketing.util.PageMode;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.VelocityUtil;
 import com.dotmarketing.util.json.JSONArray;
@@ -29,6 +27,7 @@ import org.apache.velocity.context.Context;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,7 +38,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
     final Lazy<AppConfig> config;
 
     final Lazy<AppConfig> defaultConfig = Lazy.of(() -> ConfigService.INSTANCE.config(Try.of(() ->
-            WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()))
+                    WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()))
             .getOrElse(APILocator.systemHost()))
     );
 
@@ -63,7 +62,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
         List<EmbeddingsDTO> localResults = EmbeddingsAPI.impl().getEmbeddingResults(searcher);
 
         // send all this as a json blob to OpenAI
-        JSONObject json = buildRequestDataJson(summaryRequest, localResults);
+        JSONObject json = buildRequestJson(summaryRequest, localResults);
         if (json.optBoolean("stream", false)) {
             throw new DotRuntimeException("Please use the summarizeStream method to stream results");
         }
@@ -77,79 +76,82 @@ public class CompletionsAPIImpl implements CompletionsAPI {
         return dotCMSResponse;
     }
 
-    private JSONObject buildRequestDataJson(CompletionsForm form, List<EmbeddingsDTO> searchResults) {
+    private JSONObject buildRequestJson(CompletionsForm form, List<EmbeddingsDTO> searchResults) {
 
 
-        int maxTokenSize = OpenAIModel.resolveModel(config.get().getModel()).maxTokens;
+        final int maxTokenSize = OpenAIModel.resolveModel(config.get().getConfig(AppKeys.COMPLETION_MODEL)).maxTokens;
         // aggregate matching results into text
-        StringBuilder supportingContent = new StringBuilder();
-        searchResults.forEach(s -> supportingContent.append(s.extractedText + " "));
+        final StringBuilder supportingContent = new StringBuilder();
+        searchResults.forEach(s -> supportingContent.append(s.extractedText).append(" "));
 
 
-        String systemPrompt = getSystemPrompt(form.query, supportingContent.toString());
-        String textPrompt = getTextPrompt(form.query, supportingContent.toString());
+        final String systemPrompt = getSystemPrompt(form.prompt, supportingContent.toString());
+        String textPrompt = getTextPrompt(form.prompt, supportingContent.toString());
 
-        int systemPromptTokens = countTokens(systemPrompt);
-
-        JSONArray messages = new JSONArray();
+        final int systemPromptTokens = countTokens(systemPrompt);
         textPrompt = reduceStringToTokenSize(textPrompt, maxTokenSize - form.responseLengthTokens - systemPromptTokens);
 
-        messages.add(Map.of("role", "user", "content", textPrompt));
-        if(UtilMethods.isSet(systemPrompt)) {
+
+        final JSONObject json = new JSONObject();
+
+        json.put("stream", form.stream);
+        json.put("temperature", form.temperature);
+        final List<Map> messages = new ArrayList<>();
+        if (UtilMethods.isSet(systemPrompt)) {
             messages.add(Map.of("role", "system", "content", systemPrompt));
         }
-        JSONObject json = new JSONObject();
+        messages.add(Map.of("role", "user", "content", textPrompt));
         json.put("messages", messages);
+
         if (!json.containsKey("model")) {
-            json.put("model", config.get().getModel());
+            json.put("model", config.get().getConfig(AppKeys.COMPLETION_MODEL));
         }
-        json.put("temperature", form.temperature);
+
         if (form.responseLengthTokens > 0) {
             json.put("max_tokens", form.responseLengthTokens);
         }
-        json.put("stream", form.stream);
+
 
         return json;
     }
 
-    private String getSystemPrompt(String query, String supportingContent) {
-        if (UtilMethods.isEmpty(query) || UtilMethods.isEmpty(supportingContent)) {
-            throw new DotRuntimeException("no query or supportingContent to summarize found");
+    private String getSystemPrompt(String prompt, String supportingContent) {
+        if (UtilMethods.isEmpty(prompt) || UtilMethods.isEmpty(supportingContent)) {
+            throw new DotRuntimeException("no prompt or supporting content to summarize found");
 
         }
         String systemPrompt = config.get().getConfig(AppKeys.COMPLETION_ROLE_PROMPT);
 
 
-
         HttpServletRequest requestProxy = new FakeHttpRequest("localhost", "/").request();
         HttpServletResponse responseProxy = new BaseResponse().response();
         Context ctx = VelocityUtil.getWebContext(requestProxy, responseProxy);
-        ctx.put("query", query);
+        ctx.put("prompt", prompt);
         ctx.put("supportingContent", supportingContent);
 
-        return Try.of(()->VelocityUtil.eval(systemPrompt, ctx)).getOrElseThrow(DotRuntimeException::new);
+        return Try.of(() -> VelocityUtil.eval(systemPrompt, ctx)).getOrElseThrow(DotRuntimeException::new);
 
 
     }
 
-    private String getTextPrompt(String query, String supportingContent) {
-        if (UtilMethods.isEmpty(query) || UtilMethods.isEmpty(supportingContent)) {
-            throw new DotRuntimeException("no query or supportingContent to summarize found");
+    private String getTextPrompt(String prompt, String supportingContent) {
+        if (UtilMethods.isEmpty(prompt) || UtilMethods.isEmpty(supportingContent)) {
+            throw new DotRuntimeException("no prompt or supporting content to summarize found");
         }
-
         String textPrompt = config.get().getConfig(AppKeys.COMPLETION_TEXT_PROMPT);
+
         HttpServletRequest requestProxy = new FakeHttpRequest("localhost", "/").request();
         HttpServletResponse responseProxy = new BaseResponse().response();
         Context ctx = VelocityUtil.getWebContext(requestProxy, responseProxy);
-        ctx.put("query", query);
+        ctx.put("prompt", prompt);
         ctx.put("supportingContent", supportingContent);
 
-        return Try.of(()->VelocityUtil.eval(textPrompt, ctx)).getOrElseThrow(DotRuntimeException::new);
+        return Try.of(() -> VelocityUtil.eval(textPrompt, ctx)).getOrElseThrow(DotRuntimeException::new);
 
     }
 
     private int countTokens(String testString) {
-        Optional<Encoding> encoderOpt = EncodingUtil.registry.getEncodingForModel(config.get().getModel());
+        Optional<Encoding> encoderOpt = EncodingUtil.registry.getEncodingForModel(config.get().getConfig(AppKeys.COMPLETION_MODEL));
         if (encoderOpt.isEmpty()) {
             throw new DotRuntimeException("Encoder not found");
         }
@@ -201,24 +203,59 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         List<EmbeddingsDTO> localResults = EmbeddingsAPI.impl().getEmbeddingResults(searcher);
 
-        JSONObject json = buildRequestDataJson(summaryRequest, localResults);
+        JSONObject json = buildRequestJson(summaryRequest, localResults);
         json.put("stream", true);
         OpenAIRequest.doPost(config.get().getApiUrl(), config.get().getApiKey(), json, out);
 
     }
 
     @Override
+    public JSONObject raw(CompletionsForm promptForm) {
+        JSONObject jsonObject = buildRequestJson(promptForm);
+        return raw(jsonObject);
+    }
+
+    @Override
     public JSONObject raw(JSONObject jsonObject) {
-        jsonObject.put("stream", false);
 
         String response = OpenAIRequest.doRequest(config.get().getApiUrl(), "POST", config.get().getApiKey(), jsonObject);
         return new JSONObject(response);
     }
 
+
     @Override
-    public void rawStream(JSONObject jsonObject, OutputStream out) {
+    public void rawStream(CompletionsForm promptForm, OutputStream out) {
+        JSONObject jsonObject = buildRequestJson(promptForm);
         jsonObject.put("stream", true);
-        OpenAIRequest.doPost(config.get().getApiUrl(), config.get().getApiKey(), jsonObject, out);
+        OpenAIRequest.doRequest(config.get().getApiUrl(), "POST", config.get().getApiKey(), jsonObject, out);
+
+    }
+
+    private JSONObject buildRequestJson(CompletionsForm form) {
+
+
+        int maxTokenSize = OpenAIModel.resolveModel(config.get().getConfig(AppKeys.COMPLETION_MODEL)).maxTokens;
+
+
+        int promptTokens = countTokens(form.prompt);
+
+        JSONArray messages = new JSONArray();
+        String textPrompt = reduceStringToTokenSize(form.prompt, maxTokenSize - form.responseLengthTokens - promptTokens);
+
+        messages.add(Map.of("role", "user", "content", textPrompt));
+
+        JSONObject json = new JSONObject();
+        json.put("messages", messages);
+        if (!json.containsKey("model")) {
+            json.put("model", config.get().getConfig(AppKeys.COMPLETION_MODEL));
+        }
+        json.put("temperature", form.temperature);
+        if (form.responseLengthTokens > 0) {
+            json.put("max_tokens", form.responseLengthTokens);
+        }
+        json.put("stream", form.stream);
+
+        return json;
     }
 
 

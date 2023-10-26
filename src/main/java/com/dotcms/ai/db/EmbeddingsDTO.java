@@ -72,7 +72,7 @@ public class EmbeddingsDTO implements Serializable {
                 .withField(form.fieldVar)
                 .withContentType(form.contentType)
                 .withHost(form.site)
-                .withQuery(form.query)
+                .withQuery(form.prompt)
                 .withShowFields(form.fields)
                 .withIndexName(form.indexName)
                 .withLimit(form.searchLimit)

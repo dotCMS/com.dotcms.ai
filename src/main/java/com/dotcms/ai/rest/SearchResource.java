@@ -3,7 +3,6 @@ package com.dotcms.ai.rest;
 import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.ai.rest.forms.CompletionsForm;
-import com.dotcms.rest.AnonymousAccess;
 import com.dotcms.rest.WebResource;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
@@ -49,7 +48,7 @@ public class SearchResource {
 
 
         CompletionsForm form = new CompletionsForm.Builder()
-                .query(query)
+                .prompt(query)
                 .searchLimit(searchLimit)
                 .site(site)
                 .language(language)
@@ -75,7 +74,7 @@ public class SearchResource {
 
     ) throws DotDataException, DotSecurityException, IOException {
 
-        User user = new WebResource.InitBuilder(request, response).requiredAnonAccess(AnonymousAccess.READ).init().getUser();
+        User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).requiredFrontendUser(true).init().getUser();
 
         EmbeddingsDTO searcher = EmbeddingsDTO.from(form).withUser(user).build();
 

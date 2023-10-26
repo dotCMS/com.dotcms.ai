@@ -7,7 +7,6 @@ import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.web.WebAPILocator;
-import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.json.JSONObject;
 import org.apache.velocity.tools.view.context.ViewContext;
 import org.apache.velocity.tools.view.tools.ViewTool;
@@ -17,10 +16,10 @@ import java.util.Map;
 
 public class CompletionsTool implements ViewTool {
 
-    final private HttpServletRequest request;
-    final private Host host;
-    final private AppConfig app;
-    final private ViewContext context;
+    private final HttpServletRequest request;
+    private final Host host;
+    private final AppConfig app;
+    private final ViewContext context;
 
 
     /**
@@ -54,34 +53,13 @@ public class CompletionsTool implements ViewTool {
 
     }
 
-
-    public JSONObject summarize(String prompt, String indexName) {
-        CompletionsForm form = new CompletionsForm.Builder().indexName(indexName).query(prompt).build();
-        return CompletionsAPI.impl().summarize(form);
-    }
-
     public JSONObject summarize(String prompt) {
         return summarize(prompt, "default");
     }
-    /**
-     * Note this does not really stream the output as Velocity Buffers the response.
-     *
-     * @param prompt
-     * @param indexName
-     * @return
-     */
-    public void stream(String prompt, String indexName) {
-        CompletionsForm form = new CompletionsForm.Builder().stream(true).indexName(indexName).query(prompt).build();
-        try {
-            CompletionsAPI.impl().summarizeStream(form, this.context.getResponse().getOutputStream());
-        } catch (Exception e) {
-            Logger.warnAndDebug(this.getClass(), e);
-        }
-    }
 
-    public JSONObject prompt(Map<String, Object> prompt) {
-        JSONObject json = new JSONObject(prompt);
-        return CompletionsAPI.impl().raw(json);
+    public JSONObject summarize(String prompt, String indexName) {
+        CompletionsForm form = new CompletionsForm.Builder().indexName(indexName).prompt(prompt).build();
+        return CompletionsAPI.impl().summarize(form);
     }
 
 

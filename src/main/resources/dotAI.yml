@@ -7,8 +7,7 @@ description: |
   properties that can be set in the extra parameter fields. You can see their property names here.  
   
   https://github.com/dotCMS/com.dotcms.ai/blob/main/src/main/java/com/dotcms/ai/app/AppKeys.java
-  
-  The properties that can be configured from the App in the Extras fields start with `com.dotcms.ai`.
+
   
 
 params:

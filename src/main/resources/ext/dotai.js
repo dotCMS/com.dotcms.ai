@@ -2,6 +2,8 @@ const changeTabs = async () => {
     let ele = document.getElementsByName('tab-group');
     for (i = 0; i < ele.length; i++) {
         document.getElementById('content-' + (i + 1)).style.display = ele[i].checked ? "block" : "none";
+        document.getElementById('content-' + (i + 1)).className = ele[i].checked  ? + " dijitTabChecked" : "";
+
     }
     if (ele[0].checked) {
         tab1()
@@ -70,9 +72,9 @@ const writeIndexesToDropdowns = async () => {
     const indexName = document.getElementById("indexNameChat");
     let options = indexName.getElementsByTagName('option');
 
-
+    console.log("options", options)
     for (i = 1; i < options.length; i++) {
-        options.removeChild(options[i]);
+        indexName.removeChild(options[i]);
     }
 
     for (i = 0; i < dotAiState.indexes.length; i++) {
@@ -235,13 +237,13 @@ const doSearchChatJson = async (callback) => {
     const formDataRaw = new FormData(document.getElementById("chatForm"))
     const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
 
-    const query = document.getElementById("searchQuery").value;
-    formData.query=query;
+    const prompt = document.getElementById("searchQuery").value;
+    formData.prompt=prompt;
 
 
     const responseType = formData.responseType
     delete formData.responseType;
-    if (formData.query == undefined || formData.query.trim().length == 0) {
+    if (formData.prompt == undefined || formData.prompt.trim().length == 0) {
         alert("please enter a query/prompt");
         return;
     }
@@ -350,7 +352,7 @@ const doChatResponse = async (formData) => {
             "Content-Type": "application/json"
         }
     });
-
+    document.getElementById("answerChat").value="";
 
     const reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
 

@@ -142,9 +142,9 @@
             <div>
                 <table style="margin-top:50px;margin-bottom:20px;">
                 <tr>
-                    <th><h2>Query</h2></th>
+                    <th><b>Prompt:</b></th>
                     <td>
-                            <textarea class="prompt" name="query" id="searchQuery"
+                            <textarea class="prompt" name="prompt" id="searchQuery"
                                       placeholder="Search text or phrase"></textarea>
                     </td>
                 </tr>
@@ -185,7 +185,7 @@
                                 Index Name
                             </th>
                             <td>
-                                <input type="text" value="" name="indexName" placeholder="default"><br>
+                                <input type="text"  name="indexName" value="default"><br>
                                 index to create or append
                             </td>
                         </tr>

@@ -9,8 +9,6 @@ import com.dotcms.rest.WebResource;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.Role;
 import com.dotmarketing.common.model.ContentletSearch;
-import com.dotmarketing.exception.DotDataException;
-import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
@@ -30,11 +28,9 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 /**
  * Call
@@ -42,8 +38,6 @@ import java.util.regex.Pattern;
 @Path("/v1/ai/embeddings")
 public class EmbeddingsResource {
 
-
-    Pattern allowedPattern = Pattern.compile("^[a-zA-Z0-9 \\-,.()]*$");
 
     @GET
     @JSONP
@@ -62,7 +56,7 @@ public class EmbeddingsResource {
     public final Response embed(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
                                 JSONObject json
 
-    ) throws DotDataException, DotSecurityException {
+    ) {
         // force authentication
         final User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
         final int limit = json.optInt("limit", 1000) < 1 ? 1000 : json.optInt("limit", 1000);
@@ -92,10 +86,10 @@ public class EmbeddingsResource {
 
                 for (ContentletSearch results : searchResults) {
                     Contentlet contentlet = APILocator.getContentletAPI().find(results.getInode(), user, false);
-                    if(UtilMethods.isEmpty(()->contentlet.getContentType())){
+                    if (UtilMethods.isEmpty(contentlet::getContentType)) {
                         continue;
                     }
-                    Optional<Field> field = contentlet.getContentType().fields().stream().filter(f -> f.variable().equalsIgnoreCase(fieldVar)).findFirst();
+                    Optional<Field> field = contentlet.getContentType().fields().stream().filter(f -> fieldVar.equalsIgnoreCase(f.variable())).findFirst();
                     EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, field, indexName);
                     if (++added >= limit) {
                         break;
@@ -110,7 +104,7 @@ public class EmbeddingsResource {
             ResponseBuilder builder = Response.ok(map, MediaType.APPLICATION_JSON);
 
             return builder.build();
-        }catch(Throwable e){
+        } catch (Exception e) {
             Logger.error(this.getClass(), e.getMessage(), e);
             return Response.status(500).entity(Map.of("error", e.getMessage())).build();
         }
@@ -120,31 +114,24 @@ public class EmbeddingsResource {
     String getQuery(JSONObject json) {
         StringBuilder builder = new StringBuilder(json.optString("query", ""));
         if (UtilMethods.isSet(json.optString("inode"))) {
-            builder.append(" +inode:" + json.optString("inode"));
+            builder.append(" +inode:").append(json.optString("inode"));
         }
         if (UtilMethods.isSet(json.optString("identifier"))) {
-            builder.append(" +identifier:" + json.optString("identifier"));
+            builder.append(" +identifier:").append(json.optString("identifier"));
         }
         if (UtilMethods.isSet(json.optString("language"))) {
-            builder.append(" +language:" + json.optString("language"));
+            builder.append(" +language:").append(json.optString("language"));
         }
         return builder.toString();
     }
 
-
-    String sanitizeParams(String in) {
-        if (in == null || allowedPattern.matcher(in).matches()) {
-            return in;
-        }
-        return "";
-    }
 
     @DELETE
     @JSONP
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
     public final Response delete(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                 JSONObject json) throws DotDataException, DotSecurityException {
+                                 JSONObject json) {
         new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
 
         EmbeddingsDTO dto = new EmbeddingsDTO.Builder()
@@ -166,7 +153,7 @@ public class EmbeddingsResource {
     @Path("/db")
     @Produces(MediaType.APPLICATION_JSON)
     public final Response dropAndRecreateTables(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                                JSONObject json) throws DotDataException, DotSecurityException {
+                                                JSONObject json) {
         new WebResource.InitBuilder(request, response)
                 .requiredBackendUser(true)
                 .requiredRoles(Role.CMS_ADMINISTRATOR_ROLE)
@@ -193,9 +180,10 @@ public class EmbeddingsResource {
                                 @QueryParam("language") String language,
                                 @QueryParam("identifier") String identifier,
                                 @QueryParam("inode") String inode,
-                                @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
+                                @QueryParam("fieldVar") String fieldVar) {
+        new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
 
-        CompletionsForm form = new CompletionsForm.Builder().contentType(contentType).site(site).language(language).fieldVar(fieldVar).indexName(indexName).query("NOT USED").build();
+        CompletionsForm form = new CompletionsForm.Builder().contentType(contentType).site(site).language(language).fieldVar(fieldVar).indexName(indexName).prompt("NOT USED").build();
         return count(request, response, form);
 
 
@@ -206,14 +194,10 @@ public class EmbeddingsResource {
     @Path("/count")
     @Produces(MediaType.APPLICATION_JSON)
     public final Response count(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                CompletionsForm form) throws DotDataException, DotSecurityException {
-        new WebResource.InitBuilder(request, response)
-                .requiredBackendUser(true)
-                .requiredRoles(Role.CMS_ADMINISTRATOR_ROLE)
-                .requestAndResponse(request, response)
-                .rejectWhenNoUser(true)
-                .init();
-        form = (form==null) ? new CompletionsForm.Builder().query("NOT USED").build() : form;
+                                CompletionsForm form) {
+        new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+
+        form = (form == null) ? new CompletionsForm.Builder().prompt("NOT USED").build() : form;
         EmbeddingsDTO dto = EmbeddingsDTO.from(form).build();
 
 
@@ -225,14 +209,15 @@ public class EmbeddingsResource {
     @JSONP
     @Path("/indexCount")
     @Produces(MediaType.APPLICATION_JSON)
-    public final Response indexCount(@Context final HttpServletRequest request, @Context final HttpServletResponse response) throws DotDataException, DotSecurityException {
+    public final Response indexCount(@Context final HttpServletRequest request, @Context final HttpServletResponse response) {
         new WebResource.InitBuilder(request, response)
                 .requiredBackendUser(true)
                 .requiredRoles(Role.CMS_ADMINISTRATOR_ROLE)
                 .requestAndResponse(request, response)
                 .rejectWhenNoUser(true)
                 .init();
-        final User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+        new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+
         return Response.ok(Map.of("indexCount", EmbeddingsDB.impl.get().countEmbeddingsByIndex())).build();
 
     }

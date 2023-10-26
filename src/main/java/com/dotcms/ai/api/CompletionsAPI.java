@@ -18,13 +18,48 @@ public interface CompletionsAPI {
     }
 
 
+    /**
+     * this method takes the query/prompt, searches dotCMS content for matching
+     * embeddings and then returns an AI summary based on the matching content in dotCMS
+     *
+     * @param searcher
+     * @return
+     */
     JSONObject summarize(CompletionsForm searcher);
 
+
+    /**
+     * this method takes the query/prompt, searches dotCMS content for matching
+     * embeddings and then streams the AI response based on the matching content in dotCMS
+     *
+     * @param searcher
+     * @return
+     */
     void summarizeStream(CompletionsForm searcher, OutputStream out);
 
 
-    JSONObject raw(JSONObject jsonObject);
+    /**
+     * this method takes a prompt and returns the AI response based upon that prompt
+     *
+     * @param promptForm
+     * @return
+     */
+    JSONObject raw(CompletionsForm promptForm);
 
 
-    void rawStream(JSONObject jsonObject, OutputStream out);
+    /**
+     * this method takes a prompt in the form of json and returns a json AI response based upon that prompt
+     *
+     * @param promptJSON
+     * @return
+     */
+    JSONObject raw(JSONObject promptJSON);
+
+    /**
+     * this method takes a prompt in the form of json and returns streaming AI response based upon that prompt
+     *
+     * @param promptForm
+     * @return
+     */
+    void rawStream(CompletionsForm promptForm, OutputStream out);
 }
