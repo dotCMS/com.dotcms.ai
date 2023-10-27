@@ -37,7 +37,7 @@ import java.net.URL;
 import java.util.Map;
 
 
-@Path("{a:/v1/ai/image|/ai/image}")
+@Path("/v1/ai/image")
 public class ImageResource {
 
 
@@ -45,7 +45,8 @@ public class ImageResource {
     @JSONP
     @Path("/test")
     @Produces(MediaType.APPLICATION_JSON)
-    public final Response indexByInode(@Context final HttpServletRequest request, @Context final HttpServletResponse response) {
+    public final Response indexByInode(@Context final HttpServletRequest request,
+                                       @Context final HttpServletResponse response) {
 
         Response.ResponseBuilder builder = Response.ok(Map.of("type", "image"), MediaType.APPLICATION_JSON);
         return builder.build();
@@ -55,7 +56,9 @@ public class ImageResource {
     @JSONP
     @Path("/generate")
     @Produces(MediaType.APPLICATION_JSON)
-    public final Response indexByInode(@Context final HttpServletRequest request, @Context final HttpServletResponse response, @QueryParam("prompt") String prompt) throws IOException {
+    public final Response indexByInode(@Context final HttpServletRequest request,
+                                       @Context final HttpServletResponse response,
+                                       @QueryParam("prompt") String prompt) throws IOException {
         AIImageRequestDTO dto = new AIImageRequestDTO();
         dto.setPrompt(prompt);
         return handleImageRequest(request, response, dto);
@@ -73,7 +76,9 @@ public class ImageResource {
     @POST
     @Path("/generate")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response handleImageRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, AIImageRequestDTO aiImageRequestDTO) throws IOException {
+    public Response handleImageRequest(@Context HttpServletRequest request,
+                                       @Context HttpServletResponse response,
+                                       AIImageRequestDTO aiImageRequestDTO) throws IOException {
 
         final User user = new WebResource.InitBuilder(request, response)
                 .requiredBackendUser(true)

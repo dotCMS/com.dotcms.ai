@@ -28,18 +28,22 @@ import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.Map;
 
-@Path("{a:/v1/ai/text|/ai/text}")
+@Path("/v1/ai/text")
 public class TextResource {
 
     @Path("/generate")
     @GET
-    public Response doGet(@Context HttpServletRequest request, @Context final HttpServletResponse response, @QueryParam("prompt") String prompt) throws IOException {
+    public Response doGet(@Context HttpServletRequest request,
+                          @Context final HttpServletResponse response,
+                          @QueryParam("prompt") String prompt) throws IOException {
         return doPost(request, response, new AITextRequestDTO(prompt));
     }
 
     @Path("/generate")
     @POST
-    public Response doPost(@Context final HttpServletRequest request, @Context final HttpServletResponse response, AITextRequestDTO aiTextRequestDTO) throws IOException {
+    public Response doPost(@Context final HttpServletRequest request,
+                           @Context final HttpServletResponse response,
+                           AITextRequestDTO aiTextRequestDTO) throws IOException {
 
         final User user = new WebResource.InitBuilder(request, response)
                 .requiredBackendUser(true)
