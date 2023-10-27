@@ -168,6 +168,7 @@ public class EmbeddingsResource {
 
     }
 
+
     @GET
     @JSONP
     @Path("/count")

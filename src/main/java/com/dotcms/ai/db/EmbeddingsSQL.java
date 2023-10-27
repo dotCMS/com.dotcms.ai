@@ -33,7 +33,8 @@ class EmbeddingsSQL {
             "create index if not exists dot_embeddings_idx_type_field on dot_embeddings(inode,lower(content_type),lower(field_var))",
             "create index if not exists dot_embeddings_idx_id_lang on dot_embeddings(identifier,language)",
             "create index if not exists dot_embeddings_idx_host on dot_embeddings(host)",
-            "create index if not exists dot_embeddings_idx_text_hash on dot_embeddings(extracted_text_hash)"
+            "create index if not exists dot_embeddings_idx_text_hash on dot_embeddings(extracted_text_hash)",
+            "create index if not exists dot_embeddings_idx_vector ON dot_embeddings USING hnsw (embeddings vector_cosine_ops);"
     };
     /**
      * The number of lists in this index should be determined

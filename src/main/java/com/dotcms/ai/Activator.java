@@ -2,12 +2,12 @@ package com.dotcms.ai;
 
 import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.app.AppKeys;
-import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.listener.EmbeddingContentListener;
 import com.dotcms.ai.rest.CompletionsResource;
-import com.dotcms.ai.rest.DotAIResource;
 import com.dotcms.ai.rest.EmbeddingsResource;
+import com.dotcms.ai.rest.ImageResource;
 import com.dotcms.ai.rest.SearchResource;
+import com.dotcms.ai.rest.TextResource;
 import com.dotcms.ai.viewtool.AIToolInfo;
 import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
 import com.dotcms.ai.workflow.OpenAIModifyContentActionlet;
@@ -52,7 +52,8 @@ public class Activator extends GenericBundleActivator {
     private static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
     private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server" + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
     private Class[] clazzes = {
-            DotAIResource.class,
+            TextResource.class,
+            ImageResource.class,
             EmbeddingsResource.class,
             CompletionsResource.class,
             SearchResource.class
@@ -66,10 +67,6 @@ public class Activator extends GenericBundleActivator {
         LoggerContext dotcmsLoggerContext = Log4jUtil.getLoggerContext();
         //Initialing the log4j context of this plugin based on the dotCMS logger context
         pluginLoggerContext = (LoggerContext) LogManager.getContext(this.getClass().getClassLoader(), false, dotcmsLoggerContext, dotcmsLoggerContext.getConfigLocation());
-
-
-        // set up embeddings table
-        EmbeddingsDB.impl.get();
 
 
         //Registering the ViewTool service

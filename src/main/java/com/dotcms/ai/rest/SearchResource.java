@@ -21,6 +21,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Call
@@ -28,6 +29,15 @@ import java.io.IOException;
 @Path("/v1/ai/search")
 public class SearchResource {
 
+    @GET
+    @JSONP
+    @Path("/test")
+    @Produces(MediaType.APPLICATION_JSON)
+    public final Response indexByInode(@Context final HttpServletRequest request, @Context final HttpServletResponse response) {
+
+        Response.ResponseBuilder builder = Response.ok(Map.of("type", "search"), MediaType.APPLICATION_JSON);
+        return builder.build();
+    }
 
     @GET
     @JSONP

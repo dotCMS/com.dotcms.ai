@@ -12,19 +12,15 @@ import com.pgvector.PGvector;
 import io.vavr.Lazy;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.control.Try;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -33,7 +29,6 @@ public class EmbeddingsDB {
 
 
     public static final Lazy<EmbeddingsDB> impl = Lazy.of(EmbeddingsDB::new);
-
 
 
     private EmbeddingsDB() {
@@ -49,26 +44,32 @@ public class EmbeddingsDB {
 
     public void initVectorDbTable() {
 
-
         try {
-            Logger.info(EmbeddingsDB.class, "Adding table dot_embeddings to database");
-            runSQL(EmbeddingsSQL.CREATE_EMBEDDINGS_TABLE);
-            Logger.info(EmbeddingsDB.class, "Adding indexes to dot_embedding table");
-            for (String index : EmbeddingsSQL.CREATE_TABLE_INDEXES) {
-                runSQL(index);
-            }
+            internalInitVectorDbTable();
         } catch (Exception e) {
-            String newTableName = "dot_embeddings_" + System.currentTimeMillis();
-            Logger.info(EmbeddingsDB.class, "Create Table Failed + " + e.getMessage() + " trying to rename:" + newTableName);
-            runSQL("ALTER TABLE IF EXISTS dot_embeddings RENAME TO " + newTableName);
-            runSQL(EmbeddingsSQL.CREATE_EMBEDDINGS_TABLE);
-            for (String index : EmbeddingsSQL.CREATE_TABLE_INDEXES) {
-                runSQL(index);
-            }
+            Logger.info(EmbeddingsDB.class, "Create Table Failed : " + e.getMessage());
+            moveVectorDbTable();
+            internalInitVectorDbTable();
+        }
+    }
+
+    public void moveVectorDbTable() {
+        String newTableName = "dot_embeddings_" + System.currentTimeMillis();
+        Logger.info(EmbeddingsDB.class, "Create Table Failed : trying to rename:" + newTableName);
+        runSQL("ALTER TABLE IF EXISTS dot_embeddings RENAME TO " + newTableName);
+    }
+
+    public void internalInitVectorDbTable() {
+
+        Logger.info(EmbeddingsDB.class, "Adding table dot_embeddings to database");
+        runSQL(EmbeddingsSQL.CREATE_EMBEDDINGS_TABLE);
+        Logger.info(EmbeddingsDB.class, "Adding indexes to dot_embedding table");
+        for (String index : EmbeddingsSQL.CREATE_TABLE_INDEXES) {
+            runSQL(index);
         }
 
-
     }
+
 
     public void dropVectorDbTable() {
         Logger.info(EmbeddingsDB.class, "Dropping table dot_embeddings from database");
@@ -90,17 +91,8 @@ public class EmbeddingsDB {
         return conn;
     }
 
-
-    public String hashText(String text) {
-
-        return Hashing.sha256()
-                .hashString(text, StandardCharsets.UTF_8)
-                .toString();
-    }
-
-
     public Tuple2<Integer, List<Float>> searchExistingEmbeddings(String extractedText) {
-        try (Connection conn = getPGVectorConnection();  PreparedStatement statement = conn.prepareStatement(EmbeddingsSQL.SELECT_EMBEDDING_BY_TEXT_HASH)) {
+        try (Connection conn = getPGVectorConnection(); PreparedStatement statement = conn.prepareStatement(EmbeddingsSQL.SELECT_EMBEDDING_BY_TEXT_HASH)) {
             String hash = hashText(extractedText);
             statement.setObject(1, hash);
             ResultSet rs = statement.executeQuery();
@@ -110,8 +102,7 @@ public class EmbeddingsDB {
                 List<Float> list = Arrays.asList(ArrayUtils.toObject(vector));
                 return Tuple.of(tokenCount, list);
             }
-            return Tuple.of(0,List.of());
-
+            return Tuple.of(0, List.of());
 
 
         } catch (SQLException e) {
@@ -120,6 +111,12 @@ public class EmbeddingsDB {
 
     }
 
+    public String hashText(String text) {
+
+        return Hashing.sha256()
+                .hashString(text, StandardCharsets.UTF_8)
+                .toString();
+    }
 
     public void saveEmbeddings(EmbeddingsDTO embeddings) {
 
@@ -155,7 +152,7 @@ public class EmbeddingsDB {
         List<Object> params = appendParams(sql, dto);
         sql.append(" ) data ");
 
-        if(dto.threshold!=0) {
+        if (dto.threshold != 0) {
             sql.append(" where distance <= ? ");
             params.add(dto.threshold);
         }
@@ -165,9 +162,6 @@ public class EmbeddingsDB {
         params.add(dto.offset);
 
         params.add(0, new PGvector(ArrayUtils.toPrimitive(dto.embeddings)));
-
-
-
 
 
         try (Connection conn = getPGVectorConnection();
@@ -217,12 +211,11 @@ public class EmbeddingsDB {
         }
 
         if (UtilMethods.isSet(dto.excludeIdentifiers)) {
-            for(String id : dto.excludeIdentifiers) {
+            for (String id : dto.excludeIdentifiers) {
                 sql.append(" and identifier <> ? ");
                 params.add(id);
             }
         }
-
 
 
         if (dto.language > 0) {
@@ -245,11 +238,6 @@ public class EmbeddingsDB {
             sql.append(" and lower(index_name)=lower(?) ");
             params.add(dto.indexName);
         }
-
-
-
-
-
 
 
         return params;
@@ -284,13 +272,11 @@ public class EmbeddingsDB {
         List<Object> params = appendParams(sql, dto);
         sql.append(" ) data ");
 
-        if(dto.threshold!=0) {
+        if (dto.threshold != 0) {
             sql.append(" where distance <= ? ");
             params.add(dto.threshold);
         }
         params.add(0, new PGvector(ArrayUtils.toPrimitive(dto.embeddings)));
-
-
 
 
         try (Connection conn = getPGVectorConnection();
@@ -306,23 +292,23 @@ public class EmbeddingsDB {
             }
             return 0;
         } catch (SQLException e) {
-            Logger.warnAndDebug(this.getClass(),e.getMessage(),e);
+            Logger.warnAndDebug(this.getClass(), e.getMessage(), e);
             throw new DotRuntimeException(e);
         }
 
 
     }
 
-    public Map<String, Map<String,Long>> countEmbeddingsByIndex() {
+    public Map<String, Map<String, Long>> countEmbeddingsByIndex() {
         StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_BY_INDEX);
 
         try (Connection conn = getPGVectorConnection();
              PreparedStatement statement = conn.prepareStatement(sql.toString())) {
 
-            Map<String, Map<String,Long>> results = new TreeMap<>();
+            Map<String, Map<String, Long>> results = new TreeMap<>();
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
-                results.put(rs.getString("index_name"), Map.of("fragments", rs.getLong("embeddings"), "contents", rs.getLong("contents"),"tokenTotal",rs.getLong("token_total")));
+                results.put(rs.getString("index_name"), Map.of("fragments", rs.getLong("embeddings"), "contents", rs.getLong("contents"), "tokenTotal", rs.getLong("token_total")));
             }
             return results;
         } catch (SQLException e) {

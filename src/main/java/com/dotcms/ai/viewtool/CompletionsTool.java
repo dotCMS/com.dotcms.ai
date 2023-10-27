@@ -12,6 +12,7 @@ import org.apache.velocity.tools.view.context.ViewContext;
 import org.apache.velocity.tools.view.tools.ViewTool;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Arrays;
 import java.util.Map;
 
 public class CompletionsTool implements ViewTool {
@@ -53,14 +54,38 @@ public class CompletionsTool implements ViewTool {
 
     }
 
-    public JSONObject summarize(String prompt) {
+    public Object summarize(String prompt) {
         return summarize(prompt, "default");
     }
 
-    public JSONObject summarize(String prompt, String indexName) {
+    public Object summarize(String prompt, String indexName) {
         CompletionsForm form = new CompletionsForm.Builder().indexName(indexName).prompt(prompt).build();
-        return CompletionsAPI.impl().summarize(form);
+
+        try {
+            return CompletionsAPI.impl().summarize(form);
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+
+        }
     }
 
+    public Object raw(String prompt) {
+        try {
+            return raw(new JSONObject(prompt));
+        }
+        catch (Exception e){
+            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+        }
 
+    }
+
+    public Object raw(JSONObject prompt) {
+        try {
+            return CompletionsAPI.impl().raw(prompt);
+        }
+        catch (Exception e){
+            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+        }
+
+    }
 }

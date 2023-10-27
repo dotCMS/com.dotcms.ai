@@ -1,62 +1,60 @@
 # README
 
-This is plugin that exposes REST API for generates text from ChatGPT API by using passed prompt. It also crates new App using dotAI.yml file.
+This is plugin that a number of dotCMS specific tools that leverage AI tooling (Open AI specifically) for use in dotCMS.  
+This includes REST apis, Workflow Actions and Viewtools that let dotCMS interact with AI in a variety of ways.  For examples on how to use these endpoints, see 
+[these curl examples](README-CURL.md) and this document on how to create a [content embedding database](README-Embeddings-and-Search.md). 
 
-## How to build this example
+Out of the box, it provides:
+### An App
+  Where credentials and defaults can be configured and/or overridden
+### dotAI Portlet/Tool
+  - Search and Chat with Content
+  - View/Update/Delete Content Embedding Indexes
+  - View AI Plugin configuration values
+### REST APIs
+  There are 4 main REST resources provided by this plugin:
+  - `/api/v1/ai` - Generative Resource
+    - Generate new content from a prompt, e.g. "Write me a blog about the top 10 ski resorts in Canada".
+    - Generate an image from a prompt, e.g.  "Create an image of a dog skiing in Canada".
+  - `/api/v1/ai/embeddings` - Embeddings Resource
+    - Drop/Recreate the `dot_embeddings` content embeddings database
+    - CRUD Actions for the `dot_embeddings` content embeddings database (add content to index, delete content from index, list embedding indexes)
+  - `/api/v1/ai/search` - Semantic Search Resource
+    - Search the content embedding database for nearest matching content using 
+  - `/api/v1/ai/completions` - Completion Resource
+    - Using search results from querying the embeddings, generate a response based on the content in the embeddings (from content in dotCMS), e.g.  "What should I do when visiting Costa Rica?"
+    - Generate a streaming response from a query, e.g.  "What should I do when visiting Costa Rica?"
+    - Perform a `raw` chat request to OpenAIs completion endpoint
+### Workflow Actions
+  - **OpenAI Embeddings** (`DotEmbeddingsActionlet`)  This actionlet uses OpenAI to generate and save (or delete) the embeddings for content.  This is used so that an embedding index can be kept up to date as new content is published and/or unpublished from dotCMS.
+  - **OpenAI Modify Content** (`OpenAIModifyContentActionlet`).  This actionlet can be called to automatically populate/update fields of content as the content is pushed through a workflow.  It works by expecting OpenAI to return its data/answer in a json format which will then be used to update the content.  The example usage is to post content to OpenAI and have OpenAI automatically write appropriate SEO title and SEO short description for the content.
+### Velocity Viewtools
+  - `$ai` can be used to generate content and/or images from a prompt.
+  - `$ai.embeddings` - list embedding indexes, generate embeddings from a prompt, count the tokens in a prompt.  
+  - `$ai.search` - semantically search an index of embedded content.  Also can be used to pull a list of content that is semantically related another piece of content.
+  - `$ai.completions` - generate completions based on a content query.  Can also be used to do a raw OpenAI request.
 
-To install all you need to do is build the JAR. to do this run
+
+
+
+
+
+### How to build/install this plugin
+
+To install this plugin all you need to do is build the JAR. to do this run
 `./gradlew jar`
 
-This will build two jars in the `build/libs` directory: a bundle fragment (in order to expose needed 3rd party libraries from dotCMS) and the plugin jar 
 
-* **To install this bundle:**
+### Installation
 
-    Copy the bundle jar files inside the Felix OSGI container (*dotCMS/felix/load*).
-        
-    OR
-        
-    Upload the bundle jars files using the dotCMS UI (*CMS Admin->Dynamic Plugins->Upload Plugin*).
+1. Upload the bundle jar files using the dotCMS UI `Dev Tools -> Plugins -> Upload Plugin`.  It should go ultimately go to the "Active" state.  If it is not "Active" it has not been successfully started.  Try to manually start it.  If it does not go to "Active", check your logs to see why the plugin is failing to start.  Trying tailing the logs while you try to start the plugin again.
+2. Add the **dotAI** tool to your admin screen from the **Roles & Tools** tool. 
+3. Note that choosing to "undeploy" a plugin is somewhat destructive and is generally not needed before uploading a newer version of the plugin. If you undeploy the plugin, dotCMS will automatically remove the portlet from your tools and delete any associated workflow actions you might have configured. 
 
-* **To uninstall this bundle:**
-    
-    Remove the bundle jars files from the Felix OSGI container (*dotCMS/felix/load*).
 
-    OR
 
-    Undeploy the bundle jars using the dotCMS UI (*CMS Admin->Dynamic Plugins->Undeploy*).
-
-## How to create a bundle plugin for a rest resource
-
-In order to create this OSGI plugin, you must create a `META-INF/MANIFEST` to be inserted into OSGI jar.
-This file is being created for you by Gradle. If you need you can alter our config for this but in general our out of the box config should work.
-The Gradle plugin uses BND to generate the Manifest. The main reason you need to alter the config is when you need to exclude a package you are including on your Bundle-ClassPath
-
-If you are building the MANIFEST on your own or desire more info on it below is a description of what is required in this MANIFEST you must specify (see template plugin):
-
-```
-    Bundle-Name: The name of your bundle
-    Bundle-SymbolicName: A short an unique name for the bundle
-    Bundle-Activator: Package and name of your Activator class (example: com.dotmarketing.osgi.override.Activator)
-    Export-Package: Declares the packages that are visible outside the plugin. Any package not declared here has visibility only within the bundle.
-    Import-Package: This is a comma separated list of the names of packages to import. In this list there must be the packages that you are using inside your osgi bundle plugin and are exported and exposed by the dotCMS runtime.
-```
-
-## Beware (!)
-
-In order to work inside the Apache Felix OSGI runtime, the import and export directive must be bidirectional, there are two ways to accomplish this:
-
-* **Exported Packages**
-
-    The dotCMS must declare the set of packages that will be available to the OSGI plugins by changing the file: *dotCMS/WEB-INF/felix/osgi-extra.conf*.
-This is possible also using the dotCMS UI (*CMS Admin->Dynamic Plugins->Exported Packages*).
-
-    Only after that exported packages are defined in this list, a plugin can Import the packages to use them inside the OSGI blundle.
-    
-* **Fragment**
-
-    A Bundle fragment, is a bundle whose contents are made available to another bundles exporting 3rd party libraries from dotCMS.
-One notable difference is that fragments do not participate in the lifecycle of the bundle, and therefore cannot have an Bundle-Activator.
-As it not contain a Bundle-Activator a fragment cannot be started so after deploy it will have its state as Resolved and NOT as Active as a normal bundle plugin.
+## Configuration
+At the bare minimum, you will need an API Key from OpenAI. Go to `Settings >  Apps` and open the OpenAI app / System Host.  There you can set your OpenAI api key and other configuration values.
 
 ---
 ## How to test
@@ -70,7 +68,7 @@ You can try the get and post resources by
 curl --location 'http://localhost:8081/api/ai/text/generate' \
 --header 'Content-Type: application/json' \
 --data '{
-"prompt": "your prompt text"
+"prompt": "What are the top 5 places to visit in Costa Rica?"
 }'
 `
 
@@ -140,26 +138,3 @@ URL: https://api.openai.com/v1/images/generations
 <li>$result.response</li>
 </ul>
 ```
-
-## Language variables
-
-This plugin also generates language variables.
-Variables are hardcoded in Activator class.
-If you want to make changes to variables you should do that inside createLanguageVariables() method
-
-```
-        // Define key-value pairs in a map
-        HashMap<String, String> langVariableMap = new HashMap<>();
-        langVariableMap.put("ai-text-box-key", "AI text box value");
-        langVariableMap.put("ai-text-area-key", "AI text area value");
-```
-
-## Authentication
-
-This API supports the same REST auth infrastructure as other 
-rest apis in dotcms. There are 4 ways to authenticate.
-
-* user/xxx/password/yyy in the URI
-* basic http/https authentication (base64 encoded)
-* DOTAUTH header similar to basic auth and base64 encoded, e.g. setHeader("DOTAUTH", base64.encode("admin@dotcms.com:admin"))
-* Session based (form based login) for frontend or backend logged in user

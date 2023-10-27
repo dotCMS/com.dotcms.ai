@@ -17,6 +17,7 @@ import org.apache.velocity.tools.view.context.ViewContext;
 import org.apache.velocity.tools.view.tools.ViewTool;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 
@@ -44,46 +45,59 @@ public class SearchTool implements ViewTool {
     }
 
 
-    public JSONObject query(Map<String, Object> mapIn) {
+    public Object query(Map<String, Object> mapIn) {
         User user = PortalUtil.getUser(request);
         EmbeddingsDTO searcher = EmbeddingsDTO.from(mapIn).withUser(user).build();
 
 
-        return EmbeddingsAPI.impl(host).searchForContent(searcher);
+        try {
+            return EmbeddingsAPI.impl(host).searchForContent(searcher);
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+        }
     }
 
-    public JSONObject query(String query) {
+    public Object query(String query) {
 
         return query(query, "default");
     }
 
-    public JSONObject query(String query, String indexName) {
+    public Object query(String query, String indexName) {
         User user = PortalUtil.getUser(request);
 
         EmbeddingsDTO searcher = new EmbeddingsDTO.Builder().withQuery(query).withIndexName(indexName).withUser(user).withLimit(50).withThreshold(.25f).build();
 
 
-        return EmbeddingsAPI.impl(host).searchForContent(searcher);
+        try {
+            return EmbeddingsAPI.impl(host).searchForContent(searcher);
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+        }
+
 
     }
 
-    public JSONObject related(ContentMap contentMap, String indexName) {
+    public Object related(ContentMap contentMap, String indexName) {
 
         return related(contentMap.getContentObject(), indexName);
 
     }
 
-    public JSONObject related(Contentlet contentlet, String indexName) {
-        User user = PortalUtil.getUser(request);
-        Optional<Field> field = ContentToStringUtil.impl.get().guessWhatFieldToIndex(contentlet);
+    public Object related(Contentlet contentlet, String indexName) {
+        try {
+            User user = PortalUtil.getUser(request);
+            Optional<Field> field = ContentToStringUtil.impl.get().guessWhatFieldToIndex(contentlet);
 
 
-        Optional<String> contentToRelate = ContentToStringUtil.impl.get().parseField(contentlet, field);
-        if (contentToRelate.isEmpty()) {
-            return new JSONObject();
+            Optional<String> contentToRelate = ContentToStringUtil.impl.get().parseField(contentlet, field);
+            if (contentToRelate.isEmpty()) {
+                return new JSONObject();
+            }
+            EmbeddingsDTO searcher = new EmbeddingsDTO.Builder().withQuery(contentToRelate.get()).withIndexName(indexName).withExcludeIndentifiers(new String[]{contentlet.getIdentifier()}).withUser(user).withLimit(50).withThreshold(.25f).build();
+            return EmbeddingsAPI.impl(host).searchForContent(searcher);
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
         }
-        EmbeddingsDTO searcher = new EmbeddingsDTO.Builder().withQuery(contentToRelate.get()).withIndexName(indexName).withExcludeIndentifiers(new String[]{contentlet.getIdentifier()}).withUser(user).withLimit(50).withThreshold(.25f).build();
-        return EmbeddingsAPI.impl(host).searchForContent(searcher);
 
 
     }
