@@ -1,8 +1,8 @@
 # README
 
 This is plugin that a number of dotCMS specific tools that leverage AI tooling (Open AI specifically) for use in dotCMS.  
-This includes REST apis, Workflow Actions and Viewtools that let dotCMS interact with AI in a variety of ways.  For examples on how to use these endpoints, see 
-[these curl examples](README-CURL.md) and this document on how to create a [content embedding database](README-Embeddings-and-Search.md). 
+This includes REST apis, Workflow Actions and Viewtools that let dotCMS interact with AI in a variety of ways.  For examples on how to use these endpoints and to create content embedding indexes, see 
+[ this document](README-CURL.md). 
 
 Out of the box, it provides:
 ### An App
@@ -25,6 +25,8 @@ Out of the box, it provides:
     - Using search results from querying the embeddings, generate a response based on the content in the embeddings (from content in dotCMS), e.g.  "What should I do when visiting Costa Rica?"
     - Generate a streaming response from a query, e.g.  "What should I do when visiting Costa Rica?"
     - Perform a `raw` chat request to OpenAIs completion endpoint
+- `/api/v1/ai/image/generate` - Image Resource
+    - Create an AI generated image based on a prompt.  The resulting image will be stored as a temp file in dotCMS"
 ### Workflow Actions
   - **OpenAI Embeddings** (`DotEmbeddingsActionlet`)  This actionlet uses OpenAI to generate and save (or delete) the embeddings for content.  This is used so that an embedding index can be kept up to date as new content is published and/or unpublished from dotCMS.
   - **OpenAI Modify Content** (`OpenAIModifyContentActionlet`).  This actionlet can be called to automatically populate/update fields of content as the content is pushed through a workflow.  It works by expecting OpenAI to return its data/answer in a json format which will then be used to update the content.  The example usage is to post content to OpenAI and have OpenAI automatically write appropriate SEO title and SEO short description for the content.
@@ -90,33 +92,6 @@ ViewTool implementation
 ## ChatGPT APIs
 
 ### Text generator
-
-URL: https://api.openai.com/v1/chat/completions
-
-```
-{
-"model": "gpt-3.5-turbo",
-"messages": [
-{
-"role": "user",
-"content": "You are a chatbot providing travel advice to people who visit a travel website; provide an enticing description of the beaches of Costa Rica"
-}
-]
-}
-```
-
-### Image generator
-
-URL: https://api.openai.com/v1/images/generations
-
-```
-{
-"prompt": "The golden sun sets over the magnificent",
-"n": 1,
-"size": "1024x1024"
-}
-```
-* limitation: max 1000 characters in prompt
 
 
 ## Velocity usage
