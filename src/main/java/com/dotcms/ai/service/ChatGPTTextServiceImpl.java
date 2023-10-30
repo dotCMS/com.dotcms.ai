@@ -55,12 +55,11 @@ public class ChatGPTTextServiceImpl implements ChatGPTTextService {
     /**
      * Creates new DTO class to be used in request body sent to ChatGPT api and returns formatted response
      * @param prompt
-     * @param config
      * @param isRawPrompt
      * @return
      */
     @Override
-    public AITextResponseDTO sendChatGPTRequest(String prompt, Optional<AppConfig> config, boolean isRawPrompt) {
+    public AITextResponseDTO sendChatGPTRequest(String prompt, boolean isRawPrompt) {
         AITextResponseDTO aiTextResponseDTO = new AITextResponseDTO();
 
         try {

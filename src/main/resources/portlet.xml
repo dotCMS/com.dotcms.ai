@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<portlet-app>
+
+    <portlet>
+        <portlet-name>dotAI</portlet-name>
+        <display-name>dotAI</display-name>
+        <portlet-class>com.liferay.portlet.JSPPortlet</portlet-class>
+        <init-param>
+            <name>view-jsp</name>
+            <value>/ext/dotai.jsp</value>
+        </init-param>
+    </portlet>
+
+
+</portlet-app>

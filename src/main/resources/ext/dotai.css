@@ -1,0 +1,156 @@
+#container {
+    margin: 18px auto 0px auto;
+    width: 98%;
+    overflow: hidden;
+
+}
+
+#container input[type="radio"] {
+
+    visibility: hidden;
+}
+
+#container label {
+    background: #f9f9f9;
+    border-radius: .25em .25em 0 0;
+    color: #888;
+    cursor: pointer;
+    display: block;
+    float: left;
+    font-size: 1em;
+    height: 2.5em;
+    line-height: 2.5em;
+    margin-right: .25em;
+    padding: 0 1.5em;
+    text-align: center;
+
+}
+
+#container input:hover + label {
+    background: #ddd;
+    color: #666;
+}
+
+#container input:checked + label {
+    background: #f1f1f1;
+    color: #444;
+    position: relative;
+    z-index: 6;
+}
+
+#content {
+    background: #f1f1f1;
+    border-radius: 0 .25em .25em .25em;
+    min-height: 20em;
+    width: 98%;
+    margin: 0 auto;
+    text-align: left;
+    z-index: 5;
+}
+
+#content-1 {
+    display: block;
+    padding: 20px;
+    min-height: 60vh;
+}
+
+#content-2 {
+    display: none;
+    padding: 20px;
+    min-height: 60vh;
+}
+
+#content-3 {
+    display: none;
+    padding: 20px;
+    min-height: 60vh;
+}
+
+#content-4 {
+    display: none;
+    padding: 20px;
+    min-height: 60vh;
+}
+
+
+input[type="text"] {
+    font-size: large;
+    padding: 10px;
+    margin-top:-10px;
+
+
+}
+
+input[type="number"] {
+    font-size: large;
+    padding: 10px;
+    min-width: 100px;
+    margin-top:-10px;
+}
+
+input[type="radio"] {
+
+    padding: 10px;
+
+}
+#answerChat{
+    width:100%;
+    min-height: 500px;
+
+
+}
+
+.hTable{
+    text-align:left;
+}
+textarea {
+    font-size: large;
+    padding: 10px;
+    margin-top:-10px;
+}
+
+select {
+    font-size: large;
+    padding: 10px;
+    margin-top:-10px;
+}
+
+.button {
+    font-size: large;
+    padding: 20px 40px;
+    border: 1px solid #9D9D9D;
+    border-radius: .25em;
+
+}
+
+.prompt {
+    width: 400px;
+    min-height: 100px;
+}
+
+th {
+    padding: 1em;
+    vertical-align: top;
+    text-align: right;
+    margin-right: 20px;
+}
+
+td {
+    padding: 1em;
+    vertical-align: top;
+}
+
+
+.propTh {
+    padding: 5px;
+    font-weight: bold;
+
+
+}
+
+.propTd {
+    max-width: 400px;
+    overflow-wrap: break-word;
+    padding: 5px;
+
+}
