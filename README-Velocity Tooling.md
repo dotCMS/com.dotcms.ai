@@ -4,7 +4,7 @@
 The search tool can be accessed using `$ai.search`
 
 ### Search an index with a content/query 
-This example searches the blog index for matching content:
+This example searches the blog `blogIndex` embedding index for matching content:
 ```vtl
 ## Run a semantic query
 #set($results = $ai.search.query("Where can I find the Best beaches?", "blogIndex"))
@@ -24,7 +24,7 @@ $results.query
 ```
 
 ### Search with parameters
-You can also build a search map by hand:
+You can also build a search map by hand by passing a Map.
 
 ```vtl
 ## A semantic quer using a Map of Parameters
@@ -52,7 +52,7 @@ $results.query
 #end
 ```
 
-### Find Related Content
+### Find Semantically Related Content
 You can easily use this to automatically find related content based on an existing content. 
 The method will try to find the most "content-rich" field from the content you have passed 
 in and use it to find other content that is semantically related to the original.
@@ -101,11 +101,12 @@ $ai.embeddings.indexCount
 ### Config
 Show the current config for completions, including the model and the prompt templates
 
+```
 $ai.completions.config
+```
+### Summarize Content
 
-### Summarize
-
-This method takes a prompt, and using the configured model and prompt templates, will return a summary object as json.
+This method takes a search, and using the configured model and prompt templates, will return a summary object as json.
 
 ```vtl
 #set($summary = $ai.completions.summarize("Where can I find the Best beaches?", "blogIndex")))
@@ -117,14 +118,32 @@ $summary.choices.get(0).message.content
 
 ```
 
-### Prompt
-#set($contentMap = $dotcont
-This method takes an arbitrary  prompt, and will return the openai response object as json.
+### RAW Prompting
+You can also do "raw" prompting using the `.raw` method
+```vtl
+#set($prompt = '{
+"model": "gpt-3.5-turbo",
+"messages": [
+{
+"role": "user",
+"content": "You are a chatbot providing travel advice to people who visit a travel website; provide an enticing description of the beaches of Costa Rica"
+}
+]
+}')
 
+#set($chat = $ai.completions.raw($prompt))
+```
+Or using a Map to build your json
+```vtl
+#set($prompt = {})
+$!prompt.put("model", "gpt-3.5-turbo")
+#set($messages =[])
+#set($message ={})
+$!message.put("role", "user")
+$!message.put("content", "You are a chatbot providing travel advice to people who visit a travel website; provide an enticing description of the beaches of Costa Rica")
+$messages.add($message)
+$prompt.put("messages", $messages)
 
+#set($chat = $ai.completions.raw($prompt))
 
-
-#set($summary = $ai.completions.summarize("Where can I find the Best beaches?", "blogIndex")))
-
-
-
+```

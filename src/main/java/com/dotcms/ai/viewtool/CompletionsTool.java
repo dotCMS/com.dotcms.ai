@@ -88,4 +88,15 @@ public class CompletionsTool implements ViewTool {
         }
 
     }
+
+    public Object raw(Map prompt) {
+        try {
+            return raw(new JSONObject(prompt));
+        }
+        catch (Exception e){
+            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+        }
+
+    }
+
 }

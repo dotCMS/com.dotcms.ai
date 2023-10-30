@@ -10,7 +10,7 @@ Out of the box, it provides:
 ### dotAI Portlet/Tool
   - Search and Chat with Content
   - View/Update/Delete Content Embedding Indexes
-  - View AI Plugin configuration values
+  - View AI Plugin configuration values.  These are important because they can override and parameterize the prompts that we send to OpenAI.
 ### REST APIs
   There are 4 main REST resources provided by this plugin:
   - `/api/v1/ai` - Generative Resource
