@@ -12,7 +12,9 @@ import org.apache.velocity.tools.view.context.ViewContext;
 import org.apache.velocity.tools.view.tools.ViewTool;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Arrays;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Map;
 
 public class CompletionsTool implements ViewTool {
@@ -64,17 +66,27 @@ public class CompletionsTool implements ViewTool {
         try {
             return CompletionsAPI.impl().summarize(form);
         } catch (Exception e) {
-            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+            return handleException(e);
 
         }
+    }
+
+    public Map<String, Object> handleException(Exception e) {
+        try (StringWriter out = new StringWriter()) {
+            PrintWriter writer = new PrintWriter(out);
+            e.printStackTrace(writer);
+            return Map.of("error", e.getMessage(), "stackTrace", out.toString());
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+
     }
 
     public Object raw(String prompt) {
         try {
             return raw(new JSONObject(prompt));
-        }
-        catch (Exception e){
-            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+        } catch (Exception e) {
+            return handleException(e);
         }
 
     }
@@ -82,9 +94,8 @@ public class CompletionsTool implements ViewTool {
     public Object raw(JSONObject prompt) {
         try {
             return CompletionsAPI.impl().raw(prompt);
-        }
-        catch (Exception e){
-            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+        } catch (Exception e) {
+            return handleException(e);
         }
 
     }
@@ -92,9 +103,8 @@ public class CompletionsTool implements ViewTool {
     public Object raw(Map prompt) {
         try {
             return raw(new JSONObject(prompt));
-        }
-        catch (Exception e){
-            return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
+        } catch (Exception e) {
+            return handleException(e);
         }
 
     }
