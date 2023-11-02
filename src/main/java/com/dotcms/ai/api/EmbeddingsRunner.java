@@ -93,6 +93,12 @@ class EmbeddingsRunner implements Runnable {
             return;
         }
 
+        if(EmbeddingsDB.impl.get().embeddingExists(contentlet.getInode(), indexName, content)){
+            Logger.info(this.getClass(), "embedding already exists for content:" + contentlet.getTitle() + ", inode:" + contentlet.getInode());
+            return;
+        }
+
+
 
         Tuple2<Integer, List<Float>> embeddings = embeddingsAPI.pullOrGenerateEmbeddings(content);
 

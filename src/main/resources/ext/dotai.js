@@ -74,16 +74,20 @@ const reinitializeDatabase = async () => {
     }
     const contentTypes = [];
 
-    return fetch("/api/v1/ai/embeddings/db", {
+    await fetch("/api/v1/ai/embeddings/db", {
         method: 'DELETE',
         headers: {
             'Content-type': 'application/json'
         }} )
         .then(response => response.json())
         .then(data => {
-            alert("DB dropped/created:" + data.created);
+            document.getElementById("indexingMessages").innerHTML="DB dropped/created:" + data.created;
+            setTimeout(tab2, 4000);
+        });
 
-        })
+
+
+
 };
 
 const writeIndexesToDropdowns = async () => {
@@ -212,11 +216,17 @@ const writeIndexManagementTable = async () => {
         tr = document.createElement("tr");
         tr.style.borderBottom = "1px solid silver"
         td1 = document.createElement("td");
+        td1.style.textAlign="center";
         td2 = document.createElement("td");
+        td2.style.textAlign="center";
         td3 = document.createElement("td");
+        td3.style.textAlign="center";
         td4 = document.createElement("td");
+        td4.style.textAlign="center";
         td5 = document.createElement("td");
+        td5.style.textAlign="center";
         td6 = document.createElement("td");
+        td6.style.textAlign="center";
         td1.innerHTML = row.name;
         td2.innerHTML = row.fragments;
         td3.innerHTML = row.contents;
@@ -224,6 +234,7 @@ const writeIndexManagementTable = async () => {
         td4.style.whiteSpace="nowrap"
         td5.innerHTML = row.tokensPerChunk;
         td6.innerHTML = `<a href="#" onclick="doDeleteIndex('${row.name}')">delete</a>`
+
         tr.append(td1);
         tr.append(td2);
         tr.append(td3);
@@ -236,9 +247,13 @@ const writeIndexManagementTable = async () => {
 
     tr = document.createElement("tr");
     td1 = document.createElement("td");
-    td1.style.textAlign="right";
-    td1.colSpan="100";
-    td1.innerHTML=`<a href="#" onclick="reinitializeDatabase()">delete all</a>`;
+    td1.id="indexingMessages"
+    td1.colSpan=5
+    tr.append(td1);
+    td1 = document.createElement("td");
+    td1.style.textAlign="center";
+    td1.colSpan="1";
+    td1.innerHTML=`<a href="#" onclick="reinitializeDatabase()">reinit db</a>`;
     tr.append(td1);
     indexTable.append(tr)
 
@@ -309,8 +324,16 @@ const showResultTables = () => {
 
 }
 
+const doSearchChatJson = () => {
+    document.getElementById("submitChat").style.display = "none";
+    document.getElementById("loaderChat").style.display = "block";
+    setTimeout(function () {
+        doSearchChatJsonDebounced();
+    }, 500);
+}
 
-const doSearchChatJson = async (callback) => {
+
+const doSearchChatJsonDebounced = async () => {
 
     const formDataRaw = new FormData(document.getElementById("chatForm"))
     const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
@@ -323,11 +346,12 @@ const doSearchChatJson = async (callback) => {
     delete formData.responseType;
     if (formData.prompt == undefined || formData.prompt.trim().length == 0) {
         alert("please enter a query/prompt");
+        document.getElementById("submitChat").style.display = "";
+        document.getElementById("loaderChat").style.display = "none";
         return;
     }
 
-    document.getElementById("submitChat").style.display = "none";
-    document.getElementById("loaderChat").style.display = "block";
+
 
 
     if (responseType === "search") {
@@ -385,7 +409,7 @@ const doBuildIndex = async () => {
         }
     }).then(response => response.json())
         .then(data => {
-            document.getElementById("buildResponse").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
+            document.getElementById("indexingMessages").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
             setTimeout(clearIndexMessage, 5000);
 
         });
@@ -393,7 +417,7 @@ const doBuildIndex = async () => {
 
 
 const clearIndexMessage = async () => {
-    document.getElementById("buildResponse").innerHTML = "";
+    document.getElementById("indexingMessages").innerHTML = "";
     refreshIndexes()
         .then(() => {
             writeIndexesToDropdowns();
@@ -423,8 +447,6 @@ const doChatResponse = async (formData) => {
 
     const stream = document.getElementById("streamingResponseType").checked;
 
-    let parsedLines = [];
-    //console.log(JSON.stringify(formData));
     formData.stream = true;
     let line="";
     let lines =[];
@@ -445,7 +467,7 @@ const doChatResponse = async (formData) => {
         while (true) {
             const { value, done } = await reader.read();
             if (done) {
-                console.log("got a done:" + done);
+                //console.log("got a done:" + done);
                 break;
             }
             //console.log(value);

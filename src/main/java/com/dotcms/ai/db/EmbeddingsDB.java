@@ -117,8 +117,27 @@ public class EmbeddingsDB {
         } catch (SQLException e) {
             throw new DotRuntimeException(e);
         }
-
     }
+    public boolean embeddingExists(String inode, String indexName, String extractedText) {
+        try (Connection conn = getPGVectorConnection(); PreparedStatement statement = conn.prepareStatement(EmbeddingsSQL.SELECT_EMBEDDING_BY_TEXT_HASH_INODE_AND_INDEX)) {
+            String hash = hashText(extractedText);
+            statement.setObject(1, hash);
+            statement.setObject(2, inode);
+            statement.setObject(3, indexName);
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                return true;
+            }
+            return false;
+
+
+        } catch (SQLException e) {
+            throw new DotRuntimeException(e);
+        }
+    }
+
+
+
 
     public String hashText(@NotNull String text) {
 

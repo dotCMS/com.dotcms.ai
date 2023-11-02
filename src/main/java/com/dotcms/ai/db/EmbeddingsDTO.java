@@ -67,8 +67,8 @@ public class EmbeddingsDTO implements Serializable {
         this.query = builder.query;
         this.user = builder.user;
         this.showFields = UtilMethods.isSet(builder.showFields) ? new String[0] : builder.showFields;
-        this.excludeIdentifiers = UtilMethods.isSet(builder.excludeIdentifiers) ? new String[0] : builder.excludeIdentifiers;
-        this.excludeInodes = UtilMethods.isSet(builder.excludeInodes) ? new String[0] : builder.excludeInodes;
+        this.excludeIdentifiers = UtilMethods.isSet(builder.excludeIdentifiers) ?  builder.excludeIdentifiers : new String[0] ;
+        this.excludeInodes = UtilMethods.isSet(builder.excludeInodes) ? builder.excludeInodes:  new String[0] ;
     }
 
     public static Builder from(CompletionsForm form) {
@@ -125,6 +125,7 @@ public class EmbeddingsDTO implements Serializable {
                 .withTokenCount(values.tokenCount)
                 .withShowFields(values.showFields)
                 .withExcludeIndentifiers(values.excludeIdentifiers)
+                .withExcludeInodes(values.excludeInodes)
                 .withTemperature(values.temperature)
                 .withExcludeInodes(values.excludeInodes)
                 .withUser(values.user)

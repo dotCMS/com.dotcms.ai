@@ -63,6 +63,9 @@ class EmbeddingsSQL {
     static final String SELECT_EMBEDDING_BY_TEXT_HASH =
             "Select token_count, embeddings, index_name from dot_embeddings where extracted_text_hash=? limit 1";
 
+    static final String SELECT_EMBEDDING_BY_TEXT_HASH_INODE_AND_INDEX =
+            "Select id from dot_embeddings where extracted_text_hash=? and inode=? and lower(index_name)=lower(?) limit 1";
+
 
     static final String INSERT_EMBEDDINGS =
             "insert into dot_embeddings " +
