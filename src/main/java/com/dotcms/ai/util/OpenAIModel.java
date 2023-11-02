@@ -7,22 +7,23 @@ import java.util.stream.Collectors;
 
 public enum OpenAIModel {
 
-    GPT_3_5_TURBO("gpt-3.5-turbo", 3000, 3500, 4096),
-    GPT_3_5_TURBO_16k("gpt-3.5-turbo-16k", 180000, 3500, 16384),
-    GPT_4("gpt-4", 10000, 200, 8191),
-    TEXT_EMBEDDING_ADA_002("text-embedding-ada-002", 1000000, 3000, 8191);
+    GPT_3_5_TURBO("gpt-3.5-turbo", 3000, 3500, 4096, true),
+    GPT_3_5_TURBO_16k("gpt-3.5-turbo-16k", 180000, 3500, 16384, true),
+    GPT_4("gpt-4", 10000, 200, 8191, true),
+    TEXT_EMBEDDING_ADA_002("text-embedding-ada-002", 1000000, 3000, 8191, false);
 
 
     public final int tokensPerMinute;
     public final int apiPerMinute;
     public final int maxTokens;
     public final String modelName;
-
-    OpenAIModel(String modelName, int tokensPerMinute, int apiPerMinute, int maxTokens) {
+    public final boolean completionModel;
+    OpenAIModel(String modelName, int tokensPerMinute, int apiPerMinute, int maxTokens, boolean completionModel) {
         this.modelName = modelName;
         this.tokensPerMinute = tokensPerMinute;
         this.apiPerMinute = apiPerMinute;
         this.maxTokens = maxTokens;
+        this.completionModel=completionModel;
     }
 
     public static OpenAIModel resolveModel(String modelIn) {

@@ -11,28 +11,36 @@ import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.api.web.HttpServletResponseThreadLocal;
 import com.dotcms.contenttype.model.field.Field;
+import com.dotcms.mock.request.FakeHttpRequest;
+import com.dotcms.mock.response.BaseResponse;
+import com.dotcms.rendering.velocity.viewtools.content.ContentMap;
 import com.dotcms.rest.ContentResource;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
+import com.dotmarketing.util.PageMode;
 import com.dotmarketing.util.UtilMethods;
+import com.dotmarketing.util.VelocityUtil;
 import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.liferay.portal.model.User;
+import com.liferay.portal.util.PortalUtil;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import io.vavr.control.Try;
+import org.apache.velocity.context.Context;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
-import java.text.BreakIterator;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -56,43 +64,73 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     }
 
 
-
-
     @Override
     public void shutdown() {
         Try.run(() -> OpenAIThreadPool.threadPool.get().shutdown());
     }
 
     @Override
-    public void generateEmbeddingsforContent(Contentlet contentlet, String indexName) {
-        generateEmbeddingsforContent(contentlet, Optional.empty(), indexName);
+    public boolean generateEmbeddingsforContent(Contentlet contentlet, String indexName) {
+        return generateEmbeddingsforContent(contentlet, List.of(), indexName);
     }
 
     @Override
     public int deleteEmbedding(@NotNull EmbeddingsDTO dto) {
-
-
         return EmbeddingsDB.impl.get().deleteEmbeddings(dto);
-
-
     }
 
     @Override
-    public void generateEmbeddingsforContent(@NotNull Contentlet contentlet, Optional<Field> tryField, String indexName) {
+    public boolean generateEmbeddingsforContent(@NotNull Contentlet contentlet, List<Field> tryFields, String indexName) {
 
 
-        final Optional<Field> field = tryField.isPresent() ? tryField : ContentToStringUtil.impl.get().guessWhatFieldToIndex(contentlet);
-        final Optional<String> content = ContentToStringUtil.impl.get().parseField(contentlet, field);
+        final List<Field> fields = tryFields.isEmpty() ? ContentToStringUtil.impl.get().guessWhatFieldsToIndex(contentlet) : tryFields;
+
+        final Optional<String> content = ContentToStringUtil.impl.get().parseFields(contentlet, fields);
 
         if (content.isEmpty() || UtilMethods.isEmpty(content.get())) {
-            String fieldVar = Try.of(() -> field.get().variable()).getOrElse("unknown");
-            Logger.info(EmbeddingsAPIImpl.class, "No content to embed for:" + contentlet.getContentType().variable() + "." + fieldVar + " id:" + contentlet.getIdentifier() + " title:" + contentlet.getTitle());
-            return;
+            Logger.info(EmbeddingsAPIImpl.class, "No valid fields to embed for:" + contentlet.getContentType().variable() + " id:" + contentlet.getIdentifier() + " title:" + contentlet.getTitle());
+            return false;
         }
 
-        OpenAIThreadPool.threadPool.get().submit(new EmbeddingsRunner(field, contentlet, content.get(), indexName));
+        OpenAIThreadPool.threadPool.get().submit(new EmbeddingsRunner(this, contentlet, content.get(), indexName));
+        return true;
+    }
+
+    @Override
+    public boolean generateEmbeddingsforContent(@NotNull Contentlet contentlet, String velocityTemplate, String indexName) {
+        if (UtilMethods.isEmpty(velocityTemplate)) {
+            return false;
+        }
+        final Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
+        User user = PortalUtil.getUser() != null ? PortalUtil.getUser() : APILocator.systemUser();
+
+
+        HttpServletRequest requestProxy = new FakeHttpRequest("localhost", null).request();
+        HttpServletResponse responseProxy = new BaseResponse().response();
+
+        Context ctx = VelocityUtil.getWebContext(requestProxy, responseProxy);
+        ContentMap contentMap = new ContentMap(contentlet, user, PageMode.EDIT_MODE, host, ctx);
+        ctx.put("dotContentMap", contentMap);
+        ctx.put("contentlet", contentMap);
+        ctx.put("content", contentMap);
+
+        String textToEmbed = Try.of(() -> VelocityUtil.eval(velocityTemplate, ctx)).getOrNull();
+
+        if (UtilMethods.isEmpty(textToEmbed)) {
+            return false;
+        }
+        Optional<String> parsed = ContentToStringUtil.impl.get().isHtml(textToEmbed) ? ContentToStringUtil.impl.get().parseHTML(textToEmbed) : Optional.ofNullable(textToEmbed);
+
+        if(parsed.isEmpty()){
+            return false;
+        }
+
+
+        OpenAIThreadPool.threadPool.get().submit(new EmbeddingsRunner(this, contentlet, parsed.get(), indexName));
+        return true;
 
     }
+
 
     @Override
     public JSONObject reduceChunksToContent(EmbeddingsDTO searcher, final List<EmbeddingsDTO> searchResults) {
@@ -119,7 +157,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             JSONArray matches = contentObject.optJSONArray(MATCHES) == null ? new JSONArray() : contentObject.optJSONArray(MATCHES);
             JSONObject match = new JSONObject();
             match.put("distance", result.threshold);
-            match.put("extractedText", result.extractedText);
+            match.put("extractedText", UtilMethods.truncatify(result.extractedText, 255));
             matches.add(match);
             contentObject.put(MATCHES, matches);
 
@@ -189,9 +227,30 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
     }
 
-    private String hashText(String text) {
+    private String hashText(@NotNull String text) {
 
         return EmbeddingsDB.impl.get().hashText(text);
+    }
+
+    private void saveEmbeddingsForCache(String content, Tuple2<Integer, List<Float>> embeddings) {
+
+        EmbeddingsDTO embeddingsDTO = new EmbeddingsDTO.Builder()
+                .withContentType("cache")
+                .withField("cache")
+                .withTokenCount(embeddings._1)
+                .withInode("cache")
+                .withLanguage(0)
+                .withTitle("cache")
+                .withIdentifier("cache")
+                .withHost("cache")
+                .withExtractedText(content)
+                .withIndexName("cache")
+                .withEmbeddings(embeddings._2).build();
+
+
+        EmbeddingsDB.impl.get().saveEmbeddings(embeddingsDTO);
+
+
     }
 
     private List<Float> sendTokensToOpenAI(@NotNull List<Integer> tokens) {
@@ -279,129 +338,37 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
      * @return Tuple(Count of Tokens Input, List of Embeddings Output)
      */
     @Override
-    public Tuple2<Integer, List<Float>> pullOrGenerateEmbeddings(String content) {
+    public Tuple2<Integer, List<Float>> pullOrGenerateEmbeddings(@NotNull String content) {
+        if (UtilMethods.isEmpty(content)) {
+            return Tuple.of(0, List.of());
+        }
         String hashed = hashText(content);
-        Tuple2<Integer, List<Float>> alreadyHaveEmbeddings = embeddingCache.getIfPresent(hashed);
-        if (alreadyHaveEmbeddings == null || alreadyHaveEmbeddings._2.isEmpty()) {
-
-            alreadyHaveEmbeddings = EmbeddingsDB.impl.get().searchExistingEmbeddings(content);
-            if (alreadyHaveEmbeddings == null || alreadyHaveEmbeddings._2.isEmpty()) {
-                List<Integer> tokens = EncodingUtil.encoding.get().encode(content);
-                if (tokens.isEmpty()) {
-                    Logger.debug(this.getClass(), "NO TOKENS for " + content);
-                    return Tuple.of(0, List.of());
-                }
-                alreadyHaveEmbeddings = Tuple.of(tokens.size(), sendTokensToOpenAI(tokens));
-            }
-            embeddingCache.put(hashed, alreadyHaveEmbeddings);
-        }
-        return alreadyHaveEmbeddings;
-    }
-
-
-
-    class EmbeddingsRunner implements Runnable {
-        final Optional<Field> field;
-        final Contentlet contentlet;
-        final String content;
-        final String indexName;
-
-        public EmbeddingsRunner(Optional<Field> field, Contentlet contentlet, String content, String index) {
-            this.field = field;
-            this.contentlet = contentlet;
-            this.content = content;
-            this.indexName = index;
+        final Tuple2<Integer, List<Float>> cachedEmbeddings = embeddingCache.getIfPresent(hashed);
+        if (cachedEmbeddings != null && !cachedEmbeddings._2.isEmpty()) {
+            return cachedEmbeddings;
         }
 
-        @Override
-        public void run() {
-            try {
-
-                final String fieldVar = field.isPresent() ? field.get().variable() : contentlet.getContentType().variable();
-
-
-                if (config.getConfigBoolean(AppKeys.EMBEDDINGS_DB_DELETE_OLD_ON_UPDATE)) {
-
-                    EmbeddingsDTO deleteOldVersions = new EmbeddingsDTO.Builder()
-                            .withIdentifier(contentlet.getIdentifier())
-                            .withLanguage(contentlet.getLanguageId())
-                            .withIndexName(indexName)
-                            .withField(fieldVar)
-                            .withContentType(contentlet.getContentType().variable())
-                            .build();
-                    EmbeddingsDB.impl.get().deleteEmbeddings(deleteOldVersions);
-                }
-
-
-                final String cleanContent = String.join(" ", content.trim().split("\\s+"));
-                final int SPLIT_AT_TOKENS = config.getConfigInteger(AppKeys.EMBEDDINGS_SPLIT_AT_TOKENS);
-
-                // split into sentences
-                BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.getDefault());
-                StringBuilder buffer = new StringBuilder();
-                iterator.setText(cleanContent);
-                int start = iterator.first();
-                int totalTokens = 0;
-                for (int end = iterator.next(); end != BreakIterator.DONE; start = end, end = iterator.next()) {
-                    String sentence = cleanContent.substring(start, end);
-                    int tokenCount = EncodingUtil.encoding.get().countTokens(sentence);
-                    totalTokens += tokenCount;
-
-                    if (totalTokens < SPLIT_AT_TOKENS) {
-                        buffer.append(sentence).append(" ");
-                    } else {
-                        saveEmbedding(buffer.toString(), contentlet, field, indexName);
-                        buffer.setLength(0);
-                        buffer.append(sentence).append(" ");
-                        totalTokens = tokenCount;
-                    }
-
-                }
-                if (buffer.toString().split("\\s+").length > 0) {
-                    saveEmbedding(buffer.toString(), contentlet, field, indexName);
-                }
-
-
-            } catch (Exception e) {
-                Logger.error(EmbeddingsAPIImpl.class, e.getMessage(), e);
-
-
-            }
+        List<Integer> tokens = EncodingUtil.encoding.get().encode(content);
+        if (tokens.isEmpty()) {
+            Logger.debug(this.getClass(), "NO TOKENS for " + content);
+            return Tuple.of(0, List.of());
         }
 
-        private void saveEmbedding(@NotNull String content, @NotNull Contentlet contentlet, Optional<Field> field, String indexName) {
-            final String fieldVar = field.isPresent() ? field.get().variable() : contentlet.getContentType().variable();
-            if (UtilMethods.isEmpty(content)) {
-                return;
+        Tuple3<String, Integer, List<Float>> dbEmbeddings = EmbeddingsDB.impl.get().searchExistingEmbeddings(content);
+        if (dbEmbeddings != null && !dbEmbeddings._3.isEmpty()) {
+            if (!"cache".equalsIgnoreCase(dbEmbeddings._1)) {
+                saveEmbeddingsForCache(content, Tuple.of(dbEmbeddings._2, dbEmbeddings._3));
             }
-
-
-            Tuple2<Integer, List<Float>> embeddings = pullOrGenerateEmbeddings(content);
-
-            if (embeddings._2.isEmpty()) {
-                Logger.info(this.getClass(), "NO TOKENS for " + contentlet.getContentType().variable() + "." + fieldVar + " : " + content);
-                return;
-            }
-
-
-            EmbeddingsDTO embeddingsDTO = new EmbeddingsDTO.Builder()
-                    .withContentType(contentlet.getContentType().variable())
-                    .withField(fieldVar)
-                    .withTokenCount(embeddings._1)
-                    .withInode(contentlet.getInode())
-                    .withLanguage(contentlet.getLanguageId())
-                    .withTitle(contentlet.getTitle())
-                    .withIdentifier(contentlet.getIdentifier())
-                    .withHost(contentlet.getHost())
-                    .withExtractedText(content)
-                    .withIndexName(indexName)
-                    .withEmbeddings(embeddings._2).build();
-
-
-            EmbeddingsDB.impl.get().saveEmbeddings(embeddingsDTO);
-
-
+            embeddingCache.put(hashed, Tuple.of(dbEmbeddings._2, dbEmbeddings._3));
+            return Tuple.of(dbEmbeddings._2, dbEmbeddings._3);
         }
+
+
+        Tuple2<Integer, List<Float>> openAiEmbeddings = Tuple.of(tokens.size(), sendTokensToOpenAI(tokens));
+        saveEmbeddingsForCache(content, openAiEmbeddings);
+        embeddingCache.put(hashed, openAiEmbeddings);
+        return openAiEmbeddings;
+
 
     }
 

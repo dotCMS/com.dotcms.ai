@@ -39,12 +39,15 @@ import org.apache.velocity.context.Context;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
 
@@ -55,118 +58,89 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
     public List<WorkflowActionletParameter> getParameters() {
 
         return List.of(
-                new WorkflowActionletParameter("fieldToRead", "The field with the content to use in your prompt", "", true),
+                new WorkflowActionletParameter("fieldsToRead", "The fields with the content to use in your prompt", "", true),
                 new WorkflowActionletParameter("fieldToWrite", "The field where you want to write the results.  " +
                         "<br>If your response is being returned as a json object, this field can be left blank" +
                         "<br>and the keys of the json object will be used to update the content fields.", "", false),
                 new WorkflowActionletParameter("overwriteField", "Overwrite existing content (true|false)", "true", true),
-                new WorkflowActionletParameter("openAIPrompt", "The prompt that will be sent to OpenAI", "We need an attractive search result in Google. Return a json object that includes the fields \"pageTitle\" for a meta title of less than 55 characters and \"metaDescription\" for the meta description of less than 300 characters using this content:\\n\\n${fieldContent}\\n\\n", true),
+                new WorkflowActionletParameter("openAIPrompt", "The prompt that will be sent to the AI", "We need an attractive search result in Google. Return a json object that includes the fields \"pageTitle\" for a meta title of less than 55 characters and \"metaDescription\" for the meta description of less than 300 characters using this content:\\n\\n${fieldContent}\\n\\n", true),
                 new WorkflowActionletParameter("runDelay", "Update the content asynchronously, after X seconds. O means run in-process", "5", true)
         );
     }
 
     @Override
     public String getName() {
-        return "OpenAI Modify Content";
+        return "AI Modify Content";
     }
 
     @Override
     public String getHowTo() {
-        return "This actionlet will send the value of the 'openAIPrompt' field to OpenAI and write the returned results to a field or fields of your choosing.  If OpenAI returns a JSON object, the key/values of that JSON will be merged with your content's fields.  The prompt can also take velocity (content can be referenced as $dotContentMap)";
+        return "This actionlet will send the value of the 'openAIPrompt' field to AI and write the returned results to a field or fields of your choosing.  If the AI returns a JSON object, the key/values of that JSON will be merged with your content's fields.  The prompt can also take velocity (content can be referenced as $dotContentMap)";
     }
 
-    @Override
-    public void executePreAction(final WorkflowProcessor processor, final Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
-
-        final int runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
-
-        if (runDelay>0) {
-            scheduledExecutorService.schedule(new UpdateContent(processor, params), runDelay, TimeUnit.SECONDS);
-        } else {
-            new UpdateContent(processor, params).run();
-        }
-    }
 
     @Override
     public void executeAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
-        // Not used
+        final int runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
+
+        if (runDelay > 0) {
+            scheduledExecutorService.schedule(new UpdateContentInBackground(processor, params), runDelay, TimeUnit.SECONDS);
+        } else {
+            new UpdateContentInBackground(processor, params).run();
+        }
 
     }
 
-    private JSONObject buildRequest(String prompt) {
-        AppConfig config = ConfigService.INSTANCE.config();
 
-        int maxTokenSize = OpenAIModel.resolveModel(config.getConfig(AppKeys.COMPLETION_MODEL)).maxTokens;
-
-        float defaultTemperature = config.getConfigFloat(AppKeys.COMPLETION_TEMPERATURE);
-
-        // aggregate matching results into text
-        StringBuilder supportingContent = new StringBuilder();
-
-
-        JSONArray messages = new JSONArray();
-        messages.add(Map.of("role", "user", "content", prompt));
-        JSONObject json = new JSONObject();
-        json.put("messages", messages);
-        json.put("model", config.getConfig(AppKeys.COMPLETION_MODEL));
-        json.put("temperature", defaultTemperature);
-        json.put("stream", false);
-
-        return json;
-    }
-
-    class UpdateContent implements Runnable {
+    class UpdateContentInBackground implements Runnable {
         final WorkflowProcessor processor;
         final Map<String, WorkflowActionClassParameter> params;
 
 
-        UpdateContent(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
+        UpdateContentInBackground(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
             this.processor = processor;
             this.params = params;
-
         }
 
         @Override
         public void run() {
-            Contentlet contentlet = processor.getContentlet();
-            ContentType type = contentlet.getContentType();
+            final Contentlet contentlet = processor.getContentlet();
+            final ContentType type = contentlet.getContentType();
+            final Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
 
 
             final int runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
             final boolean overwriteField = Try.of(() -> Boolean.parseBoolean(params.get("overwriteField").getValue())).getOrElse(true);
-            final Optional<Field> fieldToRead = Try.of(() -> type.fieldMap().get(params.get("fieldToRead").getValue())).toJavaOptional();
+            final List<Field> fieldsToRead = parseFieldsToRead(params.get("fieldsToRead").getValue(), contentlet);
             final Optional<Field> fieldToWrite = Try.of(() -> type.fieldMap().get(params.get("fieldToWrite").getValue())).toJavaOptional();
             final String promptIn = params.get("openAIPrompt").getValue();
-
-
-            final Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
-
 
             if (UtilMethods.isEmpty(promptIn)) {
                 Logger.info(OpenAIModifyContentActionlet.class, "no prompt found");
                 return;
             }
 
-            Optional<String> content = ContentToStringUtil.impl.get().parseField(contentlet, fieldToRead);
+            Optional<String> content = ContentToStringUtil.impl.get().parseFields(contentlet, fieldsToRead);
             if (content.isEmpty() || UtilMethods.isEmpty(content.get())) {
-                Logger.info(OpenAIModifyContentActionlet.class, "no content found for field:" + type.variable() + "." + fieldToWrite.get().variable());
+                Logger.info(OpenAIModifyContentActionlet.class, "no content found for field:" + type.variable() + "." + fieldToWrite);
                 return;
             }
 
             try {
                 HttpServletRequest requestProxy = new FakeHttpRequest("localhost", null).request();
                 HttpServletResponse responseProxy = new BaseResponse().response();
-
                 Context ctx = VelocityUtil.getWebContext(requestProxy, responseProxy);
                 ctx.put("fieldContent", content.get());
-                ctx.put("dotContentMap", new ContentMap(contentlet, processor.getUser(), PageMode.EDIT_MODE, host, ctx));
+                ContentMap contentMap = new ContentMap(contentlet, processor.getUser(), PageMode.EDIT_MODE, host, ctx);
+                ctx.put("dotContentMap", contentMap);
+                ctx.put("contentlet", contentMap);
+                ctx.put("content", contentMap);
+
 
                 String finalPrompt = VelocityUtil.eval(promptIn, ctx);
 
 
                 JSONObject openAIResponse = CompletionsAPI.impl().raw(buildRequest(finalPrompt));
-
-
                 String response = openAIResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
 
 
@@ -191,17 +165,17 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
                             Logger.warnAndDebug(this.getClass(), "Unable to write tag :" + x + " to contentlet with inode " + contentlet.getInode() + " :" + e.getMessage(), e);
                         }
                     }
-                } else if(fieldToWrite.isPresent()) {
+                } else if (fieldToWrite.isPresent()) {
                     if (overwriteField || UtilMethods.isEmpty(contentlet.getStringProperty(fieldToWrite.get().variable()))) {
                         contentlet.setProperty(fieldToWrite.get().variable(), response);
                     }
                 }
                 processor.setContentlet(contentlet);
 
-                if (runDelay>0) {
+                if (runDelay > 0) {
                     boolean isPublished = APILocator.getVersionableAPI().isLive(contentlet);
                     new SaveContentActionlet().executeAction(processor, Map.of());
-                    if(isPublished){
+                    if (isPublished) {
                         new PublishContentActionlet().executeAction(processor, Map.of());
                     }
                 }
@@ -214,6 +188,44 @@ public class OpenAIModifyContentActionlet extends WorkFlowActionlet {
                 throw new DotRuntimeException(e);
             }
 
+        }
+
+        List<Field> parseFieldsToRead(String tryFieldVars, Contentlet contentlet) {
+            if (UtilMethods.isEmpty(tryFieldVars)) {
+                return List.of();
+            }
+
+            List<String> fieldVars = Arrays.asList(tryFieldVars.toLowerCase().trim().split("[\\s+,]"));
+            List<Field> fieldList = new ArrayList<>();
+
+            return contentlet.getContentType().fields()
+                    .stream()
+                    .filter(f -> fieldVars.contains(f.variable().toLowerCase()))
+                    .collect(Collectors.toList());
+
+
+        }
+
+        private JSONObject buildRequest(String prompt) {
+            AppConfig config = ConfigService.INSTANCE.config();
+
+            int maxTokenSize = OpenAIModel.resolveModel(config.getConfig(AppKeys.COMPLETION_MODEL)).maxTokens;
+
+            float defaultTemperature = config.getConfigFloat(AppKeys.COMPLETION_TEMPERATURE);
+
+            // aggregate matching results into text
+            StringBuilder supportingContent = new StringBuilder();
+
+
+            JSONArray messages = new JSONArray();
+            messages.add(Map.of("role", "user", "content", prompt));
+            JSONObject json = new JSONObject();
+            json.put("messages", messages);
+            json.put("model", config.getConfig(AppKeys.COMPLETION_MODEL));
+            json.put("temperature", defaultTemperature);
+            json.put("stream", false);
+
+            return json;
         }
 
     }

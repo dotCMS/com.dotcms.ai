@@ -18,7 +18,12 @@
 
 
 <body>
-
+<div id="openAIKeyWarn"
+     style="display: none;padding:20px; border-radius: 10px;color:indianred;border:1px solid indianred;margin:20px auto;max-width: 800px;text-align: center">
+    Your OpenAI API key is not set. Please add a valid API key in your <a
+        href="/dotAdmin/#/apps/dotAI/edit/SYSTEM_HOST"
+        target="_top">App screen</a>.
+</div>
 <div id="container">
     <input id="tab-1" type="radio" name="tab-group" checked="checked" onclick="changeTabs()"/>
     <label for="tab-1">Search and Chat with dotCMS</label>
@@ -50,6 +55,16 @@
                         </tr>
                         <tr>
                             <th>
+                                Model:
+                            </th>
+                            <td>
+                                <select name="model" id="modelName">
+                                    <option disabled="true" placeholder="Select a Model">Select a Model</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>
                                 <label>Response Type:</label>
                             </th>
                             <td>
@@ -59,12 +74,16 @@
                                     <label for="searchResponseType">Semantic Search &nbsp; &nbsp; (dotCMS Only)</label>
                                 </div>
                                 <div style="padding-bottom:10px;">
-                                    <input type="radio" id="streamingResponseType" name="responseType" value="stream" onchange="showResultTables()">
-                                    <label for="streamingResponseType">Streaming Chat &nbsp; &nbsp; (OpenAI + dotCMS Supporting Content)</label>
+                                    <input type="radio" id="streamingResponseType" name="responseType" value="stream"
+                                           onchange="showResultTables()">
+                                    <label for="streamingResponseType">Streaming Chat &nbsp; &nbsp; (OpenAI + dotCMS
+                                        Supporting Content)</label>
                                 </div>
                                 <div>
-                                    <input type="radio" id="restJsonResponseType" name="responseType" value="json" onchange="showResultTables()">
-                                    <label for="restJsonResponseType">REST/JSON Chat &nbsp; &nbsp; (OpenAI + dotCMS Supporting Content)</label>
+                                    <input type="radio" id="restJsonResponseType" name="responseType" value="json"
+                                           onchange="showResultTables()">
+                                    <label for="restJsonResponseType">REST/JSON Chat &nbsp; &nbsp; (OpenAI + dotCMS
+                                        Supporting Content)</label>
                                 </div>
                             </td>
                         </tr>
@@ -77,8 +96,15 @@
                                 (determines the randomness of the response. 0 = deterministic, 2 = most random
                             </td>
                         </tr>
-
-
+                        <tr>
+                            <th>
+                                Response length:
+                            </th>
+                            <td>
+                                <input type="text" value="500" name="responseLengthTokens" id="responseLengthTokens"><br>
+                                The general length of response you would like to generate. 75 words ~= 100 tokens
+                            </td>
+                        </tr>
 
                         <tr>
                             <th>Vector Operator:</th>
@@ -126,32 +152,24 @@
                                 content type var you would like to search - leave blank for all
                             </td>
                         </tr>
-                        <tr>
-                            <th>
-                                Field Var:
-                            </th>
-                            <td>
-                                <input type="text" value="" name="fieldVar" id="fieldVarSearch"><br>
-                                field var you would like to search - leave blank for all
-                            </td>
-                        </tr>
 
                     </form>
                 </table>
             </div>
             <div>
                 <table style="margin-top:50px;margin-bottom:20px;">
-                <tr>
-                    <th><b>Prompt:</b></th>
-                    <td>
+                    <tr>
+                        <th><b>Prompt:</b></th>
+                        <td>
                             <textarea class="prompt" name="prompt" id="searchQuery"
                                       placeholder="Search text or phrase"></textarea>
-                    </td>
-                </tr>
+                        </td>
+                    </tr>
                     <tr>
                         <td colspan="2" style="text-align: center">
                             <div style="padding:10px;height:75px; text-align: center">
-                                <div class="loader" style="display:none;height:40px;padding:10px;" id="loaderChat"></div>
+                                <div class="loader" style="display:none;height:40px;padding:10px;"
+                                     id="loaderChat"></div>
                                 <button id="submitChat" class="button dijit dijitReset dijitInline dijitButton"
                                         onclick="doSearchChatJson()">
                                     Submit
@@ -175,42 +193,72 @@
     <div id="content-2">
         <h2>Manage Embeddings / Indexes</h2>
 
-        <div style="display: grid;grid-template-columns: 40% 60%;">
+        <div style="display: grid;grid-template-columns: 50% 50%;">
             <div>
-                <h3>Create/Update Index</h3>
+
                 <form id="createUpdateIndex" onsubmit="return false;">
-                    <table>
+
+                    <table style="width:100%">
                         <tr>
-                            <th>
+                            <th style="width:30%">
                                 Index Name
                             </th>
                             <td>
-                                <input type="text"  name="indexName" value="default"><br>
-                                index to create or append
+                                <input type="text" name="indexName" value="default"><br>
+                                Index Name to create or append
                             </td>
                         </tr>
                         <tr>
-                            <th>Content to index:</th>
-                            <td>
-                            <textarea class="prompt" name="query" placeholder="lucene search to embed "></textarea>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th>
-                                Field Name
+                            <th style="width:30%">
+                                Content Query to Index:
                             </th>
                             <td>
-                                <input type="text" value="" name="fieldVar"><br>
-                               specific field to index (optional)
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align: center">
-                                <button onclick="doBuildIndex()" class="button dijit dijitReset dijitInline dijitButton">Build Index</button>
+                                    <textarea class="prompt" name="query"
+                                              placeholder="e.g. +contentType:blog"></textarea>
                             </td>
                         </tr>
                     </table>
+                    <fieldset style="margin:20px 20px 20px 0px;border-bottom:0px;border-left: 0px;border-right: 0px;">
+                        <legend style="background-color:rgba(0, 0, 0, 0);">What To Embed (Optional)</legend>
+                        <table style="width:100%">
+                            <tr>
+                                <td colspan="2" style="text-align: center">
+                                    Optionally, you can specify what field or fields of your content you want to include in the embeddings.  Leave these blank and dotCMS will try to guess what fields to use when generating embedddings.
+                                </td>
+                            </tr>
+                            <tr>
+                                <th style="width:30%">
+                                    Velocity Template to embed:
+                                </th>
+                                <td>
+                                <textarea class="prompt" name="velocityTemplate" placeholder="e.g.
+                                $contentlet.shortDescription $contentlet.body"></textarea>
+                                    <br>
+                                    Use velocity to build exactly how you want to embed your content.
+                                </td>
+                            </tr>
+                            <tr>
+                                <th style="width:30%">
+                                    Or Field Variable(s)
+                                </th>
+                                <td>
+                                    <input type="text" value="" name="fields">
+                                    <br>
+                                    If you just specify a comma separated list of fields variables, dotCMS will use them to generate the embedding.
+                                </td>
+                            </tr>
+                        </table>
+                    </fieldset>
+                    <table style="width:100%">
+                        <tr>
+                            <td colspan="2" style="text-align: center">
+                                <button onclick="doBuildIndex()"
+                                        class="button dijit dijitReset dijitInline dijitButton">Build Index
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+
                 </form>
                 <div id="buildResponse"></div>
             </div>

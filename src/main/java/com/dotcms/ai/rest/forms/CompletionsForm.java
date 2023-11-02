@@ -2,9 +2,7 @@ package com.dotcms.ai.rest.forms;
 
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
-import com.dotcms.ai.util.OpenAIModel;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
-import com.dotcms.rest.api.Validated;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.exception.DotRuntimeException;
@@ -17,10 +15,12 @@ import io.vavr.control.Try;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 
 @JsonDeserialize(builder = CompletionsForm.Builder.class)
-public class CompletionsForm extends Validated {
+public class CompletionsForm {
 
     static final Map<String, String> OPERATORS = Map.of("distance", "<->", "cosine", "<=>", "innerProduct", "<#>");
     @Size(min = 1, max = 4096)
@@ -46,6 +46,58 @@ public class CompletionsForm extends Validated {
     public final String site;
     public final String[] fields;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof CompletionsForm)) return false;
+        CompletionsForm that = (CompletionsForm) o;
+        return searchLimit == that.searchLimit &&
+                searchOffset == that.searchOffset &&
+                responseLengthTokens == that.responseLengthTokens &&
+                language == that.language &&
+                stream == that.stream &&
+                Float.compare(threshold, that.threshold) == 0 &&
+                Float.compare(temperature, that.temperature) == 0 &&
+                Objects.equals(prompt, that.prompt) &&
+                Objects.equals(fieldVar, that.fieldVar) &&
+                Objects.equals(indexName, that.indexName) &&
+                Objects.equals(contentType, that.contentType) &&
+                Objects.equals(model, that.model) &&
+                Objects.equals(operator, that.operator) &&
+                Objects.equals(site, that.site) &&
+                fields.length > 0 ? Arrays.equals(fields, that.fields) : Boolean.TRUE;
+    }
+
+    @Override
+    public String toString() {
+        return "CompletionsForm{" +
+                "prompt='" + prompt + '\'' +
+                ", searchLimit=" + searchLimit +
+                ", searchOffset=" + searchOffset +
+                ", responseLengthTokens=" + responseLengthTokens +
+                ", language=" + language +
+                ", stream=" + stream +
+                ", fieldVar='" + fieldVar + '\'' +
+                ", indexName='" + indexName + '\'' +
+                ", contentType='" + contentType + '\'' +
+                ", threshold=" + threshold +
+                ", temperature=" + temperature +
+                ", model='" + model + '\'' +
+                ", operator='" + operator + '\'' +
+                ", site='" + site + '\'' +
+                ", fields=" + Arrays.toString(fields) +
+                '}';
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(prompt, searchLimit, searchOffset, responseLengthTokens, language, stream, fieldVar, indexName, contentType, threshold, temperature, model, operator, site);
+        result = 31 * result + Arrays.hashCode(fields);
+        return result;
+    }
+
+
+
 
     private CompletionsForm(CompletionsForm.Builder builder) {
         this.prompt = validateBuilderQuery(builder.prompt);
@@ -57,17 +109,16 @@ public class CompletionsForm extends Validated {
         this.contentType = builder.contentType;
         this.threshold = builder.threshold;
         this.operator = OPERATORS.getOrDefault(builder.operator, "<=>");
-        this.site = builder.site;
+        this.site = UtilMethods.isSet(builder.site) ? builder.site : Try.of(()->WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()).getIdentifier()).getOrElse("SYSTEM_HOST");
         this.language = validateLanguage(builder.language);
         this.searchOffset = builder.searchOffset;
-        this.fields = builder.fields != null ? builder.fields.trim().split("[\\s+,]") : new String[0];
-
-        this.temperature = builder.temperature < 0
-                ? 0
-                : builder.temperature > 2
+        this.fields = (builder.fields != null) ? builder.fields.trim().split("[\\s+,]") : new String[0];
+        this.temperature = builder.temperature <= 0
+                ? ConfigService.INSTANCE.config().getConfigFloat(AppKeys.COMPLETION_TEMPERATURE)
+                : builder.temperature >= 2
                     ? 2
                     : builder.temperature;
-        this.model = builder.model;
+        this.model = UtilMethods.isSet(builder.model) ? builder.model : ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL);
     }
 
     String validateBuilderQuery(String query) {
@@ -83,6 +134,27 @@ public class CompletionsForm extends Validated {
                 .getOrElseTry(() -> APILocator.getLanguageAPI().getDefaultLanguage().getId());
 
     }
+
+    public static final Builder copy(CompletionsForm form) {
+        return new Builder()
+                .temperature(form.temperature)
+                .site(form.site)
+                .searchLimit(form.searchLimit)
+                .fields(String.join(",", form.fields))
+                .fieldVar(form.fieldVar)
+                .searchOffset(form.searchOffset)
+                .model(form.model)
+                .responseLengthTokens(form.responseLengthTokens)
+                .language(form.language)
+                .prompt(form.prompt)
+                .contentType(form.contentType)
+                .operator(form.operator)
+                .indexName(form.indexName)
+                .threshold(form.threshold)
+                .stream(form.stream);
+
+    }
+
 
 
     public static final class Builder {
@@ -105,17 +177,17 @@ public class CompletionsForm extends Validated {
         @JsonSetter(nulls = Nulls.SKIP)
         private String indexName = "default";
         @JsonSetter(nulls = Nulls.SKIP)
-        private String model = ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL);
+        private String model ;
         @JsonSetter(nulls = Nulls.SKIP)
         private String contentType;
         @JsonSetter(nulls = Nulls.SKIP)
         private float threshold = .25f;
         @JsonSetter(nulls = Nulls.SKIP)
-        private float temperature = 1f;
+        private float temperature = 0;
         @JsonSetter(nulls = Nulls.SKIP)
         private String operator = "cosine";
         @JsonSetter(nulls = Nulls.SKIP)
-        private String site = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()).getIdentifier();
+        private String site;
 
         public Builder prompt(String queryOrPrompt) {
             this.prompt = queryOrPrompt;
@@ -157,9 +229,12 @@ public class CompletionsForm extends Validated {
             this.fieldVar = fieldVar;
             return this;
         }
-
+        public Builder fields(String fields) {
+            this.fields = fields;
+            return this;
+        }
         public Builder model(String model) {
-            this.model = OpenAIModel.resolveModel(model).modelName;
+            this.model =model;
             return this;
         }
 
@@ -179,7 +254,7 @@ public class CompletionsForm extends Validated {
         }
 
         public Builder temperature(float temperature) {
-            this.temperature = temperature > 0 ? 0 : temperature > 2 ? 2 : temperature;
+            this.temperature = temperature;
             return this;
         }
 
@@ -189,7 +264,7 @@ public class CompletionsForm extends Validated {
         }
 
         public Builder site(String site) {
-            this.site = site;
+            this.site =site;
             return this;
         }
 

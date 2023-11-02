@@ -5,31 +5,31 @@ import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.rest.forms.CompletionsForm;
+import com.dotcms.ai.util.LineReadingOutputStream;
+import com.dotcms.ai.util.OpenAIModel;
 import com.dotcms.rest.WebResource;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.web.WebAPILocator;
-import com.dotmarketing.exception.DotDataException;
-import com.dotmarketing.exception.DotSecurityException;
+import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
 import org.glassfish.jersey.server.JSONP;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
-import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Call
@@ -38,29 +38,31 @@ import java.util.regex.Pattern;
 public class CompletionsResource {
 
 
-
     @POST
     @JSONP
     @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
-    public final Response summarizeFromContent(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                       CompletionsForm form
+    public final Response summarizeFromContent(@Context final HttpServletRequest request, @Context final HttpServletResponse response, CompletionsForm formIn
 
-    ) throws DotDataException, DotSecurityException, IOException {
+    ) {
 
         // get user if we have one (this is allow anon)
-        User user = new WebResource.InitBuilder(request, response)
+        User user = new WebResource
+                .InitBuilder(request, response)
                 .requiredBackendUser(true)
                 .requiredFrontendUser(true)
-                .init().getUser();
+                .init()
+                .getUser();
 
-        if (form.prompt == null) {
+        if (formIn.prompt == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", "query required")).build();
         }
+        Host host = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(request);
+
+
+        final CompletionsForm form = (!user.isAdmin()) ? CompletionsForm.copy(formIn).model(ConfigService.INSTANCE.config(host).getModel()).build() : formIn;
 
 
         long startTime = System.currentTimeMillis();
-
-
 
 
         if (!form.stream) {
@@ -70,7 +72,7 @@ public class CompletionsResource {
         }
 
         final StreamingOutput streaming = output -> {
-            CompletionsAPI.impl().summarizeStream(form, output);
+            CompletionsAPI.impl().summarizeStream(form, new LineReadingOutputStream(output));
             output.flush();
             output.close();
 
@@ -80,30 +82,28 @@ public class CompletionsResource {
     }
 
 
-
-
-
-
     @Path("/rawPrompt")
     @POST
     @JSONP
     @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
-    public final Response rawPrompt(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
-                                       CompletionsForm form
+    public final Response rawPrompt(@Context final HttpServletRequest request, @Context final HttpServletResponse response, CompletionsForm formIn
 
-    ) throws DotDataException, DotSecurityException, IOException {
+    ) {
 
         // get user if we have one (this is allow anon)
-        User user = new WebResource.InitBuilder(request, response)
+        User user = new WebResource
+                .InitBuilder(request, response)
                 .requiredBackendUser(true)
                 .requiredFrontendUser(true)
-                .init().getUser();
+                .init()
+                .getUser();
 
-        if (form.prompt == null) {
+        if (formIn.prompt == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", "query required")).build();
         }
 
-
+        Host host = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(request);
+        final CompletionsForm form = (!user.isAdmin()) ? CompletionsForm.copy(formIn).model(ConfigService.INSTANCE.config(host).getModel()).build() : formIn;
 
 
         long startTime = System.currentTimeMillis();
@@ -116,7 +116,7 @@ public class CompletionsResource {
         }
 
         final StreamingOutput streaming = output -> {
-            CompletionsAPI.impl().rawStream(form, output);
+            CompletionsAPI.impl().rawStream(form, new LineReadingOutputStream(output));
             output.flush();
             output.close();
 
@@ -126,41 +126,38 @@ public class CompletionsResource {
     }
 
 
-
-
-
-
     @GET
     @JSONP
     @Path("/config")
     @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
-    public final Response getConfig(@Context final HttpServletRequest request, @Context final HttpServletResponse response) throws DotDataException, DotSecurityException, IOException {
+    public final Response getConfig(@Context final HttpServletRequest request, @Context final HttpServletResponse response) {
         // get user if we have one (this is allow anon)
-        User user = new WebResource.InitBuilder(request, response)
+        User user = new WebResource
+                .InitBuilder(request, response)
                 .requiredBackendUser(true)
-                .requiredFrontendUser(true)
-                .init().getUser();
+                .init()
+                .getUser();
+
         Host host = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(request);
 
         AppConfig app = ConfigService.INSTANCE.config(host);
 
 
-        Map<String,String> map = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         map.put("configHost", host.getHostname() + " (falls back to system host)");
-        for(AppKeys config : AppKeys.values()){
+        for (AppKeys config : AppKeys.values()) {
             String key = config.key;
-
-            String value = config==AppKeys.API_KEY ? "******" :  app.getConfig(config);
-
-            map.put(config.key, value);
+            map.put(config.key, app.getConfig(config));
         }
+        String apiKEYYY = app.getApiKey();
 
+        String apiKey = UtilMethods.isSet(app.getApiKey()) ? "*****" : "NOT SET";
+        map.put(AppKeys.API_KEY.key, apiKey);
 
-
-
+        List<String> models = Arrays.stream(OpenAIModel.values()).filter(m->m.completionModel).map(m-> m.modelName).collect(Collectors.toList());
+        map.put("availableModels", models);
         return Response.ok(map).build();
     }
-
 
 
 }

@@ -18,7 +18,6 @@ class EmbeddingsSQL {
                     "language bigint not null,          " +
                     "host varchar(255) not null,        " +
                     "content_type varchar(255) not null," +
-                    "field_var varchar(255) not null,   " +
                     "index_name varchar(255) not null default 'default',   " +
                     "title varchar(512) not null,       " +
                     "extracted_text text,               " +
@@ -27,15 +26,30 @@ class EmbeddingsSQL {
                     "embeddings vector(1536)            " +
                     ");  ";
 
+
+
     static final String[] CREATE_TABLE_INDEXES = {
             "create index if not exists dot_embeddings_idx_index_name on dot_embeddings(lower(index_name))",
             "create index if not exists dot_embeddings_idx_inode on dot_embeddings(inode)",
-            "create index if not exists dot_embeddings_idx_type_field on dot_embeddings(inode,lower(content_type),lower(field_var))",
+            "create index if not exists dot_embeddings_idx_type on dot_embeddings(inode,lower(content_type))",
             "create index if not exists dot_embeddings_idx_id_lang on dot_embeddings(identifier,language)",
             "create index if not exists dot_embeddings_idx_host on dot_embeddings(host)",
             "create index if not exists dot_embeddings_idx_text_hash on dot_embeddings(extracted_text_hash)",
             "create index if not exists dot_embeddings_idx_vector ON dot_embeddings USING hnsw (embeddings vector_cosine_ops);"
     };
+
+
+    static final String CREATE_EMBEDDINGS_CACHE_TABLE =
+            "create table if not exists dot_embeddings_cache( " +
+                    "extracted_text_hash varchar(255) primary key,  " +
+                    "extracted_text text,               " +
+                    "token_count int ,                  " +
+                    "embeddings vector(1536)            " +
+                    ");  ";
+
+
+
+
     /**
      * The number of lists in this index should be determined
      * 1. when there is data in the table and
@@ -47,7 +61,7 @@ class EmbeddingsSQL {
 
 
     static final String SELECT_EMBEDDING_BY_TEXT_HASH =
-            "Select token_count, embeddings from dot_embeddings where extracted_text_hash=? limit 1";
+            "Select token_count, embeddings, index_name from dot_embeddings where extracted_text_hash=? limit 1";
 
 
     static final String INSERT_EMBEDDINGS =
@@ -57,7 +71,6 @@ class EmbeddingsSQL {
                     "identifier," +
                     "language, " +
                     "content_type, " +
-                    "field_var, " +
                     "title, " +
                     "extracted_text, " +
                     "extracted_text_hash, " +
@@ -76,41 +89,42 @@ class EmbeddingsSQL {
                     "?," +
                     "?," +
                     "?," +
-                    "?," +
                     "?)";
 
 
     static final String SEARCH_EMBEDDINGS_SELECT_PREFIX=
             "select " +
-            "inode, title, language, identifier,host, content_type, extracted_text ,field_var, index_name, distance, token_count " +
-            "from (select inode, title, language, identifier,host, content_type,extracted_text, field_var,index_name, token_count, (embeddings {operator} ?) AS distance " +
+            "inode, title, language, identifier,host, content_type, extracted_text, index_name, distance, token_count " +
+            "from (select inode, title, language, identifier,host, content_type,extracted_text, index_name, token_count, (embeddings {operator} ?) AS distance " +
             "from dot_embeddings where true ";
 
     static final String COUNT_EMBEDDINGS_PREFIX=
             "select count(distinct inode) as test " +
-                    "from (select inode, title, language, identifier,host, content_type,extracted_text, field_var,index_name, token_count, (embeddings {operator} ?) AS distance " +
+                    "from (select inode, title, language, identifier,host, content_type,extracted_text,index_name, token_count, (embeddings {operator} ?) AS distance " +
                     "from dot_embeddings where true ";
 
 
     static final String COUNT_EMBEDDINGS_BY_INDEX=
-            "select " +
-                "embeddings, " +
-                "index_name, " +
-                "contents, " +
-                "token_total " +
-            "from (" +
-                "select " +
-                    "count(*) as embeddings, " +
-                    "index_name, " +
-                    "count(distinct(inode)) as contents, " +
-                    "sum(token_count) as token_total " +
-                "from " +
-                    "dot_embeddings  " +
-                "group by " +
-                    "index_name " +
-                "order by " +
-                    "index_name " +
-            ") data";
+        "select  \n" +
+        "    embeddings,  \n" +
+        "    index_name,  \n" +
+        "    contents,  \n" +
+        "    token_total  ,\n" +
+        "    token_per_chunk\n" +
+        "from ( \n" +
+        "    select  \n" +
+        "        count(*) as embeddings,  \n" +
+        "        index_name,  \n" +
+        "        count(distinct(inode)) as contents,  \n" +
+        "        sum(token_count) as token_total,\n" +
+        "        avg(token_count) as token_per_chunk  \n" +
+        "    from  \n" +
+        "        dot_embeddings   \n" +
+        "    group by  \n" +
+        "        index_name  \n" +
+        "    order by  \n" +
+        "        index_name  \n" +
+        ") data;";
 
     private EmbeddingsSQL() {
     }

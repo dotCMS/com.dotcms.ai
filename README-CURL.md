@@ -80,6 +80,20 @@ curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api
 "searchLimit":50
 }'
 ```
+```
+curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api/v1/ai/completions \
+-H "Content-Type: application/json" \
+-d '{
+"prompt": "how do I create a template in dotCMS?",
+"threshold":".2",
+"searchLimit":50,
+"stream": true
+}'
+```
+
+
+
+
 
 ```bash
 curl -XPOST -k -u"admin@dotcms.com:admin" https://local.dotcms.site:8443/api/v1/ai/search \
@@ -88,6 +102,22 @@ curl -XPOST -k -u"admin@dotcms.com:admin" https://local.dotcms.site:8443/api/v1/
 "query": "what is the best beach?",
 }'
 ```
+
+
+### Searching for content related to another piece of content:
+
+```bash
+curl -XPOST -k -u"admin@dotcms.com:admin" https://local.dotcms.site:8443/api/v1/ai/search/related \
+-H "Content-Type: application/json" \
+-d '{
+"inode": "d7741a84-6050-4b9b-9c09-26759a833741",
+}'
+```
+
+
+
+
+
 
 ### Content Chatting and Summarization
 

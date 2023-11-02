@@ -30,6 +30,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -78,7 +79,7 @@ public class ContentToStringUtil {
      * @param html
      * @return
      */
-    private Optional<String> parseHTML(@NotNull String html) {
+    public Optional<String> parseHTML(@NotNull String html) {
 
         Path tempFile = null;
         try {
@@ -144,37 +145,37 @@ public class ContentToStringUtil {
      */
 
 
-    public Optional<Field> guessWhatFieldToIndex(@NotNull Contentlet contentlet) {
+    public List<Field> guessWhatFieldsToIndex(@NotNull Contentlet contentlet) {
+
+        List<Field> embedMe = new ArrayList<>();
         if (contentlet.isFileAsset()) {
             File fileAsset = Try.of(() -> contentlet.getBinary("fileAsset")).getOrNull();
-            if (!indexMe(fileAsset)) {
-                return Optional.empty();
+            if (shouldIndex(fileAsset)) {
+                embedMe.add(contentlet.getContentType().fieldMap().get("fileAsset"));
             }
-            return Optional.ofNullable(contentlet.getContentType().fieldMap().get("fileAsset"));
         }
         if (contentlet.isDotAsset()) {
             File asset = Try.of(() -> contentlet.getBinary("asset")).getOrNull();
-            if (!indexMe(asset)) {
-                return Optional.empty();
+            if (shouldIndex(asset)) {
+                embedMe.add(contentlet.getContentType().fieldMap().get("asset"));
             }
-            return Optional.ofNullable(contentlet.getContentType().fieldMap().get("asset"));
         }
 
         if (contentlet.isHTMLPage()) {
-            return Optional.empty();
+            return List.of();
         }
 
 
         final String ignoreUrlMapFields = (contentlet.getContentType().urlMapPattern() != null) ? contentlet.getContentType().urlMapPattern() : "";
 
-        Optional<Field> foundField = contentlet.getContentType()
+        contentlet.getContentType()
                 .fields()
                 .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
-                .filter(f -> f instanceof StoryBlockField || f instanceof WysiwygField
-                ).findFirst();
+                .filter(f -> f instanceof StoryBlockField || f instanceof WysiwygField)
+                .forEach(f -> embedMe.add(f));
 
-        if (foundField.isPresent()) {
-            return foundField;
+        if (!embedMe.isEmpty()) {
+            return embedMe;
         }
 
         return contentlet.getContentType()
@@ -182,30 +183,24 @@ public class ContentToStringUtil {
                 .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
                 .filter(f ->
                         f instanceof TextAreaField || f.dataType().equals(DataTypes.LONG_TEXT)
-                ).findFirst();
+                ).collect(Collectors.toList());
     }
 
-    private boolean indexMe(File file) {
+    private boolean shouldIndex(File file) {
 
         final Set<String> indexFileExtensions = Set.of(ConfigService.INSTANCE.config().getConfigArray(AppKeys.EMBEDDINGS_FILE_EXTENSIONS_TO_EMBED));
-        final int minimumTextLength = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_FILE_SIZE_TO_INDEX);
+        final int minimumFileLength = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_FILE_SIZE_TO_INDEX);
 
 
-        return file != null && indexFileExtensions.contains(UtilMethods.getFileExtension(file.toString()));
+        return file != null
+                && file.exists()
+                && indexFileExtensions.contains(UtilMethods.getFileExtension(file.toString()))
+                && file.length() > minimumFileLength;
     }
 
-
-    public String parseFields(@NotNull Contentlet con, @NotNull List<Field> fields) {
-        StringBuilder builder = new StringBuilder();
-        for (Field field : fields) {
-            builder.append(parseField(con, Optional.of(field)));
-            builder.append(" \n");
-        }
-        return builder.toString();
-    }
 
     private Optional<String> parseFile(@NotNull File file) {
-        if (!indexMe(file)) {
+        if (!shouldIndex(file)) {
             return Optional.empty();
         }
 
@@ -213,20 +208,31 @@ public class ContentToStringUtil {
 
     }
 
-    public Optional<String> parseField(@NotNull Contentlet contentlet, @NotNull Optional<Field> fieldOpt) {
+    public Optional<String> parseFields(@NotNull Contentlet contentlet, @NotNull List<Field> fields) {
         if (UtilMethods.isEmpty(() -> contentlet.getIdentifier())) {
             return Optional.empty();
         }
-        ContentType type = contentlet.getContentType();
 
         // if no field is specified and it is an html page, send it
-        if (fieldOpt.isEmpty() && contentlet.isHTMLPage() == Boolean.TRUE) {
+        if (fields.isEmpty() && contentlet.isHTMLPage() == Boolean.TRUE) {
             return parsePage(contentlet);
         }
-        if (fieldOpt.isEmpty()) {
+        if (fields.isEmpty()) {
             return Optional.empty();
         }
-        Field field = fieldOpt.get();
+        final StringBuilder builder = new StringBuilder();
+        for (Field field : fields) {
+            parseField(contentlet, field)
+                    .ifPresent(s -> builder.append(s).append(" "));
+        }
+        return (builder.length() > 0) ? Optional.of(builder.toString()) : Optional.empty();
+
+
+    }
+
+    private Optional<String> parseField(@NotNull Contentlet contentlet, @NotNull Field field) {
+
+        ContentType type = contentlet.getContentType();
         if (field instanceof BinaryField) {
             return parseFile(Try.of(() -> contentlet.getBinary(field.variable())).getOrNull());
         }
@@ -246,6 +252,7 @@ public class ContentToStringUtil {
         }
         Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is a text field");
         return parseText(value);
+
 
     }
 
@@ -280,7 +287,7 @@ public class ContentToStringUtil {
     }
 
     // it is HTML if parsing it returns a different value than it
-    private boolean isHtml(@NotNull String value) {
+    public boolean isHtml(@NotNull String value) {
         if (UtilMethods.isEmpty(value)) {
             return false;
         }

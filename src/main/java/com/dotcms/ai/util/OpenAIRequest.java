@@ -1,6 +1,8 @@
 package com.dotcms.ai.util;
 
 
+import com.dotcms.ai.app.AppKeys;
+import com.dotcms.ai.app.ConfigService;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.json.JSONObject;
@@ -81,8 +83,9 @@ public class OpenAIRequest {
      * @param out
      */
     public static void doRequest(String urlIn, String method, String openAiAPIKey, JSONObject json, OutputStream out) {
-
-        Logger.info(OpenAIRequest.class, "posting:" + json);
+        if(ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
+            Logger.info(OpenAIRequest.class, "posting:" + json);
+        }
         final OpenAIModel model = OpenAIModel.resolveModel(json.optString("model"));
 
 
@@ -115,8 +118,14 @@ public class OpenAIRequest {
             }
 
         } catch (Exception e) {
-            Logger.warnAndDebug(OpenAIRequest.class, "INVALID REQUEST: " + e.getMessage(), e);
-            Logger.warn(OpenAIRequest.class, " -  " + method + " : " +json.toString());
+            if(ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)){
+                Logger.warn(OpenAIRequest.class, "INVALID REQUEST: " + e.getMessage(),e);
+                Logger.warn(OpenAIRequest.class, " -  " + method + " : " +json.toString());
+            }else{
+                Logger.warn(OpenAIRequest.class, "INVALID REQUEST: " + e.getMessage());
+                Logger.warn(OpenAIRequest.class, " -  " + method + " : " +json.toString());
+            }
+
             throw new DotRuntimeException(e);
         }
 

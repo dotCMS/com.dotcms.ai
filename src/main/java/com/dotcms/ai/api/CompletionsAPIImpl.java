@@ -79,7 +79,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
     private JSONObject buildRequestJson(CompletionsForm form, List<EmbeddingsDTO> searchResults) {
 
 
-        final int maxTokenSize = OpenAIModel.resolveModel(config.get().getConfig(AppKeys.COMPLETION_MODEL)).maxTokens;
+        OpenAIModel model = OpenAIModel.resolveModel(form.model);
         // aggregate matching results into text
         final StringBuilder supportingContent = new StringBuilder();
         searchResults.forEach(s -> supportingContent.append(s.extractedText).append(" "));
@@ -89,7 +89,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
         String textPrompt = getTextPrompt(form.prompt, supportingContent.toString());
 
         final int systemPromptTokens = countTokens(systemPrompt);
-        textPrompt = reduceStringToTokenSize(textPrompt, maxTokenSize - form.responseLengthTokens - systemPromptTokens);
+        textPrompt = reduceStringToTokenSize(textPrompt, model.maxTokens - form.responseLengthTokens - systemPromptTokens);
 
 
         final JSONObject json = new JSONObject();
@@ -103,8 +103,8 @@ public class CompletionsAPIImpl implements CompletionsAPI {
         messages.add(Map.of("role", "user", "content", textPrompt));
         json.put("messages", messages);
 
-        if (!json.containsKey("model")) {
-            json.put("model", config.get().getConfig(AppKeys.COMPLETION_MODEL));
+        if (UtilMethods.isSet(form.model)) {
+            json.put("model", model.modelName);
         }
 
         if (form.responseLengthTokens > 0) {

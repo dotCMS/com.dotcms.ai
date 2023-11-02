@@ -29,7 +29,8 @@ const refreshIndexes = async () => {
                 entry.name = key;
                 entry.contents = value.contents;
                 entry.fragments = value.fragments;
-                entry.tokenTotal = value.tokenTotal
+                entry.tokenTotal = value.tokenTotal;
+                entry.tokensPerChunk=value.tokensPerChunk;
                 dotAiState.indexes.push(entry);
 
             }
@@ -48,7 +49,6 @@ const refreshConfigs = async () => {
                 entity[key] = value
             }
             dotAiState.config = entity;
-
         });
 };
 
@@ -72,13 +72,15 @@ const writeIndexesToDropdowns = async () => {
     const indexName = document.getElementById("indexNameChat");
     let options = indexName.getElementsByTagName('option');
 
-    console.log("options", options)
+    //console.log("options", options)
     for (i = 1; i < options.length; i++) {
         indexName.removeChild(options[i]);
     }
 
     for (i = 0; i < dotAiState.indexes.length; i++) {
-
+        if(dotAiState.indexes[i].name==="cache"){
+            continue;
+        }
         const newOption = document.createElement("option");
         newOption.value = dotAiState.indexes[i].name;
         newOption.text = `${dotAiState.indexes[i].name}   - (content:${dotAiState.indexes[i].contents}, fragments:${dotAiState.indexes[i].fragments})`
@@ -87,11 +89,35 @@ const writeIndexesToDropdowns = async () => {
     }
 };
 
+const writeModelToDropdown = async () => {
+    const modelName = document.getElementById("modelName");
+    let options = modelName.getElementsByTagName('option');
+
+    for (i = 1; i < options.length; i++) {
+        indexName.removeChild(options[i]);
+    }
+
+    for (i = 0; i < dotAiState.config.availableModels.length; i++) {
+
+        const newOption = document.createElement("option");
+        newOption.value = dotAiState.config.availableModels[i];
+        newOption.text = `${dotAiState.config.availableModels[i]}`
+        if(dotAiState.config.availableModels[i]===dotAiState.config.model){
+            newOption.selected=true;
+            newOption.text = `${dotAiState.config.availableModels[i]} (default)`
+        }
+
+
+        modelName.appendChild(newOption);
+    }
+};
+
+
 
 const writeConfigTable = async () => {
 
     const configTable = document.getElementById("configTable")
-    console.log("config", dotAiState.config)
+    //console.log("config", dotAiState.config)
 
     configTable.innerHTML = "";
 
@@ -130,29 +156,38 @@ const writeIndexManagementTable = async () => {
     let td3 = document.createElement("th");
     let td4 = document.createElement("th");
     let td5 = document.createElement("th");
+    let td6 = document.createElement("th");
 
     td1.className = "hTable"
     td2.className = "hTable"
     td3.className = "hTable"
     td4.className = "hTable"
     td5.className = "hTable"
+    td6.className = "hTable"
 
     td1.innerHTML = "Index"
     td2.innerHTML = "Chunks"
     td3.innerHTML = "Content"
     td4.innerHTML = "Tokens"
-    td5.innerHTML = ""
+    td5.innerHTML = "Tokens per Chunk"
+
 
     tr.append(td1);
     tr.append(td2);
     tr.append(td3);
     tr.append(td4);
     tr.append(td5);
+    tr.append(td6);
 
     indexTable.append(tr)
 
     dotAiState.indexes.map(row => {
-        //console.log("row", row)
+       //console.log("row", row)
+
+
+        const cost = row.name==='cache' ? "(est $" + ((parseInt(row.tokenTotal)/1000) * 0.0001).toFixed(2) + ")" : "";
+
+
 
         tr = document.createElement("tr");
         td1 = document.createElement("td");
@@ -160,16 +195,20 @@ const writeIndexManagementTable = async () => {
         td3 = document.createElement("td");
         td4 = document.createElement("td");
         td5 = document.createElement("td");
+        td6 = document.createElement("td");
         td1.innerHTML = row.name;
         td2.innerHTML = row.fragments;
         td3.innerHTML = row.contents;
-        td4.innerHTML = row.tokenTotal;
-        td5.innerHTML = `<a href="#" onclick="doDeleteIndex('${row.name}')">delete</a>`
+        td4.innerHTML = `${row.tokenTotal} ${cost}`;
+        td4.style.whiteSpace="nowrap"
+        td5.innerHTML = row.tokensPerChunk;
+        td6.innerHTML = `<a href="#" onclick="doDeleteIndex('${row.name}')">delete</a>`
         tr.append(td1);
         tr.append(td2);
         tr.append(td3);
         tr.append(td4);
         tr.append(td5);
+        tr.append(td6);
         indexTable.append(tr)
     })
 
@@ -185,6 +224,10 @@ window.addEventListener('load', function () {
 
     refreshConfigs().then(() => {
         writeConfigTable();
+        writeModelToDropdown();
+        if(dotAiState.config["apiKey"]!="*****"){
+            document.getElementById("openAIKeyWarn").style.display="block";
+        }
     });
     showResultTables();
 });
@@ -224,7 +267,8 @@ const showResultTables = () => {
         document.getElementById("answerChat").style.display = "none";
         document.getElementById("semanticSearchResults").style.display = "block";
     } else {
-        document.getElementById("answerChat").placeholder = "Current Prompt: \n\n" + dotAiState.config["com.dotcms.ai.completion.text.prompt"]
+        const prompt = "Current Prompt: \n\n" + dotAiState.config["com.dotcms.ai.completion.text.prompt"];
+        document.getElementById("answerChat").placeholder = prompt.replaceAll('\\n', '\n').replaceAll("\\\"", "\"")
         document.getElementById("answerChat").style.display = "block";
         document.getElementById("semanticSearchResults").style.display = "none";
     }
@@ -345,41 +389,68 @@ const doChatResponse = async (formData) => {
 
     const stream = document.getElementById("streamingResponseType").checked;
 
+    let parsedLines = [];
     //console.log(JSON.stringify(formData));
     formData.stream = true;
-    const response = await fetch('/api/v1/ai/completions', {
-        method: "POST", body: JSON.stringify(formData), headers: {
-            "Content-Type": "application/json"
+    let line="";
+    let lines =[];
+    try {
+        const response = await fetch('/api/v1/ai/completions', {
+            method: "POST", body: JSON.stringify(formData), headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+
+        document.getElementById("answerChat").value="";
+        // Read the response as a stream of data
+        const reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
+        if (!reader) return;
+
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+                console.log("got a done:" + done);
+                break;
+            }
+            //console.log(value);
+            lines = (line + value).split('\ndata: ');
+            for (line of lines) {
+
+                line = line.replace(/^data: /, '').trim();
+                if (line.length === 0) continue; // ignore empty message
+                if (line.startsWith(':')) continue; // ignore sse comment message
+
+                if (line === '[DONE]') {
+                    break;
+                }
+                try {
+                    const json = JSON.parse(line);
+                    line="";
+                    const value = json.choices[0].delta.content;
+                    if(value === undefined){
+                        continue;
+                    }
+                    document.getElementById("answerChat").value +=value;
+                }
+                catch (e){
+                    // line is half sent, will append to the next value
+                    console.log("line:" + line);
+                }
+
+
+            };
+
         }
-    });
-    document.getElementById("answerChat").value="";
+    } catch(e) {
 
-    const reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
-
+        console.log("got an error:", e);
+        console.log("line:" + line);
+        console.log("lines:" + lines);
+    }
     resetLoader();
 
-    if (!reader) return;
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-        // eslint-disable-next-line no-await-in-loop
-        const {value, done} = await reader.read();
-        if (done) break;
-        let dataDone = false;
-        const arr = value.split('\n');
-        arr.forEach((data) => {
-            if (data.trim().length === 0) return; // ignore empty message
-            if (data.startsWith(':')) return; // ignore sse comment message
-            if (data === 'data: [DONE]') {
-                dataDone = true;
-                return;
-            }
-
-            const json = JSON.parse(data.substring(6));
-            if (json.choices[0].delta.content == null) return;
-            document.getElementById("answerChat").value += json.choices[0].delta.content;
-        });
-        if (dataDone) break;
-    }
 
 };
 
@@ -392,7 +463,18 @@ const doSearch = async (formData) => {
 
 
     const table = document.createElement("table");
+    table.className="aiSearchResultsTable";
     semanticSearchResults.appendChild(table);
+
+    const truncateString = (str,num) =>{
+        if (str.length <= num) {
+            return str
+        }
+        return str.slice(0, num) + '...'
+
+
+    }
+
 
 
     fetch("/api/v1/ai/search", {
@@ -440,7 +522,7 @@ const doSearch = async (formData) => {
                 td1.innerHTML = `<a href="/dotAdmin/#/c/content/${row.inode}" target="_top">${row.title}</a>`;
                 td2.innerHTML = row.matches.length;
                 td3.innerHTML = parseFloat(row.matches[0].distance).toFixed(2);
-                td4.innerHTML = row.matches[0].extractedText;
+                td4.innerHTML = truncateString(row.matches[0].extractedText, 200);
 
                 tr.append(td1);
                 tr.append(td2);

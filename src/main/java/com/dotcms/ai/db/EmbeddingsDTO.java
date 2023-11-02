@@ -1,5 +1,7 @@
 package com.dotcms.ai.db;
 
+import com.dotcms.ai.app.AppKeys;
+import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.util.UtilMethods;
@@ -38,6 +40,7 @@ public class EmbeddingsDTO implements Serializable {
     public final String[] showFields;
     public final User user;
     public final String[] excludeIdentifiers;
+    public final String[] excludeInodes;
     @Min(0)
     @Max(2)
     public final float temperature;
@@ -52,7 +55,7 @@ public class EmbeddingsDTO implements Serializable {
         this.contentType = builder.contentType;
         this.field = builder.field;
         this.extractedText = builder.extractedText;
-        this.temperature = builder.temperature >0 ? 0 : builder.temperature >2 ? 2 : builder.temperature;
+        this.temperature = builder.temperature > 0 ? 0 : builder.temperature > 2 ? 2 : builder.temperature;
 
         this.host = builder.host;
         this.limit = builder.limit;
@@ -65,6 +68,7 @@ public class EmbeddingsDTO implements Serializable {
         this.user = builder.user;
         this.showFields = builder.showFields == null ? new String[0] : builder.showFields;
         this.excludeIdentifiers = builder.excludeIdentifiers == null ? new String[0] : builder.excludeIdentifiers;
+        this.excludeInodes = builder.excludeInodes == null ? new String[0] : builder.excludeInodes;
     }
 
     public static Builder from(CompletionsForm form) {
@@ -87,9 +91,6 @@ public class EmbeddingsDTO implements Serializable {
     public static Builder from(Map<String, Object> form) {
 
 
-
-
-
         return new Builder()
                 .withField((String) form.get("fieldVar"))
                 .withContentType((String) form.get("contentType"))
@@ -100,8 +101,9 @@ public class EmbeddingsDTO implements Serializable {
                 .withLimit(Try.of(() -> Integer.parseInt((String) form.get("limit"))).getOrElse(100))
                 .withOffset(Try.of(() -> Integer.parseInt((String) form.get("offset"))).getOrElse(0))
                 .withOperator((String) form.get("operator"))
-                .withExcludeIndentifiers(Try.of(()->((String)form.get("excludeIdentifiers")).split("\\s+,")).getOrNull())
-                .withTemperature(Try.of(()->Float.parseFloat(form.get("temperature").toString())).getOrElse(1f))
+                .withExcludeIndentifiers(Try.of(() -> ((String) form.get("excludeIdentifiers")).split("\\s+,")).getOrNull())
+                .withExcludeInodes(Try.of(() -> ((String) form.get("excludeInodes")).split("\\s+,")).getOrNull())
+                .withTemperature(Try.of(() -> Float.parseFloat(form.get("temperature").toString())).getOrElse(1f))
                 .withThreshold((Try.of(() -> Float.parseFloat((String) form.get("threshold"))).getOrElse(.25f)));
 
     }
@@ -128,6 +130,7 @@ public class EmbeddingsDTO implements Serializable {
                 .withShowFields(values.showFields)
                 .withExcludeIndentifiers(values.excludeIdentifiers)
                 .withTemperature(values.temperature)
+                .withExcludeInodes(values.excludeInodes)
                 .withUser(values.user)
                 .withQuery(values.query);
 
@@ -136,7 +139,8 @@ public class EmbeddingsDTO implements Serializable {
     @Override
     public String toString() {
         return "EmbeddingsDTO{" +
-                "identifier='" + identifier + '\'' +
+                "embeddings=" + Arrays.toString(embeddings) +
+                ", identifier='" + identifier + '\'' +
                 ", inode='" + inode + '\'' +
                 ", language=" + language +
                 ", title='" + title + '\'' +
@@ -150,14 +154,20 @@ public class EmbeddingsDTO implements Serializable {
                 ", tokenCount=" + tokenCount +
                 ", offset=" + offset +
                 ", threshold=" + threshold +
+                ", query='" + query + '\'' +
+                ", showFields=" + Arrays.toString(showFields) +
+                ", user=" + user +
+                ", excludeIdentifiers=" + Arrays.toString(excludeIdentifiers) +
+                ", excludeInodes=" + Arrays.toString(excludeInodes) +
                 ", temperature=" + temperature +
+                ", operators=" + Arrays.toString(operators) +
                 '}';
     }
 
     public static final class Builder implements Serializable {
 
         @JsonProperty(defaultValue = ".25f")
-        public float threshold = .25f;
+        public float threshold = ConfigService.INSTANCE.config().getConfigFloat(AppKeys.EMBEDDINGS_SEARCH_DEFAULT_THRESHOLD);
         @JsonProperty(defaultValue = "<=>")
         public String operator = "<=>";
         @JsonProperty
@@ -189,9 +199,13 @@ public class EmbeddingsDTO implements Serializable {
         @JsonProperty
         private String query;
         @JsonSetter(nulls = Nulls.SKIP)
-        private float temperature   = 1f;
+        private float temperature = 1f;
+
         @JsonProperty(defaultValue = "")
         private String[] excludeIdentifiers;
+
+        @JsonProperty(defaultValue = "")
+        private String[] excludeInodes;
 
         private User user;
         @JsonProperty(defaultValue = "")
@@ -214,16 +228,23 @@ public class EmbeddingsDTO implements Serializable {
         }
 
         public Builder withExcludeIndentifiers(String[] exclude) {
-            if(exclude!=null && exclude.length>0) {
+            if (exclude != null && exclude.length > 0) {
                 this.excludeIdentifiers = exclude;
+            }
+            return this;
+        }
+        public Builder withExcludeInodes(String[] exclude) {
+            if (exclude != null && exclude.length > 0) {
+                this.excludeInodes = exclude;
             }
             return this;
         }
 
         public Builder withTemperature(float temperature) {
-            this.temperature = temperature >0 ? 0 : temperature >2 ? 2 : temperature;
+            this.temperature = temperature > 0 ? 0 : temperature > 2 ? 2 : temperature;
             return this;
         }
+
         public Builder withQuery(String query) {
             this.query = query;
             return this;
