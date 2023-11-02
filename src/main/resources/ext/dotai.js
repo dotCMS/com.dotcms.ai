@@ -165,9 +165,10 @@ const writeConfigTable = async () => {
     }
 
 };
+
 const writeIndexManagementTable = async () => {
     const indexTable = document.getElementById("indexManageTable")
-
+    const oldChunks = dotAiState.numberOfChunks!==undefined ? dotAiState.numberOfChunks : 0;
     indexTable.innerHTML = "";
 
     let tr = document.createElement("tr");
@@ -203,11 +204,11 @@ const writeIndexManagementTable = async () => {
     tr.append(td6);
 
     indexTable.append(tr)
-
+    let newChunks=0;
 
     dotAiState.indexes.map(row => {
        //console.log("row", row)
-
+        newChunks+=row.fragments;
 
         const cost = row.name==='cache' ? "(est $" + ((parseInt(row.tokenTotal)/1000) * 0.0001).toFixed(2) + ")" : "";
 
@@ -252,13 +253,21 @@ const writeIndexManagementTable = async () => {
     tr.append(td1);
     td1 = document.createElement("td");
     td1.style.textAlign="center";
-    td1.colSpan="1";
+    td1.colSpan=1;
     td1.innerHTML=`<a href="#" onclick="reinitializeDatabase()">reinit db</a>`;
     tr.append(td1);
     indexTable.append(tr)
 
-
-
+    dotAiState.numberOfChunks=newChunks;
+    if(newChunks !== oldChunks){
+        //console.log("reloading: newChunks:" + newChunks + " oldChunks:" +  oldChunks)
+        setTimeout(   ()=> {
+            refreshIndexes()
+                .then(() => {
+                    writeIndexManagementTable();
+                })
+        }, 5000);
+    }
 
 
 }
