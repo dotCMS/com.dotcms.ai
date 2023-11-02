@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /***
- * This class takes an outputstream and only writes to it when it gets a newline.  This
- * is very helpful for streaming responses because the responses are formated as lines of
- * json.  If the Response.outputstream flushes at mid-line, the client only gets 1/2 a line of
+ * This class takes an OutputStream and only writes to it when it gets a newline.  This
+ * is very helpful for streaming OpenAI responses because the responses are formated as lines of
+ * json.  If the Response.OutputStream flushes at mid-line, the client only gets 1/2 a line of
  * json which fails to parse.  The problem can be handled on the client but it is clunky
  */
 public class LineReadingOutputStream extends OutputStream {

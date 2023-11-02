@@ -40,7 +40,6 @@ class EmbeddingsRunner implements Runnable {
                         .withIdentifier(contentlet.getIdentifier())
                         .withLanguage(contentlet.getLanguageId())
                         .withIndexName(indexName)
-                        .withField(contentlet.getContentType().variable())
                         .withContentType(contentlet.getContentType().variable())
                         .withExcludeInodes(new String[]{contentlet.getInode()})
                         .build();
@@ -105,7 +104,6 @@ class EmbeddingsRunner implements Runnable {
 
         EmbeddingsDTO embeddingsDTO = new EmbeddingsDTO.Builder()
                 .withContentType(contentlet.getContentType().variable())
-                .withField(contentlet.getContentType().variable())
                 .withTokenCount(embeddings._1)
                 .withInode(contentlet.getInode())
                 .withLanguage(contentlet.getLanguageId())

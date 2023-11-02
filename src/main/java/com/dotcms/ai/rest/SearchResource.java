@@ -64,8 +64,7 @@ public class SearchResource {
                                       @DefaultValue("false") @QueryParam("stream") boolean stream,
                                       @DefaultValue("1024") @QueryParam("responseLength") int responseLength,
                                       @DefaultValue("<=>") @QueryParam("operator") String operator,
-                                      @QueryParam("language") String language,
-                                      @QueryParam("fieldVar") String fieldVar) throws DotDataException, DotSecurityException, IOException {
+                                      @QueryParam("language") String language) throws DotDataException, DotSecurityException, IOException {
 
 
         CompletionsForm form = new CompletionsForm.Builder()
@@ -75,7 +74,6 @@ public class SearchResource {
                 .language(language)
                 .contentType(contentType)
                 .searchOffset(searchOffset)
-                .fieldVar(fieldVar)
                 .threshold(threshold)
                 .indexName(indexName)
                 .operator(operator)

@@ -138,7 +138,7 @@ public class EmbeddingsDB {
             statement.setObject(++i, embeddings.inode);
             statement.setObject(++i, embeddings.identifier);
             statement.setObject(++i, embeddings.language);
-            statement.setObject(++i, embeddings.contentType);
+            statement.setObject(++i, embeddings.contentType[0]);
             statement.setObject(++i, embeddings.title);
             statement.setObject(++i, embeddings.extractedText);
             statement.setObject(++i, hashText(embeddings.extractedText));
@@ -236,9 +236,14 @@ public class EmbeddingsDB {
             sql.append(" and language=? ");
             params.add(dto.language);
         }
-        if (UtilMethods.isSet(dto.contentType)) {
-            sql.append(" and lower(content_type)=lower(?) ");
-            params.add(dto.contentType);
+
+        if (UtilMethods.isSet(dto.contentType) && dto.contentType.length > 0) {
+            sql.append(" and ( false ") ;
+            for(String contentType : dto.contentType){
+                sql.append(" OR lower(content_type)=lower(?)");
+                params.add(contentType);
+            }
+            sql.append(") ") ;
         }
 
         if (UtilMethods.isSet(dto.host)) {

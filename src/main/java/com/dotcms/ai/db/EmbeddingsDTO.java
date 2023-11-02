@@ -26,8 +26,8 @@ public class EmbeddingsDTO implements Serializable {
     public final String inode;
     public final long language;
     public final String title;
-    public final String contentType;
-    public final String field;
+    public final String[] contentType;
+
     public final String extractedText;
     public final String host;
     public final String indexName;
@@ -52,8 +52,8 @@ public class EmbeddingsDTO implements Serializable {
         this.inode = builder.inode;
         this.language = builder.language;
         this.title = builder.title;
-        this.contentType = builder.contentType;
-        this.field = builder.field;
+        this.contentType = UtilMethods.isSet(builder.contentType) ? builder.contentType.trim().split("[\\s+,]") : new String[0];
+
         this.extractedText = builder.extractedText;
         this.temperature = builder.temperature > 0 ? 0 : builder.temperature > 2 ? 2 : builder.temperature;
 
@@ -66,18 +66,16 @@ public class EmbeddingsDTO implements Serializable {
         this.tokenCount = builder.tokenCount;
         this.query = builder.query;
         this.user = builder.user;
-        this.showFields = builder.showFields == null ? new String[0] : builder.showFields;
-        this.excludeIdentifiers = builder.excludeIdentifiers == null ? new String[0] : builder.excludeIdentifiers;
-        this.excludeInodes = builder.excludeInodes == null ? new String[0] : builder.excludeInodes;
+        this.showFields = UtilMethods.isSet(builder.showFields) ? new String[0] : builder.showFields;
+        this.excludeIdentifiers = UtilMethods.isSet(builder.excludeIdentifiers) ? new String[0] : builder.excludeIdentifiers;
+        this.excludeInodes = UtilMethods.isSet(builder.excludeInodes) ? new String[0] : builder.excludeInodes;
     }
 
     public static Builder from(CompletionsForm form) {
         return new Builder()
-                .withField(form.fieldVar)
-                .withContentType(form.contentType)
+                .withContentType(String.join(",",form.contentType))
                 .withHost(form.site)
                 .withQuery(form.prompt)
-                .withShowFields(form.fields)
                 .withIndexName(form.indexName)
                 .withLimit(form.searchLimit)
                 .withOffset(form.searchOffset)
@@ -92,7 +90,6 @@ public class EmbeddingsDTO implements Serializable {
 
 
         return new Builder()
-                .withField((String) form.get("fieldVar"))
                 .withContentType((String) form.get("contentType"))
                 .withLanguage(Try.of(() -> Long.parseLong((String) form.get("language"))).getOrElse(APILocator.getLanguageAPI().getDefaultLanguage().getId()))
                 .withHost((String) form.get("host"))
@@ -117,8 +114,7 @@ public class EmbeddingsDTO implements Serializable {
                 .withIndexName(values.indexName)
                 .withLanguage(values.language)
                 .withTitle(values.title)
-                .withContentType(values.contentType)
-                .withField(values.field)
+                .withContentType(String.join("," ,values.contentType))
                 .withExtractedText(values.extractedText)
                 .withHost(values.host)
                 .withLimit(values.limit)
@@ -144,8 +140,7 @@ public class EmbeddingsDTO implements Serializable {
                 ", inode='" + inode + '\'' +
                 ", language=" + language +
                 ", title='" + title + '\'' +
-                ", contentType='" + contentType + '\'' +
-                ", field='" + field + '\'' +
+                ", contentType='" + Arrays.toString(contentType) + '\'' +
                 ", extractedText='" + extractedText + '\'' +
                 ", host='" + host + '\'' +
                 ", indexName='" + indexName + '\'' +
@@ -184,8 +179,6 @@ public class EmbeddingsDTO implements Serializable {
         private String title;
         @JsonProperty
         private String contentType;
-        @JsonProperty
-        private String field;
         @JsonProperty(defaultValue = "default")
         private String indexName = "default";
         @JsonProperty
@@ -315,10 +308,6 @@ public class EmbeddingsDTO implements Serializable {
             return this;
         }
 
-        public Builder withField(String field) {
-            this.field = field;
-            return this;
-        }
 
         public EmbeddingsDTO build() {
             return new EmbeddingsDTO(this);

@@ -68,6 +68,24 @@ const refreshTypesAndFields = async () => {
         })
 };
 
+const reinitializeDatabase = async () => {
+    if(!confirm("Are you sure you want to recreate the whole db?  You will lose all saved embeddings.")){
+        return;
+    }
+    const contentTypes = [];
+
+    return fetch("/api/v1/ai/embeddings/db", {
+        method: 'DELETE',
+        headers: {
+            'Content-type': 'application/json'
+        }} )
+        .then(response => response.json())
+        .then(data => {
+            alert("DB dropped/created:" + data.created);
+
+        })
+};
+
 const writeIndexesToDropdowns = async () => {
     const indexName = document.getElementById("indexNameChat");
     let options = indexName.getElementsByTagName('option');
@@ -83,7 +101,7 @@ const writeIndexesToDropdowns = async () => {
         }
         const newOption = document.createElement("option");
         newOption.value = dotAiState.indexes[i].name;
-        newOption.text = `${dotAiState.indexes[i].name}   - (content:${dotAiState.indexes[i].contents}, fragments:${dotAiState.indexes[i].fragments})`
+        newOption.text = `${dotAiState.indexes[i].name}   - (contents:${dotAiState.indexes[i].contents})`
 
         indexName.appendChild(newOption);
     }
@@ -128,6 +146,7 @@ const writeConfigTable = async () => {
     for (const [key, value] of Object.entries(dotAiState.config)) {
         //console.log(key)
         const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid #cccccc"
         const th = document.createElement("th");
         th.className = "propTh";
         const td = document.createElement("td");
@@ -181,6 +200,7 @@ const writeIndexManagementTable = async () => {
 
     indexTable.append(tr)
 
+
     dotAiState.indexes.map(row => {
        //console.log("row", row)
 
@@ -190,6 +210,7 @@ const writeIndexManagementTable = async () => {
 
 
         tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid silver"
         td1 = document.createElement("td");
         td2 = document.createElement("td");
         td3 = document.createElement("td");
@@ -211,6 +232,19 @@ const writeIndexManagementTable = async () => {
         tr.append(td6);
         indexTable.append(tr)
     })
+
+
+    tr = document.createElement("tr");
+    td1 = document.createElement("td");
+    td1.style.textAlign="right";
+    td1.colSpan="100";
+    td1.innerHTML=`<a href="#" onclick="reinitializeDatabase()">delete all</a>`;
+    tr.append(td1);
+    indexTable.append(tr)
+
+
+
+
 
 }
 

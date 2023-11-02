@@ -36,7 +36,7 @@ public class CompletionsForm {
     public final boolean stream;
     public final String fieldVar;
     public final String indexName;
-    public final String contentType;
+    public final String[] contentType;
     public final float threshold;
     @Min(0)
     @Max(2)
@@ -44,7 +44,7 @@ public class CompletionsForm {
     public final String model;
     public final String operator;
     public final String site;
-    public final String[] fields;
+
 
     @Override
     public boolean equals(Object o) {
@@ -61,11 +61,10 @@ public class CompletionsForm {
                 Objects.equals(prompt, that.prompt) &&
                 Objects.equals(fieldVar, that.fieldVar) &&
                 Objects.equals(indexName, that.indexName) &&
-                Objects.equals(contentType, that.contentType) &&
                 Objects.equals(model, that.model) &&
                 Objects.equals(operator, that.operator) &&
                 Objects.equals(site, that.site) &&
-                fields.length > 0 ? Arrays.equals(fields, that.fields) : Boolean.TRUE;
+                contentType.length > 0 ? Arrays.equals(contentType, that.contentType) : Boolean.TRUE;
     }
 
     @Override
@@ -79,20 +78,19 @@ public class CompletionsForm {
                 ", stream=" + stream +
                 ", fieldVar='" + fieldVar + '\'' +
                 ", indexName='" + indexName + '\'' +
-                ", contentType='" + contentType + '\'' +
                 ", threshold=" + threshold +
                 ", temperature=" + temperature +
                 ", model='" + model + '\'' +
                 ", operator='" + operator + '\'' +
                 ", site='" + site + '\'' +
-                ", fields=" + Arrays.toString(fields) +
+                ", contentType=" + Arrays.toString(contentType) +
                 '}';
     }
 
     @Override
     public int hashCode() {
-        int result = Objects.hash(prompt, searchLimit, searchOffset, responseLengthTokens, language, stream, fieldVar, indexName, contentType, threshold, temperature, model, operator, site);
-        result = 31 * result + Arrays.hashCode(fields);
+        int result = Objects.hash(prompt, searchLimit, searchOffset, responseLengthTokens, language, stream, fieldVar, indexName, threshold, temperature, model, operator, site);
+        result = 31 * result + Arrays.hashCode(contentType);
         return result;
     }
 
@@ -106,13 +104,13 @@ public class CompletionsForm {
         this.responseLengthTokens = builder.responseLengthTokens;
         this.stream = builder.stream;
         this.indexName = builder.indexName;
-        this.contentType = builder.contentType;
+
         this.threshold = builder.threshold;
         this.operator = OPERATORS.getOrDefault(builder.operator, "<=>");
         this.site = UtilMethods.isSet(builder.site) ? builder.site : Try.of(()->WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()).getIdentifier()).getOrElse("SYSTEM_HOST");
         this.language = validateLanguage(builder.language);
         this.searchOffset = builder.searchOffset;
-        this.fields = (builder.fields != null) ? builder.fields.trim().split("[\\s+,]") : new String[0];
+        this.contentType = UtilMethods.isSet(builder.contentType) ? builder.contentType.trim().split("[\\s+,]") : new String[0];
         this.temperature = builder.temperature <= 0
                 ? ConfigService.INSTANCE.config().getConfigFloat(AppKeys.COMPLETION_TEMPERATURE)
                 : builder.temperature >= 2
@@ -140,14 +138,13 @@ public class CompletionsForm {
                 .temperature(form.temperature)
                 .site(form.site)
                 .searchLimit(form.searchLimit)
-                .fields(String.join(",", form.fields))
+                .contentType(String.join(",", form.contentType))
                 .fieldVar(form.fieldVar)
                 .searchOffset(form.searchOffset)
                 .model(form.model)
                 .responseLengthTokens(form.responseLengthTokens)
                 .language(form.language)
                 .prompt(form.prompt)
-                .contentType(form.contentType)
                 .operator(form.operator)
                 .indexName(form.indexName)
                 .threshold(form.threshold)
@@ -158,8 +155,7 @@ public class CompletionsForm {
 
 
     public static final class Builder {
-        @JsonSetter(nulls = Nulls.SKIP)
-        public String fields;
+
         @JsonSetter(nulls = Nulls.SKIP)
         private String prompt;
         @JsonSetter(nulls = Nulls.SKIP)
@@ -229,10 +225,7 @@ public class CompletionsForm {
             this.fieldVar = fieldVar;
             return this;
         }
-        public Builder fields(String fields) {
-            this.fields = fields;
-            return this;
-        }
+
         public Builder model(String model) {
             this.model =model;
             return this;

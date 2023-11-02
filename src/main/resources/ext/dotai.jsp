@@ -45,10 +45,10 @@
                     <form action="POST" id="chatForm" onsubmit="return false;">
                         <tr>
                             <th>
-                                Source content index to use:
+                                Content index to search:
                             </th>
                             <td>
-                                <select name="indexName" id="indexNameChat">
+                                <select name="indexName" id="indexNameChat" style="min-width:400px;">
                                     <option disabled="true" placeholder="Select an Index">Select an Index</option>
                                 </select>
                             </td>
@@ -58,7 +58,7 @@
                                 Model:
                             </th>
                             <td>
-                                <select name="model" id="modelName">
+                                <select name="model" id="modelName" style="min-width:400px;">
                                     <option disabled="true" placeholder="Select a Model">Select a Model</option>
                                 </select>
                             </td>
@@ -92,7 +92,7 @@
                                 Temperature:
                             </th>
                             <td>
-                                <input name="temperature" type="number" step="0.1" value="1" min="0" max="2"><br>
+                                <input name="temperature" type="number" step="0.1" value="1" min="0" max="2" style="min-width:100px;"><br>
                                 (determines the randomness of the response. 0 = deterministic, 2 = most random
                             </td>
                         </tr>
@@ -101,7 +101,7 @@
                                 Response length:
                             </th>
                             <td>
-                                <input type="text" value="500" name="responseLengthTokens" id="responseLengthTokens"><br>
+                                <input  type="number" step="1" value="500" min="10" max="2048"  style="min-width:100px;" name="responseLengthTokens" id="responseLengthTokens"><br>
                                 The general length of response you would like to generate. 75 words ~= 100 tokens
                             </td>
                         </tr>
@@ -119,7 +119,7 @@
                                 <input type="radio" name="operator" id="product" value="product">
                                 <label for="product">Inner Product</label>
                                 <br>
-                                Search stored embeddings using this operator. (probably best to leave it alone)
+                                Search stored embeddings using this operator<br>(probably best to leave it alone).
                             </td>
                         </tr>
                         <tr>
@@ -127,8 +127,7 @@
                                 Distance Threshold:
                             </th>
                             <td>
-                                <input type="number" step="0.05" value=".25" name="threshold" min="0.05"
-                                       max="100"><br>
+                                <input type="number" step="0.05" value=".25" name="threshold" min="0.05"  max="100"  style="min-width:100px;"><br>
                                 the lower this number, the more semantically similar the results
                             </td>
                         </tr>
@@ -139,17 +138,17 @@
                             </th>
                             <td>
                                 <input type="text" value="" name="site"><br>
-                                site id on which the content lives - leave blank for all
+                                Site id on which the content lives - leave blank for all
                             </td>
                         </tr>
 
                         <tr>
                             <th>
-                                Content Type Var:
+                                Content Types:
                             </th>
                             <td>
                                 <input type="text" value="" name="contentType" id="contentTypeSearch"><br>
-                                content type var you would like to search - leave blank for all
+                                Comma separated list of content types to include in the results
                             </td>
                         </tr>
 
@@ -231,8 +230,7 @@
                                     Velocity Template to embed:
                                 </th>
                                 <td>
-                                <textarea class="prompt" name="velocityTemplate" placeholder="e.g.
-                                $contentlet.shortDescription $contentlet.body"></textarea>
+                                <textarea class="prompt" name="velocityTemplate" placeholder="e.g.&#10;$contentlet.shortDescription&#10;$contentlet.body.toHtml()"></textarea>
                                     <br>
                                     Use velocity to build exactly how you want to embed your content.
                                 </td>
@@ -264,10 +262,12 @@
             </div>
 
             <div>
-                <h3>Indexes</h3>
+                <h3>Indexes &nbsp;</h3>
                 <table id="indexManageTable" style="width:80%">
 
                 </table>
+
+
             </div>
         </div>
     </div>

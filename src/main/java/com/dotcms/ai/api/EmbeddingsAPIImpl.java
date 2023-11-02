@@ -218,9 +218,8 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
                         "identifier", dto.identifier,
                         "title", dto.title,
                         "language", dto.language,
-                        "field", dto.field,
                         "index", dto.indexName,
-                        "contentType", dto.contentType))
+                        "contentType", new JSONArray(dto.contentType)))
 
         ).getOrElse(JSONObject::new);
 
@@ -236,7 +235,6 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
         EmbeddingsDTO embeddingsDTO = new EmbeddingsDTO.Builder()
                 .withContentType("cache")
-                .withField("cache")
                 .withTokenCount(embeddings._1)
                 .withInode("cache")
                 .withLanguage(0)

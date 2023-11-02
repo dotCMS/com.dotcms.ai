@@ -79,7 +79,10 @@ public class EmbeddingsResource {
                 }
                 newOffset += embeddingsForm.limit;
 
-                List<String> inodes = searchResults.stream().map(r->r.getInode()).collect(Collectors.toList());
+                List<String> inodes = searchResults
+                        .stream()
+                        .map(ContentletSearch::getInode)
+                        .collect(Collectors.toList());
                 added+=inodes.size();
                 OpenAIThreadPool.threadPool.get().submit(new BulkEmbeddingsRunner(inodes,embeddingsForm));
 
@@ -114,7 +117,6 @@ public class EmbeddingsResource {
                 .withLanguage(json.optLong("language", 0))
                 .withInode(json.optString("inode"))
                 .withContentType(json.optString("contentType"))
-                .withField(json.optString("fieldVar"))
                 .withHost(json.optString("site"))
                 .build();
         int deleted = EmbeddingsAPI.impl().deleteEmbedding(dto);
