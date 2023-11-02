@@ -8,6 +8,7 @@ import io.vavr.control.Try;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class AppConfig implements Serializable {
@@ -43,6 +44,7 @@ public class AppConfig implements Serializable {
 
     }
 
+    public static final Pattern SPLITTER= Pattern.compile("\\s?,\\s?");
 
     public String getApiUrl() {
         return apiUrl;
@@ -112,7 +114,8 @@ public class AppConfig implements Serializable {
 
     public String[] getConfigArray(AppKeys appKey) {
         String returnValue = getConfig(appKey);
-        return returnValue != null ? returnValue.trim().split("\\s+,") : new String[0];
+
+        return returnValue != null ? SPLITTER.split(returnValue) : new String[0];
 
     }
 

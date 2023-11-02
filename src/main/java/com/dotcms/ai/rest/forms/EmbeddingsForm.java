@@ -1,5 +1,6 @@
 package com.dotcms.ai.rest.forms;
 
+import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotmarketing.business.APILocator;
@@ -44,7 +45,7 @@ public class EmbeddingsForm {
         this.velocityTemplate = builder.velocityTemplate;
         this.offset = builder.offset;
         this.model = UtilMethods.isSet(builder.model) ? builder.model : ConfigService.INSTANCE.config().getConfig(AppKeys.EMBEDDINGS_MODEL);
-        this.fields = (builder.fields != null) ? builder.fields.toLowerCase().trim().split("[\\s+,]") : new String[0];
+        this.fields = (builder.fields != null) ? AppConfig.SPLITTER.split(builder.fields.toLowerCase()) : new String[0];
         this.userId= PortalUtil.getUser() != null ? PortalUtil.getUser().getUserId() : APILocator.systemUser().getUserId();
     }
 

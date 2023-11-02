@@ -1,5 +1,6 @@
 package com.dotcms.ai.rest.forms;
 
+import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
@@ -107,10 +108,10 @@ public class CompletionsForm {
 
         this.threshold = builder.threshold;
         this.operator = OPERATORS.getOrDefault(builder.operator, "<=>");
-        this.site = UtilMethods.isSet(builder.site) ? builder.site : Try.of(()->WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()).getIdentifier()).getOrElse("SYSTEM_HOST");
+        this.site = UtilMethods.isSet(builder.site) ? builder.site : null;
         this.language = validateLanguage(builder.language);
         this.searchOffset = builder.searchOffset;
-        this.contentType = UtilMethods.isSet(builder.contentType) ? builder.contentType.trim().split("[\\s+,]") : new String[0];
+        this.contentType = UtilMethods.isSet(builder.contentType) ? AppConfig.SPLITTER.split(builder.contentType) : new String[0];
         this.temperature = builder.temperature <= 0
                 ? ConfigService.INSTANCE.config().getConfigFloat(AppKeys.COMPLETION_TEMPERATURE)
                 : builder.temperature >= 2

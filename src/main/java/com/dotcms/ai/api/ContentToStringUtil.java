@@ -6,6 +6,7 @@ import com.dotcms.ai.app.ConfigService;
 import com.dotcms.contenttype.model.field.BinaryField;
 import com.dotcms.contenttype.model.field.DataTypes;
 import com.dotcms.contenttype.model.field.Field;
+import com.dotcms.contenttype.model.field.FileField;
 import com.dotcms.contenttype.model.field.StoryBlockField;
 import com.dotcms.contenttype.model.field.TextAreaField;
 import com.dotcms.contenttype.model.field.WysiwygField;
@@ -160,7 +161,7 @@ public class ContentToStringUtil {
                 embedMe.add(contentlet.getContentType().fieldMap().get("asset"));
             }
         }
-
+        // pages are not indexed based on fields, instead they will be rendered to be parsed
         if (contentlet.isHTMLPage()) {
             return List.of();
         }
@@ -171,7 +172,7 @@ public class ContentToStringUtil {
         contentlet.getContentType()
                 .fields()
                 .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
-                .filter(f -> f instanceof StoryBlockField || f instanceof WysiwygField)
+                .filter(f -> f instanceof StoryBlockField || f instanceof WysiwygField || f instanceof BinaryField ||  f instanceof TextAreaField || f instanceof FileField)
                 .forEach(f -> embedMe.add(f));
 
         if (!embedMe.isEmpty()) {
@@ -182,7 +183,7 @@ public class ContentToStringUtil {
                 .fields()
                 .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
                 .filter(f ->
-                        f instanceof TextAreaField || f.dataType().equals(DataTypes.LONG_TEXT)
+                        f.dataType().equals(DataTypes.LONG_TEXT)
                 ).collect(Collectors.toList());
     }
 
@@ -209,7 +210,7 @@ public class ContentToStringUtil {
     }
 
     public Optional<String> parseFields(@NotNull Contentlet contentlet, @NotNull List<Field> fields) {
-        if (UtilMethods.isEmpty(() -> contentlet.getIdentifier())) {
+        if (UtilMethods.isEmpty(contentlet::getIdentifier)) {
             return Optional.empty();
         }
 
@@ -234,12 +235,20 @@ public class ContentToStringUtil {
 
         ContentType type = contentlet.getContentType();
         if (field instanceof BinaryField) {
+            Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is a BinaryField ");
             return parseFile(Try.of(() -> contentlet.getBinary(field.variable())).getOrNull());
         }
-        String value = contentlet.getStringProperty(field.variable());
 
+        final String value = contentlet.getStringProperty(field.variable());
+
+
+        // handle attached files
+        if (field instanceof FileField) {
+            Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is a FileField ");
+            return handleFileField(contentlet,value);
+        }
         if (field instanceof StoryBlockField && StringUtils.isJson(value)) {
-            Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is a StoryBlockField field");
+            Logger.info(this.getClass(), type.variable() + "." + field.variable() + " is a StoryBlockField ");
             return parseBlockEditor(value);
         }
         if (isMarkdown(value)) {
@@ -255,6 +264,22 @@ public class ContentToStringUtil {
 
 
     }
+
+
+    private Optional<String> handleFileField(Contentlet contentlet, String identifier) {
+        Optional<Contentlet> con = APILocator.getContentletAPI().findContentletByIdentifierOrFallback(identifier,false,contentlet.getLanguageId(),APILocator.systemUser(),false);
+        if(con.isEmpty()) {
+            return Optional.empty();
+        }
+        if(con.get().isDotAsset()){
+            return parseFile(Try.of(() -> con.get().getBinary("asset")).getOrNull());
+        }
+        else if(con.get().isFileAsset()){
+            return parseFile(Try.of(() -> con.get().getBinary("fileAsset")).getOrNull());
+        }
+        return Optional.empty();
+    }
+
 
     private Optional<String> parsePage(Contentlet pageContentlet) {
         if (UtilMethods.isEmpty(() -> pageContentlet.getIdentifier())) {
