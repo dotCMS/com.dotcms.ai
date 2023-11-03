@@ -160,7 +160,7 @@ public class CompletionsForm {
         @JsonSetter(nulls = Nulls.SKIP)
         private String prompt;
         @JsonSetter(nulls = Nulls.SKIP)
-        private int searchLimit = 1000;
+        private int searchLimit = 50;
         @JsonSetter(nulls = Nulls.SKIP)
         private String language;
         @JsonSetter(nulls = Nulls.SKIP)

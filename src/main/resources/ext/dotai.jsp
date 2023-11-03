@@ -42,11 +42,10 @@
 
         <div style="display: grid;grid-template-columns: 45% 55%;">
             <div style="border-right:1px solid #eeeeee;margin-right:40px;padding-right: 40px">
-
-                <table >
-                    <form action="POST" id="chatForm" onsubmit="return false;">
+                <form action="POST" id="chatForm" onsubmit="return false;">
+                    <table class="aiSearchResultsTable">
                         <tr>
-                            <th>
+                            <th style="width:30%">
                                 Content index to search:
                             </th>
                             <td>
@@ -73,114 +72,136 @@
                                 <div style="padding-bottom:10px;">
                                     <input type="radio" checked="true" id="searchResponseType" name="responseType"
                                            value="search" onchange="showResultTables()">
-                                    <label for="searchResponseType">Semantic Search &nbsp; &nbsp; (dotCMS Only)</label>
+                                    <label for="searchResponseType">Semantic Search &nbsp; &nbsp; - dotCMS Only</label>
                                 </div>
                                 <div style="padding-bottom:10px;">
                                     <input type="radio" id="streamingResponseType" name="responseType" value="stream"
                                            onchange="showResultTables()">
-                                    <label for="streamingResponseType">Streaming Chat &nbsp; &nbsp; (OpenAI + dotCMS
-                                        Supporting Content)</label>
+                                    <label for="streamingResponseType">Streaming Chat &nbsp; &nbsp; &nbsp; &nbsp; -
+                                        OpenAI + dotCMS
+                                        Supporting Content</label>
                                 </div>
                                 <div>
                                     <input type="radio" id="restJsonResponseType" name="responseType" value="json"
                                            onchange="showResultTables()">
-                                    <label for="restJsonResponseType">REST/JSON Chat &nbsp; &nbsp; (OpenAI + dotCMS
-                                        Supporting Content)</label>
+                                    <label for="restJsonResponseType">REST/JSON Chat &nbsp; &nbsp; - OpenAI + dotCMS
+                                        Supporting Content</label>
                                 </div>
                             </td>
                         </tr>
+                    </table>
+
+                    <table class="aiSearchResultsTable">
                         <tr>
-                            <th>
+                            <th style="width:30%">
+                                <b>Prompt:</b>
+                            </th>
+                            <td>
+                            <textarea class="prompt" name="prompt" id="searchQuery"
+                                      placeholder="Search text or phrase"></textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align: center">
+                                <div style="padding:10px;height:75px; text-align: center">
+                                    <div class="loader" style="display:none;height:40px;padding:10px;"
+                                         id="loaderChat"></div>
+                                    <button id="submitChat" class="button dijit dijitReset dijitInline dijitButton"
+                                            onclick="doSearchChatJson()">
+                                        Submit &nbsp; &nbsp; <i>&rarr;</i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+
+
+
+                    <fieldset style="margin:10px 20px 0px 0px;border-bottom:0px;border-left: 0px;border-right: 0px;">
+                        <legend style="background-color:white;font-weight: normal;padding: 10px 20px"
+                                class="button" onclick="toggleAdvancedSearchOptionsTable()">Advanced
+                            &nbsp; <span id="showAdvancedArrow" class="fa fa-chevron-right" style="color: #444444"
+                                         class="fa fa-chevron-right"></span>
+                        </legend>
+                        <table id="advancedSearchOptionsTable" style="display: none" class="aiSearchResultsTable">
+                            <th style="width:30%">
                                 Temperature:
                             </th>
                             <td>
-                                <input name="temperature" type="number" step="0.1" value="1" min="0" max="2" style="min-width:100px;"><br>
+                                <input name="temperature" type="number" step="0.1" value="1" min="0" max="2"
+                                       style="min-width:100px;"><br>
                                 (determines the randomness of the response. 0 = deterministic, 2 = most random
                             </td>
-                        </tr>
-                        <tr>
-                            <th>
-                                Response length:
-                            </th>
-                            <td>
-                                <input  type="number" step="1" value="500" min="10" max="2048"  style="min-width:100px;" name="responseLengthTokens" id="responseLengthTokens"><br>
-                                The general length of response you would like to generate. 75 words ~= 100 tokens
-                            </td>
-                        </tr>
+                            </tr>
+                            <tr>
+                                <th>
+                                    Response length:
+                                </th>
+                                <td>
+                                    <input type="number" step="1" value="500" min="10" max="2048"
+                                           style="min-width:100px;"
+                                           name="responseLengthTokens" id="responseLengthTokens"><br>
+                                    The general length of response you would like to generate. 75 words ~= 100 tokens
+                                </td>
+                            </tr>
 
-                        <tr>
-                            <th>Vector Operator:</th>
-                            <td>
+                            <tr>
+                                <th>Vector Operator:</th>
+                                <td>
 
-                                <input type="radio" name="operator" id="cosine" checked="true" value="cosine">
-                                <label for="cosine">Cosine Similarity</label>
-                                &nbsp; &nbsp;
-                                <input type="radio" name="operator" id="distance" value="distance">
-                                <label for="distance">Distance</label>
-                                &nbsp; &nbsp;
-                                <input type="radio" name="operator" id="product" value="product">
-                                <label for="product">Inner Product</label>
-                                <br>
-                                Search stored embeddings using this operator<br>(probably best to leave it alone).
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>
-                                Distance Threshold:
-                            </th>
-                            <td>
-                                <input type="number" step="0.05" value=".25" name="threshold" min="0.05"  max="100"  style="min-width:100px;"><br>
-                                the lower this number, the more semantically similar the results
-                            </td>
-                        </tr>
+                                    <input type="radio" name="operator" id="cosine" checked="true" value="cosine">
+                                    <label for="cosine">Cosine Similarity</label>
+                                    &nbsp; &nbsp;
+                                    <input type="radio" name="operator" id="distance" value="distance">
+                                    <label for="distance">Distance</label>
+                                    &nbsp; &nbsp;
+                                    <input type="radio" name="operator" id="product" value="product">
+                                    <label for="product">Inner Product</label>
+                                    <br>
+                                    Search stored embeddings using this operator<br>(probably best to leave it alone).
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>
+                                    Distance Threshold:
+                                </th>
+                                <td>
+                                    <input type="number" step="0.05" value=".25" name="threshold" min="0.05" max="100"
+                                           style="min-width:100px;"><br>
+                                    the lower this number, the more semantically similar the results
+                                </td>
+                            </tr>
 
-                        <tr>
-                            <th>
-                                Site:
-                            </th>
-                            <td>
-                                <input type="text" value="" name="site"><br>
-                                Site id on which the content lives - leave blank for all
-                            </td>
-                        </tr>
+                            <tr>
+                                <th>
+                                    Site:
+                                </th>
+                                <td>
+                                    <input type="text" value="" name="site"><br>
+                                    Site id on which the content lives - leave blank for all
+                                </td>
+                            </tr>
 
-                        <tr>
-                            <th>
-                                Content Types:
-                            </th>
-                            <td>
-                                <input type="text" value="" name="contentType" id="contentTypeSearch"><br>
-                                Comma separated list of content types to include in the results
-                            </td>
-                        </tr>
+                            <tr>
+                                <th>
+                                    Content Types:
+                                </th>
+                                <td>
+                                    <input type="text" value="" name="contentType" id="contentTypeSearch"><br>
+                                    Comma separated list of content types to drive the prompt
+                                </td>
+                            </tr>
+                        </table>
+                    </fieldset>
 
-                    </form>
-                </table>
+
+
+
+                </form>
             </div>
             <div>
-                <table style="margin-bottom:20px;">
-                    <tr>
-                        <th style="width:20%">
-                            <b>Prompt:</b>
-                        </th>
-                        <td>
-                            <textarea class="prompt" name="prompt" id="searchQuery"
-                                      placeholder="Search text or phrase"></textarea>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2" style="text-align: center">
-                            <div style="padding:10px;height:75px; text-align: center">
-                                <div class="loader" style="display:none;height:40px;padding:10px;"
-                                     id="loaderChat"></div>
-                                <button id="submitChat" class="button dijit dijitReset dijitInline dijitButton"
-                                        onclick="doSearchChatJson()">
-                                    Submit
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
+
 
                 <div>
                     <textarea id="answerChat" style="overflow: auto;white-space: pre-wrap;"></textarea>
@@ -214,17 +235,41 @@
                                 Content to Index by Query:
                             </th>
                             <td>
-                                    <textarea class="prompt" name="query"
+                                    <textarea class="prompt" name="query" id="contentQueryTextArea"
                                               placeholder="e.g. +contentType:blog"></textarea>
                             </td>
                         </tr>
                     </table>
+
+                    <table style="width:100%">
+                        <tr>
+                            <td colspan="2" style="text-align: center">
+                                <button onclick="doBuildIndex()"
+                                        class="button dijit dijitReset dijitInline dijitButton">Build Index
+                                    &nbsp; &nbsp; <i>&rarr;</i>
+                                </button>
+                            </td>
+                        </tr>
+                    </table>
+
+
+
+
                     <fieldset style="margin:20px 20px 20px 0px;border-bottom:0px;border-left: 0px;border-right: 0px;">
-                        <legend style="background-color:rgba(0, 0, 0, 0);">What To Embed (Optional)</legend>
-                        <table style="width:100%">
+                        <legend style="background-color:rgba(0, 0, 0, 0); padding: 10px 20px;font-weight: normal"
+                                class="button" onclick="toggleWhatToEmbedTable()">Advanced
+                            &nbsp; <span id="showOptionalEmbeddingsArrow" style="color: #444444"
+                                         class="fa fa-chevron-right"></span>
+                        </legend>
+                        <table style="width:100%;display: none" id="whatToEmbedTable">
                             <tr>
                                 <td colspan="2" style="text-align:justify ">
-                                    Three options. 1) You can specify what field or fields of your content you want to include in the embeddings or 2) you can also use velocity to render your content for embedding or 3) leave these blank and dotCMS will try to guess what fields to use when generating embedddings.  Without prompting, dotCMS will generate embeddings for any WYSIWYG, StoryBlock, Textarea, File or Binary fields.
+                                    <b>What To Embed (Optional)</b><br>
+                                    Three options. 1) You can specify what field or fields of your content you want to
+                                    include in the embeddings or 2) you can also use velocity to render your content for
+                                    embedding or 3) leave these blank and dotCMS will try to guess what fields to use
+                                    when generating embedddings. Without prompting, dotCMS will generate embeddings for
+                                    any WYSIWYG, StoryBlock, Textarea, File or Binary fields.
                                 </td>
                             </tr>
                             <tr>
@@ -232,7 +277,8 @@
                                     Velocity Template to embed:
                                 </th>
                                 <td>
-                                <textarea class="prompt" name="velocityTemplate" placeholder="e.g.&#10;$contentlet.shortDescription&#10;$contentlet.body.toHtml()"></textarea>
+                                    <textarea class="prompt" name="velocityTemplate"
+                                              placeholder="e.g.&#10;$contentlet.shortDescription&#10;$contentlet.body.toHtml()"></textarea>
                                     <br>
                                     Use velocity to build exactly how you want to embed your content.
                                 </td>
@@ -244,21 +290,12 @@
                                 <td>
                                     <input type="text" value="" name="fields">
                                     <br>
-                                    If you just specify a comma separated list of fields variables, dotCMS will use them to generate the embedding.
+                                    If you just specify a comma separated list of fields variables, dotCMS will use
+                                    their values when generating the embedding.
                                 </td>
                             </tr>
                         </table>
                     </fieldset>
-                    <table style="width:100%">
-                        <tr>
-                            <td colspan="2" style="text-align: center">
-                                <button onclick="doBuildIndex()"
-                                        class="button dijit dijitReset dijitInline dijitButton">Build Index
-                                </button>
-                            </td>
-                        </tr>
-                    </table>
-
                 </form>
                 <div id="buildResponse"></div>
             </div>

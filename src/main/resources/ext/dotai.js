@@ -210,7 +210,7 @@ const writeIndexManagementTable = async () => {
        //console.log("row", row)
         newChunks+=row.fragments;
 
-        const cost = row.name==='cache' ? "(est $" + ((parseInt(row.tokenTotal)/1000) * 0.0001).toFixed(2) + ")" : "";
+        const cost = row.name==='cache' ? "(~$" + ((parseInt(row.tokenTotal)/1000) * 0.0001).toFixed(2).toLocaleString() + ")" : "";
 
 
 
@@ -230,11 +230,11 @@ const writeIndexManagementTable = async () => {
         td6 = document.createElement("td");
         td6.style.textAlign="center";
         td1.innerHTML = row.name;
-        td2.innerHTML = row.fragments;
+        td2.innerHTML = row.fragments.toLocaleString();
         td3.innerHTML = row.contents;
-        td4.innerHTML = `${row.tokenTotal} ${cost}`;
+        td4.innerHTML = `${row.tokenTotal.toLocaleString()} ${cost}`;
         td4.style.whiteSpace="nowrap"
-        td5.innerHTML = row.tokensPerChunk;
+        td5.innerHTML = row.tokensPerChunk.toLocaleString();
         td6.innerHTML = `<a href="#" onclick="doDeleteIndex('${row.name}')">delete</a>`
 
         tr.append(td1);
@@ -275,6 +275,7 @@ const writeIndexManagementTable = async () => {
 
 
 window.addEventListener('load', function () {
+    setUpValuesFromPreferences();
     refreshIndexes()
         .then(() => {
             writeIndexesToDropdowns();
@@ -315,9 +316,72 @@ const tab3 = () => {
     refreshConfigs().then(() => {
         writeConfigTable();
     });
+};
 
+const preferences = () => {
+    const prefString = localStorage.getItem("com.dotcms.ai.settings") !== null ? localStorage.getItem("com.dotcms.ai.settings") : "{}";
+    return JSON.parse(prefString)
 
 };
+
+const savePreferences = (prefs) => {
+
+    //console.log("saving prefs:", JSON.stringify(prefs))
+    return localStorage.setItem("com.dotcms.ai.settings", JSON.stringify(prefs)) ;
+};
+
+const toggleAdvancedSearchOptionsTable =() =>{
+    const showingAdvanced = document.getElementById("advancedSearchOptionsTable").style.display;
+    if(showingAdvanced==="none"){
+        document.getElementById("advancedSearchOptionsTable").style.display="block"
+        document.getElementById("showAdvancedArrow").className+=" rotated"
+    }else{
+        document.getElementById("advancedSearchOptionsTable").style.display="none"
+        document.getElementById("showAdvancedArrow").className = document.getElementById("showAdvancedArrow").className.replaceAll(" rotated", "");
+    }
+
+    const prefs = preferences();
+    prefs.showAdvancedSearchOptionsTable=showingAdvanced==="hidden"
+    savePreferences(prefs);
+
+
+}
+
+const toggleWhatToEmbedTable =() =>{
+    const showingAdvanced = document.getElementById("whatToEmbedTable").style.display;
+    if(showingAdvanced==="none"){
+        document.getElementById("whatToEmbedTable").style.display="block"
+        document.getElementById("showOptionalEmbeddingsArrow").className+=" rotated"
+    }else{
+        document.getElementById("whatToEmbedTable").style.display="none"
+        document.getElementById("showOptionalEmbeddingsArrow").className = document.getElementById("showOptionalEmbeddingsArrow").className.replaceAll(" rotated", "");
+    }
+    const prefs = preferences();
+    prefs.showWhatToEmbedTable=showingAdvanced==="none"
+    savePreferences(prefs);
+}
+
+const setUpValuesFromPreferences =() =>{
+    const prefs = preferences();
+
+    if(prefs.showWhatToEmbedTable && prefs.showWhatToEmbedTable !== false){
+        toggleWhatToEmbedTable();
+    }
+
+    if(prefs.showAdvancedSearchOptionsTable && prefs.showAdvancedSearchOptionsTable !== false){
+        toggleAdvancedSearchOptionsTable();
+    }
+    if(prefs.lastPrompt && prefs.lastPrompt !== undefined && prefs.lastPrompt!== null){
+        document.getElementById("searchQuery").value=prefs.lastPrompt;
+    }
+
+    if(prefs.lastContentQuery && prefs.lastContentQuery !== undefined && prefs.lastContentQuery!== null){
+        document.getElementById("contentQueryTextArea").value=prefs.lastContentQuery;
+    }
+
+
+}
+
 
 
 const showResultTables = () => {
@@ -360,6 +424,16 @@ const doSearchChatJsonDebounced = async () => {
         document.getElementById("loaderChat").style.display = "none";
         return;
     }
+
+    const prefs = preferences();
+    prefs.lastPrompt=formData.prompt.trim();
+
+    prefs.lastIndex=formData.indexName.trim();
+
+
+
+    savePreferences(prefs);
+
 
 
 
@@ -410,7 +484,10 @@ const doBuildIndex = async () => {
         alert("Query is required");
         return;
     }
-
+    const prefs = preferences();
+    prefs.lastIndex=formData.indexName.trim();
+    prefs.lastContentQuery=formData.query.trim()
+    savePreferences(prefs);
 
     //console.log("formData", formData)
     const response = await fetch('/api/v1/ai/embeddings', {

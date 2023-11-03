@@ -68,7 +68,8 @@ You can search by the following:
 - language - (int) the language for the matching content (defaults to default lang)
 - indexName - (string) the content embedding index you want to search in (defaults to `default`)
 - threshold - (float) how semantically close should the matching content be to your search query?  The lower the threshold, the closer semantically the content matches (zero being there are zero semantic differences).  `.2` or `.25` should suffice. 
-- operator -  (string) the database vector operator to use. Should not really be changed.
+- operator -  (string) the database vector operator to use. Should not really be changed, as cosine generally returns the best results.  For a good write up on the diffences between vector similarity operators, see: https://www.pinecone.io/learn/vector-similarity 
+
 
 
 ```bash

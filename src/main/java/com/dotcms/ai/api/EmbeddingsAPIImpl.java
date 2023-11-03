@@ -136,21 +136,21 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     public JSONObject reduceChunksToContent(EmbeddingsDTO searcher, final List<EmbeddingsDTO> searchResults) {
         long startTime = System.currentTimeMillis();
 
-        Map<String, Object> reducedResults = new LinkedHashMap<>();
+        Map<String, JSONObject> reducedResults = new LinkedHashMap<>();
         Set<String> fields = (searcher.showFields != null)
                 ? Arrays.stream(searcher.showFields).collect(Collectors.toSet())
                 : Set.of();
 
         for (EmbeddingsDTO result : searchResults) {
+            JSONObject contentObject = reducedResults.getOrDefault(result.inode, dtoToContentJson(result, searcher.user));
 
-            JSONObject contentObject = dtoToContentJson(result, searcher.user);
             contentObject.getAsMap().computeIfAbsent("title", k -> result.title);
 
             if (contentObject == null) {
                 continue;
             }
 
-            if (fields.size() > 1) {
+            if (fields.size() > 0) {
                 contentObject.keySet().removeIf(k -> !fields.contains(k));
             }
 
