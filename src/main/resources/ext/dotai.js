@@ -150,7 +150,7 @@ const writeConfigTable = async () => {
     for (const [key, value] of Object.entries(dotAiState.config)) {
         //console.log(key)
         const tr = document.createElement("tr");
-        tr.style.borderBottom = "1px solid #cccccc"
+        tr.style.borderBottom = "1px solid #eeeeee"
         const th = document.createElement("th");
         th.className = "propTh";
         const td = document.createElement("td");
@@ -215,7 +215,7 @@ const writeIndexManagementTable = async () => {
 
 
         tr = document.createElement("tr");
-        tr.style.borderBottom = "1px solid silver"
+        tr.style.borderBottom = "1px solid #eeeeee"
         td1 = document.createElement("td");
         td1.style.textAlign="center";
         td1.style.fontWeight="bold";
@@ -580,7 +580,7 @@ const doSearch = async (formData) => {
             data.dotCMSResults.map(row => {
                 //console.log("row", row)
                 tr = document.createElement("tr");
-                tr.style.borderBottom = "1px solid #cccccc"
+                tr.style.borderBottom = "1px solid #eeeeee"
                 td1 = document.createElement("td");
 
                 td2 = document.createElement("td");

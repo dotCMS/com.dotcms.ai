@@ -211,7 +211,7 @@
                         </tr>
                         <tr>
                             <th style="width:30%">
-                                Content Query to Index:
+                                Content to Index by Query:
                             </th>
                             <td>
                                     <textarea class="prompt" name="query"
@@ -223,8 +223,8 @@
                         <legend style="background-color:rgba(0, 0, 0, 0);">What To Embed (Optional)</legend>
                         <table style="width:100%">
                             <tr>
-                                <td colspan="2" style="text-align: center">
-                                    Optionally, you can specify what field or fields of your content you want to include in the embeddings.  Leave these blank and dotCMS will try to guess what fields to use when generating embedddings.
+                                <td colspan="2" style="text-align:justify ">
+                                    Three options. 1) You can specify what field or fields of your content you want to include in the embeddings or 2) you can also use velocity to render your content for embedding or 3) leave these blank and dotCMS will try to guess what fields to use when generating embedddings.  Without prompting, dotCMS will generate embeddings for any WYSIWYG, StoryBlock, Textarea, File or Binary fields.
                                 </td>
                             </tr>
                             <tr>
