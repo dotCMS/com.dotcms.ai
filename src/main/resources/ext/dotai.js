@@ -320,6 +320,7 @@ const tab3 = () => {
 
 const preferences = () => {
     const prefString = localStorage.getItem("com.dotcms.ai.settings") !== null ? localStorage.getItem("com.dotcms.ai.settings") : "{}";
+    //console.log("loading prefs:", JSON.stringify(prefString))
     return JSON.parse(prefString)
 
 };
@@ -341,7 +342,7 @@ const toggleAdvancedSearchOptionsTable =() =>{
     }
 
     const prefs = preferences();
-    prefs.showAdvancedSearchOptionsTable=showingAdvanced==="hidden"
+    prefs.showAdvancedSearchOptionsTable=showingAdvanced==="none"
     savePreferences(prefs);
 
 
