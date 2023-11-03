@@ -218,6 +218,7 @@ const writeIndexManagementTable = async () => {
         tr.style.borderBottom = "1px solid silver"
         td1 = document.createElement("td");
         td1.style.textAlign="center";
+        td1.style.fontWeight="bold";
         td2 = document.createElement("td");
         td2.style.textAlign="center";
         td3 = document.createElement("td");
@@ -254,7 +255,7 @@ const writeIndexManagementTable = async () => {
     td1 = document.createElement("td");
     td1.style.textAlign="center";
     td1.colSpan=1;
-    td1.innerHTML=`<a href="#" onclick="reinitializeDatabase()">reinit db</a>`;
+    td1.innerHTML=`<a href="#" onclick="reinitializeDatabase()">rebuild db</a>`;
     tr.append(td1);
     indexTable.append(tr)
 
@@ -552,7 +553,7 @@ const doSearch = async (formData) => {
 
             let tr = document.createElement("tr");
             tr.style.fontWeight = "bold";
-            tr.style.textAlign = "left"
+
             let td1 = document.createElement("th");
             let td2 = document.createElement("th");
             let td3 = document.createElement("th");
@@ -572,17 +573,22 @@ const doSearch = async (formData) => {
             tr.append(td2);
             tr.append(td3);
             tr.append(td4);
-
+            tr.style.borderBottom = "1px solid #bbbbbb"
             table.append(tr)
 
 
             data.dotCMSResults.map(row => {
                 //console.log("row", row)
                 tr = document.createElement("tr");
+                tr.style.borderBottom = "1px solid #cccccc"
                 td1 = document.createElement("td");
+
                 td2 = document.createElement("td");
+                td2.style.textAlign = "center"
                 td3 = document.createElement("td");
+                td3.style.textAlign = "center"
                 td4 = document.createElement("td");
+                td4.style.minWidth = "400px;"
 
                 td1.innerHTML = `<a href="/dotAdmin/#/c/content/${row.inode}" target="_top">${row.title}</a>`;
                 td2.innerHTML = row.matches.length;

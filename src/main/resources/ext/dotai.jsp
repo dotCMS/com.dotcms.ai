@@ -26,7 +26,7 @@
 </div>
 <div id="container">
     <input id="tab-1" type="radio" name="tab-group" checked="checked" onclick="changeTabs()"/>
-    <label for="tab-1">Search and Chat with dotCMS</label>
+    <label for="tab-1" class="p-tabview p-tabview-nav p-tabview-nav-link">Search and Chat with dotCMS</label>
 
     <input id="tab-2" type="radio" name="tab-group" onclick="changeTabs()"/>
     <label for="tab-2">Manage Embeddings/Indexes</label>
@@ -38,10 +38,12 @@
 
 <div id="content">
     <div id="content-1">
-        <div style="display: grid;grid-template-columns: 50% 50%;">
-            <div>
-                <h2>Semantic Search and Chat with dotCMS</h2>
-                <table style="width:80%">
+        <h2>Semantic Content Search and Chat</h2>
+
+        <div style="display: grid;grid-template-columns: 45% 55%;">
+            <div style="border-right:1px solid #eeeeee;margin-right:40px;padding-right: 40px">
+
+                <table >
                     <form action="POST" id="chatForm" onsubmit="return false;">
                         <tr>
                             <th>
@@ -156,9 +158,11 @@
                 </table>
             </div>
             <div>
-                <table style="margin-top:50px;margin-bottom:20px;">
+                <table style="margin-bottom:20px;">
                     <tr>
-                        <th><b>Prompt:</b></th>
+                        <th style="width:20%">
+                            <b>Prompt:</b>
+                        </th>
                         <td>
                             <textarea class="prompt" name="prompt" id="searchQuery"
                                       placeholder="Search text or phrase"></textarea>
@@ -177,9 +181,7 @@
                         </td>
                     </tr>
                 </table>
-                <div style="padding-bottom:10px">
-                    <h2>Results</h2>
-                </div>
+
                 <div>
                     <textarea id="answerChat" style="overflow: auto;white-space: pre-wrap;"></textarea>
                     <div id="semanticSearchResults"></div>
@@ -192,8 +194,8 @@
     <div id="content-2">
         <h2>Manage Embeddings / Indexes</h2>
 
-        <div style="display: grid;grid-template-columns: 50% 50%;">
-            <div>
+        <div style="display: grid;grid-template-columns: 45% 55%;">
+            <div style="border-right:1px solid #eeeeee;margin-right:40px;padding-right: 40px">
 
                 <form id="createUpdateIndex" onsubmit="return false;">
 
