@@ -97,7 +97,7 @@
                                 <b>Prompt:</b>
                             </th>
                             <td><span class="clearPromptX" id="searchQueryX" onclick="clearPrompt('searchQuery')" style="visibility: hidden">&#10006;</span>
-                                <textarea class="prompt" name="prompt" id="searchQuery" onkeyup="showClearPrompt('searchQuery')"
+                                <textarea class="prompt" name="prompt" id="searchQuery" onkeyup="showClearPrompt('searchQuery')" onchange="showClearPrompt('searchQuery')"
                                       placeholder="Search text or phrase"></textarea>
                             </td>
                         </tr>
@@ -234,7 +234,7 @@
                                 Content to Index by Query:
                             </th>
                             <td><span class="clearPromptX" id="contentQueryX" onclick="clearPrompt('contentQuery')" style="visibility: hidden">&#10006;</span>
-                                    <textarea class="prompt" name="query" id="contentQuery" onkeyup="showClearPrompt('contentQuery')"
+                                    <textarea class="prompt" name="query" id="contentQuery" onkeyup="showClearPrompt('contentQuery')"  onchange="showClearPrompt('contentQuery')"
                                               placeholder="e.g. +contentType:blog"></textarea>
                             </td>
                         </tr>
@@ -276,7 +276,7 @@
                                     Velocity Template to embed:
                                 </th>
                                 <td><span class="clearPromptX" id="velocityTemplateX" onclick="clearPrompt('velocityTemplate')" style="visibility:hidden">&#10006;</span>
-                                    <textarea class="prompt" name="velocityTemplate" id="velocityTemplate" onkeyup="showClearPrompt('velocityTemplate')"
+                                    <textarea class="prompt" name="velocityTemplate" id="velocityTemplate" onkeyup="showClearPrompt('velocityTemplate')" onchange="showClearPrompt('velocityTemplate')"
                                               placeholder="e.g.&#10;$contentlet.shortDescription&#10;$contentlet.body.toHtml()"></textarea>
                                     <br>
                                     Use velocity to build exactly how you want to embed your content.
