@@ -68,7 +68,8 @@ You can search by the following:
 - language - (int) the language for the matching content (defaults to default lang)
 - indexName - (string) the content embedding index you want to search in (defaults to `default`)
 - threshold - (float) how semantically close should the matching content be to your search query?  The lower the threshold, the closer semantically the content matches (zero being there are zero semantic differences).  `.2` or `.25` should suffice. 
-- operator -  (string) the database vector operator to use. Should not really be changed.
+- operator -  (string) the database vector operator to use. Should not really be changed, as cosine generally returns the best results.  For a good write up on the diffences between vector similarity operators, see: https://www.pinecone.io/learn/vector-similarity 
+
 
 
 ```bash
@@ -80,6 +81,20 @@ curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api
 "searchLimit":50
 }'
 ```
+```
+curl -XPOST -k -H"Authorization: Bearer $TOK" https://local.dotcms.site:8443/api/v1/ai/completions \
+-H "Content-Type: application/json" \
+-d '{
+"prompt": "how do I create a template in dotCMS?",
+"threshold":".2",
+"searchLimit":50,
+"stream": true
+}'
+```
+
+
+
+
 
 ```bash
 curl -XPOST -k -u"admin@dotcms.com:admin" https://local.dotcms.site:8443/api/v1/ai/search \
@@ -88,6 +103,22 @@ curl -XPOST -k -u"admin@dotcms.com:admin" https://local.dotcms.site:8443/api/v1/
 "query": "what is the best beach?",
 }'
 ```
+
+
+### Searching for content related to another piece of content:
+
+```bash
+curl -XPOST -k -u"admin@dotcms.com:admin" https://local.dotcms.site:8443/api/v1/ai/search/related \
+-H "Content-Type: application/json" \
+-d '{
+"inode": "d7741a84-6050-4b9b-9c09-26759a833741",
+}'
+```
+
+
+
+
+
 
 ### Content Chatting and Summarization
 

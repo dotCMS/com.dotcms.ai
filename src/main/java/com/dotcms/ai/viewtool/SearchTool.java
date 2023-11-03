@@ -18,6 +18,7 @@ import org.apache.velocity.tools.view.tools.ViewTool;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -86,10 +87,10 @@ public class SearchTool implements ViewTool {
     public Object related(Contentlet contentlet, String indexName) {
         try {
             User user = PortalUtil.getUser(request);
-            Optional<Field> field = ContentToStringUtil.impl.get().guessWhatFieldToIndex(contentlet);
+            List<Field> fields = ContentToStringUtil.impl.get().guessWhatFieldsToIndex(contentlet);
 
 
-            Optional<String> contentToRelate = ContentToStringUtil.impl.get().parseField(contentlet, field);
+            Optional<String> contentToRelate = ContentToStringUtil.impl.get().parseFields(contentlet, fields);
             if (contentToRelate.isEmpty()) {
                 return new JSONObject();
             }

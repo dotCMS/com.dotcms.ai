@@ -1,10 +1,9 @@
 package com.dotcms.ai.rest.forms;
 
+import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
-import com.dotcms.ai.util.OpenAIModel;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
-import com.dotcms.rest.api.Validated;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.exception.DotRuntimeException;
@@ -17,10 +16,12 @@ import io.vavr.control.Try;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 
 @JsonDeserialize(builder = CompletionsForm.Builder.class)
-public class CompletionsForm extends Validated {
+public class CompletionsForm {
 
     static final Map<String, String> OPERATORS = Map.of("distance", "<->", "cosine", "<=>", "innerProduct", "<#>");
     @Size(min = 1, max = 4096)
@@ -36,7 +37,7 @@ public class CompletionsForm extends Validated {
     public final boolean stream;
     public final String fieldVar;
     public final String indexName;
-    public final String contentType;
+    public final String[] contentType;
     public final float threshold;
     @Min(0)
     @Max(2)
@@ -44,7 +45,57 @@ public class CompletionsForm extends Validated {
     public final String model;
     public final String operator;
     public final String site;
-    public final String[] fields;
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof CompletionsForm)) return false;
+        CompletionsForm that = (CompletionsForm) o;
+        return searchLimit == that.searchLimit &&
+                searchOffset == that.searchOffset &&
+                responseLengthTokens == that.responseLengthTokens &&
+                language == that.language &&
+                stream == that.stream &&
+                Float.compare(threshold, that.threshold) == 0 &&
+                Float.compare(temperature, that.temperature) == 0 &&
+                Objects.equals(prompt, that.prompt) &&
+                Objects.equals(fieldVar, that.fieldVar) &&
+                Objects.equals(indexName, that.indexName) &&
+                Objects.equals(model, that.model) &&
+                Objects.equals(operator, that.operator) &&
+                Objects.equals(site, that.site) &&
+                contentType.length > 0 ? Arrays.equals(contentType, that.contentType) : Boolean.TRUE;
+    }
+
+    @Override
+    public String toString() {
+        return "CompletionsForm{" +
+                "prompt='" + prompt + '\'' +
+                ", searchLimit=" + searchLimit +
+                ", searchOffset=" + searchOffset +
+                ", responseLengthTokens=" + responseLengthTokens +
+                ", language=" + language +
+                ", stream=" + stream +
+                ", fieldVar='" + fieldVar + '\'' +
+                ", indexName='" + indexName + '\'' +
+                ", threshold=" + threshold +
+                ", temperature=" + temperature +
+                ", model='" + model + '\'' +
+                ", operator='" + operator + '\'' +
+                ", site='" + site + '\'' +
+                ", contentType=" + Arrays.toString(contentType) +
+                '}';
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(prompt, searchLimit, searchOffset, responseLengthTokens, language, stream, fieldVar, indexName, threshold, temperature, model, operator, site);
+        result = 31 * result + Arrays.hashCode(contentType);
+        return result;
+    }
+
+
 
 
     private CompletionsForm(CompletionsForm.Builder builder) {
@@ -54,20 +105,19 @@ public class CompletionsForm extends Validated {
         this.responseLengthTokens = builder.responseLengthTokens;
         this.stream = builder.stream;
         this.indexName = builder.indexName;
-        this.contentType = builder.contentType;
+
         this.threshold = builder.threshold;
         this.operator = OPERATORS.getOrDefault(builder.operator, "<=>");
-        this.site = builder.site;
+        this.site = UtilMethods.isSet(builder.site) ? builder.site : null;
         this.language = validateLanguage(builder.language);
         this.searchOffset = builder.searchOffset;
-        this.fields = builder.fields != null ? builder.fields.trim().split("[\\s+,]") : new String[0];
-
-        this.temperature = builder.temperature < 0
-                ? 0
-                : builder.temperature > 2
+        this.contentType = UtilMethods.isSet(builder.contentType) ? AppConfig.SPLITTER.split(builder.contentType) : new String[0];
+        this.temperature = builder.temperature <= 0
+                ? ConfigService.INSTANCE.config().getConfigFloat(AppKeys.COMPLETION_TEMPERATURE)
+                : builder.temperature >= 2
                     ? 2
                     : builder.temperature;
-        this.model = builder.model;
+        this.model = UtilMethods.isSet(builder.model) ? builder.model : ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL);
     }
 
     String validateBuilderQuery(String query) {
@@ -84,14 +134,33 @@ public class CompletionsForm extends Validated {
 
     }
 
+    public static final Builder copy(CompletionsForm form) {
+        return new Builder()
+                .temperature(form.temperature)
+                .site(form.site)
+                .searchLimit(form.searchLimit)
+                .contentType(String.join(",", form.contentType))
+                .fieldVar(form.fieldVar)
+                .searchOffset(form.searchOffset)
+                .model(form.model)
+                .responseLengthTokens(form.responseLengthTokens)
+                .language(form.language)
+                .prompt(form.prompt)
+                .operator(form.operator)
+                .indexName(form.indexName)
+                .threshold(form.threshold)
+                .stream(form.stream);
+
+    }
+
+
 
     public static final class Builder {
-        @JsonSetter(nulls = Nulls.SKIP)
-        public String fields;
+
         @JsonSetter(nulls = Nulls.SKIP)
         private String prompt;
         @JsonSetter(nulls = Nulls.SKIP)
-        private int searchLimit = 1000;
+        private int searchLimit = 50;
         @JsonSetter(nulls = Nulls.SKIP)
         private String language;
         @JsonSetter(nulls = Nulls.SKIP)
@@ -105,17 +174,17 @@ public class CompletionsForm extends Validated {
         @JsonSetter(nulls = Nulls.SKIP)
         private String indexName = "default";
         @JsonSetter(nulls = Nulls.SKIP)
-        private String model = ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL);
+        private String model ;
         @JsonSetter(nulls = Nulls.SKIP)
         private String contentType;
         @JsonSetter(nulls = Nulls.SKIP)
         private float threshold = .25f;
         @JsonSetter(nulls = Nulls.SKIP)
-        private float temperature = 1f;
+        private float temperature = 0;
         @JsonSetter(nulls = Nulls.SKIP)
         private String operator = "cosine";
         @JsonSetter(nulls = Nulls.SKIP)
-        private String site = WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(HttpServletRequestThreadLocal.INSTANCE.getRequest()).getIdentifier();
+        private String site;
 
         public Builder prompt(String queryOrPrompt) {
             this.prompt = queryOrPrompt;
@@ -159,7 +228,7 @@ public class CompletionsForm extends Validated {
         }
 
         public Builder model(String model) {
-            this.model = OpenAIModel.resolveModel(model).modelName;
+            this.model =model;
             return this;
         }
 
@@ -179,7 +248,7 @@ public class CompletionsForm extends Validated {
         }
 
         public Builder temperature(float temperature) {
-            this.temperature = temperature > 0 ? 0 : temperature > 2 ? 2 : temperature;
+            this.temperature = temperature;
             return this;
         }
 
@@ -189,7 +258,7 @@ public class CompletionsForm extends Validated {
         }
 
         public Builder site(String site) {
-            this.site = site;
+            this.site =site;
             return this;
         }
 

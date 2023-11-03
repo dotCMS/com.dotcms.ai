@@ -7,13 +7,11 @@ import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.json.JSONObject;
 import io.vavr.Tuple2;
 
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public interface EmbeddingsAPI {
-
-
 
 
     static EmbeddingsAPI impl(Host host) {
@@ -26,11 +24,13 @@ public interface EmbeddingsAPI {
 
     void shutdown();
 
-    void generateEmbeddingsforContent(Contentlet contentlet, String index);
+    boolean generateEmbeddingsforContent(Contentlet contentlet, String index);
+
+    boolean generateEmbeddingsforContent(Contentlet contentlet, List<Field> fields, String index);
+
+    boolean generateEmbeddingsforContent(@NotNull Contentlet contentlet, String velocityTemplate, String indexName);
 
     int deleteEmbedding(EmbeddingsDTO dto);
-
-    void generateEmbeddingsforContent(Contentlet contentlet, Optional<Field> field, String index);
 
 
     JSONObject reduceChunksToContent(EmbeddingsDTO searcher, List<EmbeddingsDTO> searchResults);
@@ -41,7 +41,7 @@ public interface EmbeddingsAPI {
 
     long countEmbeddings(EmbeddingsDTO searcher);
 
-    Map<String, Map<String,Long>> countEmbeddingsByIndex();
+    Map<String, Map<String, Long>> countEmbeddingsByIndex();
 
     void dropEmbeddingsTable();
 
@@ -49,6 +49,7 @@ public interface EmbeddingsAPI {
 
     /**
      * Returns
+     *
      * @param content
      * @return
      */

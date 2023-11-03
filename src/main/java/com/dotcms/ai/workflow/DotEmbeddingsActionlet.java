@@ -2,7 +2,6 @@ package com.dotcms.ai.workflow;
 
 
 import com.dotcms.ai.api.EmbeddingsAPI;
-import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotmarketing.beans.Host;
@@ -16,7 +15,6 @@ import com.dotmarketing.portlets.workflows.model.WorkflowProcessor;
 import com.dotmarketing.util.UtilMethods;
 import io.vavr.control.Try;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +43,7 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
 
     @Override
     public String getName() {
-        return "OpenAI Embeddings";
+        return "AI Embeddings";
     }
 
     @Override
@@ -67,58 +65,46 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
         final String updateOrDelete = "DELETE".equalsIgnoreCase(params.get(DOT_EMBEDDING_ACTION).getValue()) ? "DELETE" : "INSERT";
         final Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), false)).getOrNull();
         final String indexName = UtilMethods.isSet(params.get(DOT_EMBEDDING_INDEX).getValue()) ? params.get(DOT_EMBEDDING_INDEX).getValue() : "default";
-        HttpServletRequest request = HttpServletRequestThreadLocal.INSTANCE.getRequest();
-        if (request == null) {
-            return;
-        }
-
-        final List<Optional<Field>> fields = parseTypesAndFields(params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
-
-        if (fields.isEmpty()) {
-            return;
-        }
 
 
-        for (Optional<Field> field : fields) {
-            EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, field, indexName);
-        }
+        final Map<String, List<Field>> typesAndfields = parseTypesAndFields(params.get(DOT_EMBEDDING_TYPES_FIELDS).getValue());
 
+        List<Field> fields = typesAndfields.getOrDefault(type.variable(), List.of());
+        
+        EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, fields, indexName);
 
     }
 
 
-    private List<Optional<Field>> parseTypesAndFields(final String typeAndFieldParam) {
+    private Map<String, List<Field>> parseTypesAndFields(final String typeAndFieldParam) {
 
         if (UtilMethods.isEmpty(typeAndFieldParam)) {
-            return List.of();
+            return Map.of();
         }
 
 
-        final Map<String, List<Optional<Field>>> typesAndFields = new HashMap<>();
+        final Map<String, List<Field>> typesAndFields = new HashMap<>();
         final String[] typeFieldArr = typeAndFieldParam.trim().split("\\r?\\n");
-        List<Optional<Field>> fields = List.of();
+
         for (String typeField : typeFieldArr) {
             String[] typeOptField = typeField.trim().split("\\.");
             Optional<ContentType> type = Try.of(() -> APILocator.getContentTypeAPI(APILocator.systemUser()).find(typeOptField[0])).toJavaOptional();
             if (type.isEmpty()) {
                 continue;
             }
-            fields = typesAndFields.getOrDefault(type.get().variable(), new ArrayList<>());
+            List<Field> fields = typesAndFields.getOrDefault(type.get().variable(), new ArrayList<>());
 
-            if (typeOptField.length > 1) {
-                Optional<Field> field = Try.of(() -> type.get().fieldMap().get(typeOptField[1])).toJavaOptional();
-                if (field.isPresent()) {
-                    fields.add(field);
-                }
-            } else {
-                fields.add(Optional.empty());
+            Optional<Field> field = Try.of(() -> type.get().fieldMap().get(typeOptField[1])).toJavaOptional();
+            if (field.isPresent()) {
+                fields.add(field.get());
             }
+
             typesAndFields.put(type.get().variable(), fields);
 
         }
 
 
-        return fields;
+        return typesAndFields;
     }
 
 

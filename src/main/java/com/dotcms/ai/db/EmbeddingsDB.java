@@ -12,8 +12,10 @@ import com.pgvector.PGvector;
 import io.vavr.Lazy;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import org.apache.commons.lang3.ArrayUtils;
 
+import javax.validation.constraints.NotNull;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -85,33 +87,59 @@ public class EmbeddingsDB {
         }
     }
 
+    /**
+     * Adds the PGvector type to the SQLConnection
+     * so it can be used and queried against
+     * @return
+     * @throws SQLException
+     */
     private Connection getPGVectorConnection() throws SQLException {
         Connection conn = DbConnectionFactory.getDataSource().getConnection();
         PGvector.addVectorType(conn);
         return conn;
     }
 
-    public Tuple2<Integer, List<Float>> searchExistingEmbeddings(String extractedText) {
+    public Tuple3<String,Integer, List<Float>> searchExistingEmbeddings(String extractedText) {
         try (Connection conn = getPGVectorConnection(); PreparedStatement statement = conn.prepareStatement(EmbeddingsSQL.SELECT_EMBEDDING_BY_TEXT_HASH)) {
             String hash = hashText(extractedText);
             statement.setObject(1, hash);
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
                 int tokenCount = rs.getInt("token_count");
+                String indexName = rs.getString("index_name");
                 float[] vector = rs.getObject("embeddings", PGvector.class).toArray();
                 List<Float> list = Arrays.asList(ArrayUtils.toObject(vector));
-                return Tuple.of(tokenCount, list);
+                return Tuple.of(indexName,tokenCount, list);
             }
-            return Tuple.of(0, List.of());
+            return Tuple.of("n/a",0, List.of());
 
 
         } catch (SQLException e) {
             throw new DotRuntimeException(e);
         }
+    }
+    public boolean embeddingExists(String inode, String indexName, String extractedText) {
+        try (Connection conn = getPGVectorConnection(); PreparedStatement statement = conn.prepareStatement(EmbeddingsSQL.SELECT_EMBEDDING_BY_TEXT_HASH_INODE_AND_INDEX)) {
+            String hash = hashText(extractedText);
+            statement.setObject(1, hash);
+            statement.setObject(2, inode);
+            statement.setObject(3, indexName);
+            ResultSet rs = statement.executeQuery();
+            while (rs.next()) {
+                return true;
+            }
+            return false;
 
+
+        } catch (SQLException e) {
+            throw new DotRuntimeException(e);
+        }
     }
 
-    public String hashText(String text) {
+
+
+
+    public String hashText(@NotNull String text) {
 
         return Hashing.sha256()
                 .hashString(text, StandardCharsets.UTF_8)
@@ -119,6 +147,7 @@ public class EmbeddingsDB {
     }
 
     public void saveEmbeddings(EmbeddingsDTO embeddings) {
+        Logger.info(EmbeddingsDB.class, "Saving embeddings for content:" + embeddings.title);
 
         PGvector vector = new PGvector(ArrayUtils.toPrimitive(embeddings.embeddings));
         try (Connection conn = getPGVectorConnection();
@@ -128,8 +157,7 @@ public class EmbeddingsDB {
             statement.setObject(++i, embeddings.inode);
             statement.setObject(++i, embeddings.identifier);
             statement.setObject(++i, embeddings.language);
-            statement.setObject(++i, embeddings.contentType);
-            statement.setObject(++i, embeddings.field);
+            statement.setObject(++i, embeddings.contentType[0]);
             statement.setObject(++i, embeddings.title);
             statement.setObject(++i, embeddings.extractedText);
             statement.setObject(++i, hashText(embeddings.extractedText));
@@ -178,7 +206,6 @@ public class EmbeddingsDB {
                 float distance = rs.getFloat("distance");
                 EmbeddingsDTO conEmbed = new EmbeddingsDTO.Builder()
                         .withContentType(rs.getString("content_type"))
-                        .withField(rs.getString("field_var"))
                         .withIdentifier(rs.getString("identifier"))
                         .withInode(rs.getString("inode"))
                         .withTitle(rs.getString("title"))
@@ -217,19 +244,27 @@ public class EmbeddingsDB {
             }
         }
 
+        if (UtilMethods.isSet(dto.excludeInodes)) {
+            for (String id : dto.excludeInodes) {
+                sql.append(" and inode <> ? ");
+                params.add(id);
+            }
+        }
 
         if (dto.language > 0) {
             sql.append(" and language=? ");
             params.add(dto.language);
         }
-        if (UtilMethods.isSet(dto.contentType)) {
-            sql.append(" and lower(content_type)=lower(?) ");
-            params.add(dto.contentType);
+
+        if (UtilMethods.isSet(dto.contentType) && dto.contentType.length > 0) {
+            sql.append(" and ( false ") ;
+            for(String contentType : dto.contentType){
+                sql.append(" OR lower(content_type)=lower(?)");
+                params.add(contentType);
+            }
+            sql.append(") ") ;
         }
-        if (UtilMethods.isSet(dto.field)) {
-            sql.append(" and lower(field_var)=lower(?) ");
-            params.add(dto.field);
-        }
+
         if (UtilMethods.isSet(dto.host)) {
             sql.append(" and host=? ");
             params.add(dto.host);
@@ -308,7 +343,7 @@ public class EmbeddingsDB {
             Map<String, Map<String, Long>> results = new TreeMap<>();
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
-                results.put(rs.getString("index_name"), Map.of("fragments", rs.getLong("embeddings"), "contents", rs.getLong("contents"), "tokenTotal", rs.getLong("token_total")));
+                results.put(rs.getString("index_name"), Map.of("fragments", rs.getLong("embeddings"), "contents", rs.getLong("contents"), "tokenTotal", rs.getLong("token_total"), "tokensPerChunk", rs.getLong("token_per_chunk")));
             }
             return results;
         } catch (SQLException e) {

@@ -29,7 +29,8 @@ const refreshIndexes = async () => {
                 entry.name = key;
                 entry.contents = value.contents;
                 entry.fragments = value.fragments;
-                entry.tokenTotal = value.tokenTotal
+                entry.tokenTotal = value.tokenTotal;
+                entry.tokensPerChunk=value.tokensPerChunk;
                 dotAiState.indexes.push(entry);
 
             }
@@ -48,7 +49,6 @@ const refreshConfigs = async () => {
                 entity[key] = value
             }
             dotAiState.config = entity;
-
         });
 };
 
@@ -68,30 +68,78 @@ const refreshTypesAndFields = async () => {
         })
 };
 
+const reinitializeDatabase = async () => {
+    if(!confirm("Are you sure you want to recreate the whole db?  You will lose all saved embeddings.")){
+        return;
+    }
+    const contentTypes = [];
+
+    await fetch("/api/v1/ai/embeddings/db", {
+        method: 'DELETE',
+        headers: {
+            'Content-type': 'application/json'
+        }} )
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("indexingMessages").innerHTML="DB dropped/created:" + data.created;
+            setTimeout(tab2, 4000);
+        });
+
+
+
+
+};
+
 const writeIndexesToDropdowns = async () => {
     const indexName = document.getElementById("indexNameChat");
     let options = indexName.getElementsByTagName('option');
 
-    console.log("options", options)
+    //console.log("options", options)
     for (i = 1; i < options.length; i++) {
         indexName.removeChild(options[i]);
     }
 
     for (i = 0; i < dotAiState.indexes.length; i++) {
-
+        if(dotAiState.indexes[i].name==="cache"){
+            continue;
+        }
         const newOption = document.createElement("option");
         newOption.value = dotAiState.indexes[i].name;
-        newOption.text = `${dotAiState.indexes[i].name}   - (content:${dotAiState.indexes[i].contents}, fragments:${dotAiState.indexes[i].fragments})`
+        newOption.text = `${dotAiState.indexes[i].name}   - (contents:${dotAiState.indexes[i].contents})`
 
         indexName.appendChild(newOption);
     }
 };
 
+const writeModelToDropdown = async () => {
+    const modelName = document.getElementById("modelName");
+    let options = modelName.getElementsByTagName('option');
+
+    for (i = 1; i < options.length; i++) {
+        indexName.removeChild(options[i]);
+    }
+
+    for (i = 0; i < dotAiState.config.availableModels.length; i++) {
+
+        const newOption = document.createElement("option");
+        newOption.value = dotAiState.config.availableModels[i];
+        newOption.text = `${dotAiState.config.availableModels[i]}`
+        if(dotAiState.config.availableModels[i]===dotAiState.config.model){
+            newOption.selected=true;
+            newOption.text = `${dotAiState.config.availableModels[i]} (default)`
+        }
+
+
+        modelName.appendChild(newOption);
+    }
+};
+
+
 
 const writeConfigTable = async () => {
 
     const configTable = document.getElementById("configTable")
-    console.log("config", dotAiState.config)
+    //console.log("config", dotAiState.config)
 
     configTable.innerHTML = "";
 
@@ -102,6 +150,7 @@ const writeConfigTable = async () => {
     for (const [key, value] of Object.entries(dotAiState.config)) {
         //console.log(key)
         const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid #eeeeee"
         const th = document.createElement("th");
         th.className = "propTh";
         const td = document.createElement("td");
@@ -116,9 +165,10 @@ const writeConfigTable = async () => {
     }
 
 };
+
 const writeIndexManagementTable = async () => {
     const indexTable = document.getElementById("indexManageTable")
-
+    const oldChunks = dotAiState.numberOfChunks!==undefined ? dotAiState.numberOfChunks : 0;
     indexTable.innerHTML = "";
 
     let tr = document.createElement("tr");
@@ -130,53 +180,102 @@ const writeIndexManagementTable = async () => {
     let td3 = document.createElement("th");
     let td4 = document.createElement("th");
     let td5 = document.createElement("th");
+    let td6 = document.createElement("th");
 
     td1.className = "hTable"
     td2.className = "hTable"
     td3.className = "hTable"
     td4.className = "hTable"
     td5.className = "hTable"
+    td6.className = "hTable"
 
     td1.innerHTML = "Index"
     td2.innerHTML = "Chunks"
     td3.innerHTML = "Content"
     td4.innerHTML = "Tokens"
-    td5.innerHTML = ""
+    td5.innerHTML = "Tokens per Chunk"
+
 
     tr.append(td1);
     tr.append(td2);
     tr.append(td3);
     tr.append(td4);
     tr.append(td5);
+    tr.append(td6);
 
     indexTable.append(tr)
+    let newChunks=0;
 
     dotAiState.indexes.map(row => {
-        //console.log("row", row)
+       //console.log("row", row)
+        newChunks+=row.fragments;
+
+        const cost = row.name==='cache' ? "(~$" + ((parseInt(row.tokenTotal)/1000) * 0.0001).toFixed(2).toLocaleString() + ")" : "";
+
+
 
         tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid #eeeeee"
         td1 = document.createElement("td");
+        td1.style.textAlign="center";
+        td1.style.fontWeight="bold";
         td2 = document.createElement("td");
+        td2.style.textAlign="center";
         td3 = document.createElement("td");
+        td3.style.textAlign="center";
         td4 = document.createElement("td");
+        td4.style.textAlign="center";
         td5 = document.createElement("td");
+        td5.style.textAlign="center";
+        td6 = document.createElement("td");
+        td6.style.textAlign="center";
         td1.innerHTML = row.name;
-        td2.innerHTML = row.fragments;
+        td2.innerHTML = row.fragments.toLocaleString();
         td3.innerHTML = row.contents;
-        td4.innerHTML = row.tokenTotal;
-        td5.innerHTML = `<a href="#" onclick="doDeleteIndex('${row.name}')">delete</a>`
+        td4.innerHTML = `${row.tokenTotal.toLocaleString()} ${cost}`;
+        td4.style.whiteSpace="nowrap"
+        td5.innerHTML = row.tokensPerChunk.toLocaleString();
+        td6.innerHTML = `<a href="#" onclick="doDeleteIndex('${row.name}')">delete</a>`
+
         tr.append(td1);
         tr.append(td2);
         tr.append(td3);
         tr.append(td4);
         tr.append(td5);
+        tr.append(td6);
         indexTable.append(tr)
     })
+
+
+    tr = document.createElement("tr");
+    td1 = document.createElement("td");
+    td1.id="indexingMessages"
+    td1.colSpan=5
+    tr.append(td1);
+    td1 = document.createElement("td");
+    td1.style.textAlign="center";
+    td1.colSpan=1;
+    td1.innerHTML=`<a href="#" onclick="reinitializeDatabase()">rebuild db</a>`;
+    tr.append(td1);
+    indexTable.append(tr)
+
+    dotAiState.numberOfChunks=newChunks;
+    if(newChunks !== oldChunks){
+        //console.log("reloading: newChunks:" + newChunks + " oldChunks:" +  oldChunks)
+        setTimeout(   ()=> {
+            refreshIndexes()
+                .then(() => {
+                    writeIndexManagementTable();
+                })
+        }, 5000);
+    }
+
 
 }
 
 
 window.addEventListener('load', function () {
+    setUpValuesFromPreferences();
     refreshIndexes()
         .then(() => {
             writeIndexesToDropdowns();
@@ -185,6 +284,10 @@ window.addEventListener('load', function () {
 
     refreshConfigs().then(() => {
         writeConfigTable();
+        writeModelToDropdown();
+        if(dotAiState.config["apiKey"]!="*****"){
+            document.getElementById("openAIKeyWarn").style.display="block";
+        }
     });
     showResultTables();
 });
@@ -213,9 +316,95 @@ const tab3 = () => {
     refreshConfigs().then(() => {
         writeConfigTable();
     });
+};
 
+const preferences = () => {
+    const prefString = localStorage.getItem("com.dotcms.ai.settings") !== null ? localStorage.getItem("com.dotcms.ai.settings") : "{}";
+    //console.log("loading prefs:", JSON.stringify(prefString))
+    return JSON.parse(prefString)
 
 };
+
+const savePreferences = (prefs) => {
+
+    //console.log("saving prefs:", JSON.stringify(prefs))
+    return localStorage.setItem("com.dotcms.ai.settings", JSON.stringify(prefs)) ;
+};
+
+const toggleAdvancedSearchOptionsTable =() =>{
+    const showingAdvanced = document.getElementById("advancedSearchOptionsTable").style.display;
+    if(showingAdvanced==="none"){
+        document.getElementById("advancedSearchOptionsTable").style.display="block"
+        document.getElementById("showAdvancedArrow").className+=" rotated"
+    }else{
+        document.getElementById("advancedSearchOptionsTable").style.display="none"
+        document.getElementById("showAdvancedArrow").className = document.getElementById("showAdvancedArrow").className.replaceAll(" rotated", "");
+    }
+
+    const prefs = preferences();
+    prefs.showAdvancedSearchOptionsTable=showingAdvanced==="none"
+    savePreferences(prefs);
+
+
+}
+
+const toggleWhatToEmbedTable =() =>{
+    const showingAdvanced = document.getElementById("whatToEmbedTable").style.display;
+    if(showingAdvanced==="none"){
+        document.getElementById("whatToEmbedTable").style.display="block"
+        document.getElementById("showOptionalEmbeddingsArrow").className+=" rotated"
+    }else{
+        document.getElementById("whatToEmbedTable").style.display="none"
+        document.getElementById("showOptionalEmbeddingsArrow").className = document.getElementById("showOptionalEmbeddingsArrow").className.replaceAll(" rotated", "");
+    }
+    const prefs = preferences();
+    prefs.showWhatToEmbedTable=showingAdvanced==="none"
+    savePreferences(prefs);
+}
+
+const clearPrompt =(idToClear) => {
+    document.getElementById(idToClear).value="";
+    const prefs = preferences();
+    prefs[idToClear]=null;
+    savePreferences(prefs);
+    showClearPrompt(idToClear);
+}
+
+const showClearPrompt =(idToClear) => {
+    if(document.getElementById(idToClear).value && document.getElementById(idToClear).value !== ""){
+        document.getElementById(idToClear + "X").style.visibility="";
+    }else{
+        document.getElementById(idToClear + "X").style.visibility="hidden";
+    }
+}
+
+
+
+const setUpValuesFromPreferences =() =>{
+    const prefs = preferences();
+
+    if(prefs.showWhatToEmbedTable && prefs.showWhatToEmbedTable !== false){
+        toggleWhatToEmbedTable();
+    }
+
+    if(prefs.showAdvancedSearchOptionsTable && prefs.showAdvancedSearchOptionsTable !== false){
+        toggleAdvancedSearchOptionsTable();
+    }
+
+
+    const textAreas = ["searchQuery","contentQuery","velocityTemplate"];
+    for (i = 0; i < textAreas.length; i++) {
+        const field = textAreas[i];
+        if (prefs[field] && prefs[field] !== undefined && prefs[field] !== null) {
+            document.getElementById(field).value = prefs[field];
+        }
+        showClearPrompt(textAreas[i])
+    }
+
+
+
+}
+
 
 
 const showResultTables = () => {
@@ -224,15 +413,24 @@ const showResultTables = () => {
         document.getElementById("answerChat").style.display = "none";
         document.getElementById("semanticSearchResults").style.display = "block";
     } else {
-        document.getElementById("answerChat").placeholder = "Current Prompt: \n\n" + dotAiState.config["com.dotcms.ai.completion.text.prompt"]
+        const prompt = "Current Prompt: \n\n" + dotAiState.config["com.dotcms.ai.completion.text.prompt"];
+        document.getElementById("answerChat").placeholder = prompt.replaceAll('\\n', '\n').replaceAll("\\\"", "\"")
         document.getElementById("answerChat").style.display = "block";
         document.getElementById("semanticSearchResults").style.display = "none";
     }
 
 }
 
+const doSearchChatJson = () => {
+    document.getElementById("submitChat").style.display = "none";
+    document.getElementById("loaderChat").style.display = "block";
+    setTimeout(function () {
+        doSearchChatJsonDebounced();
+    }, 500);
+}
 
-const doSearchChatJson = async (callback) => {
+
+const doSearchChatJsonDebounced = async () => {
 
     const formDataRaw = new FormData(document.getElementById("chatForm"))
     const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
@@ -245,11 +443,22 @@ const doSearchChatJson = async (callback) => {
     delete formData.responseType;
     if (formData.prompt == undefined || formData.prompt.trim().length == 0) {
         alert("please enter a query/prompt");
+        document.getElementById("submitChat").style.display = "";
+        document.getElementById("loaderChat").style.display = "none";
         return;
     }
 
-    document.getElementById("submitChat").style.display = "none";
-    document.getElementById("loaderChat").style.display = "block";
+    const prefs = preferences();
+    prefs.searchQuery=formData.prompt.trim();
+
+    prefs.lastIndex=formData.indexName.trim();
+
+
+
+    savePreferences(prefs);
+
+
+
 
 
     if (responseType === "search") {
@@ -298,7 +507,11 @@ const doBuildIndex = async () => {
         alert("Query is required");
         return;
     }
-
+    const prefs = preferences();
+    prefs.lastIndex=formData.indexName.trim();
+    prefs.contentQuery=formData.query.trim()
+    prefs.velocityTemplate=formData.velocityTemplate.trim()
+    savePreferences(prefs);
 
     //console.log("formData", formData)
     const response = await fetch('/api/v1/ai/embeddings', {
@@ -307,7 +520,7 @@ const doBuildIndex = async () => {
         }
     }).then(response => response.json())
         .then(data => {
-            document.getElementById("buildResponse").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
+            document.getElementById("indexingMessages").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
             setTimeout(clearIndexMessage, 5000);
 
         });
@@ -315,7 +528,7 @@ const doBuildIndex = async () => {
 
 
 const clearIndexMessage = async () => {
-    document.getElementById("buildResponse").innerHTML = "";
+    document.getElementById("indexingMessages").innerHTML = "";
     refreshIndexes()
         .then(() => {
             writeIndexesToDropdowns();
@@ -345,41 +558,66 @@ const doChatResponse = async (formData) => {
 
     const stream = document.getElementById("streamingResponseType").checked;
 
-    //console.log(JSON.stringify(formData));
     formData.stream = true;
-    const response = await fetch('/api/v1/ai/completions', {
-        method: "POST", body: JSON.stringify(formData), headers: {
-            "Content-Type": "application/json"
+    let line="";
+    let lines =[];
+    try {
+        const response = await fetch('/api/v1/ai/completions', {
+            method: "POST", body: JSON.stringify(formData), headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+
+        document.getElementById("answerChat").value="";
+        // Read the response as a stream of data
+        const reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
+        if (!reader) return;
+
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+                //console.log("got a done:" + done);
+                break;
+            }
+            //console.log(value);
+            lines = (line + value).split('\ndata: ');
+            for (line of lines) {
+
+                line = line.replace(/^data: /, '').trim();
+                if (line.length === 0) continue; // ignore empty message
+                if (line.startsWith(':')) continue; // ignore sse comment message
+
+                if (line === '[DONE]') {
+                    break;
+                }
+                try {
+                    const json = JSON.parse(line);
+                    line="";
+                    const value = json.choices[0].delta.content;
+                    if(value === undefined){
+                        continue;
+                    }
+                    document.getElementById("answerChat").value +=value;
+                }
+                catch (e){
+                    // line is half sent, will append to the next value
+                    console.log("line:" + line);
+                }
+
+
+            };
+
         }
-    });
-    document.getElementById("answerChat").value="";
+    } catch(e) {
 
-    const reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
-
+        console.log("got an error:", e);
+        console.log("line:" + line);
+        console.log("lines:" + lines);
+    }
     resetLoader();
 
-    if (!reader) return;
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-        // eslint-disable-next-line no-await-in-loop
-        const {value, done} = await reader.read();
-        if (done) break;
-        let dataDone = false;
-        const arr = value.split('\n');
-        arr.forEach((data) => {
-            if (data.trim().length === 0) return; // ignore empty message
-            if (data.startsWith(':')) return; // ignore sse comment message
-            if (data === 'data: [DONE]') {
-                dataDone = true;
-                return;
-            }
-
-            const json = JSON.parse(data.substring(6));
-            if (json.choices[0].delta.content == null) return;
-            document.getElementById("answerChat").value += json.choices[0].delta.content;
-        });
-        if (dataDone) break;
-    }
 
 };
 
@@ -392,7 +630,18 @@ const doSearch = async (formData) => {
 
 
     const table = document.createElement("table");
+    table.className="aiSearchResultsTable";
     semanticSearchResults.appendChild(table);
+
+    const truncateString = (str,num) =>{
+        if (str.length <= num) {
+            return str
+        }
+        return str.slice(0, num) + '...'
+
+
+    }
+
 
 
     fetch("/api/v1/ai/search", {
@@ -405,7 +654,7 @@ const doSearch = async (formData) => {
 
             let tr = document.createElement("tr");
             tr.style.fontWeight = "bold";
-            tr.style.textAlign = "left"
+
             let td1 = document.createElement("th");
             let td2 = document.createElement("th");
             let td3 = document.createElement("th");
@@ -425,22 +674,27 @@ const doSearch = async (formData) => {
             tr.append(td2);
             tr.append(td3);
             tr.append(td4);
-
+            tr.style.borderBottom = "1px solid #bbbbbb"
             table.append(tr)
 
 
             data.dotCMSResults.map(row => {
                 //console.log("row", row)
                 tr = document.createElement("tr");
+                tr.style.borderBottom = "1px solid #eeeeee"
                 td1 = document.createElement("td");
+
                 td2 = document.createElement("td");
+                td2.style.textAlign = "center"
                 td3 = document.createElement("td");
+                td3.style.textAlign = "center"
                 td4 = document.createElement("td");
+                td4.style.minWidth = "400px;"
 
                 td1.innerHTML = `<a href="/dotAdmin/#/c/content/${row.inode}" target="_top">${row.title}</a>`;
                 td2.innerHTML = row.matches.length;
                 td3.innerHTML = parseFloat(row.matches[0].distance).toFixed(2);
-                td4.innerHTML = row.matches[0].extractedText;
+                td4.innerHTML = truncateString(row.matches[0].extractedText, 200);
 
                 tr.append(td1);
                 tr.append(td2);
