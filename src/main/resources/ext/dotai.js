@@ -362,6 +362,24 @@ const toggleWhatToEmbedTable =() =>{
     savePreferences(prefs);
 }
 
+const clearPrompt =(idToClear) => {
+    document.getElementById(idToClear).value="";
+    const prefs = preferences();
+    prefs[idToClear]=null;
+    savePreferences(prefs);
+    showClearPrompt(idToClear);
+}
+
+const showClearPrompt =(idToClear) => {
+    if(document.getElementById(idToClear).value && document.getElementById(idToClear).value !== ""){
+        document.getElementById(idToClear + "X").style.visibility="";
+    }else{
+        document.getElementById(idToClear + "X").style.visibility="hidden";
+    }
+}
+
+
+
 const setUpValuesFromPreferences =() =>{
     const prefs = preferences();
 
@@ -372,13 +390,17 @@ const setUpValuesFromPreferences =() =>{
     if(prefs.showAdvancedSearchOptionsTable && prefs.showAdvancedSearchOptionsTable !== false){
         toggleAdvancedSearchOptionsTable();
     }
-    if(prefs.lastPrompt && prefs.lastPrompt !== undefined && prefs.lastPrompt!== null){
-        document.getElementById("searchQuery").value=prefs.lastPrompt;
+
+
+    const textAreas = ["searchQuery","contentQuery","velocityTemplate"];
+    for (i = 0; i < textAreas.length; i++) {
+        const field = textAreas[i];
+        if (prefs[field] && prefs[field] !== undefined && prefs[field] !== null) {
+            document.getElementById(field).value = prefs[field];
+        }
+        showClearPrompt(textAreas[i])
     }
 
-    if(prefs.lastContentQuery && prefs.lastContentQuery !== undefined && prefs.lastContentQuery!== null){
-        document.getElementById("contentQueryTextArea").value=prefs.lastContentQuery;
-    }
 
 
 }
@@ -427,7 +449,7 @@ const doSearchChatJsonDebounced = async () => {
     }
 
     const prefs = preferences();
-    prefs.lastPrompt=formData.prompt.trim();
+    prefs.searchQuery=formData.prompt.trim();
 
     prefs.lastIndex=formData.indexName.trim();
 
@@ -487,7 +509,8 @@ const doBuildIndex = async () => {
     }
     const prefs = preferences();
     prefs.lastIndex=formData.indexName.trim();
-    prefs.lastContentQuery=formData.query.trim()
+    prefs.contentQuery=formData.query.trim()
+    prefs.velocityTemplate=formData.velocityTemplate.trim()
     savePreferences(prefs);
 
     //console.log("formData", formData)

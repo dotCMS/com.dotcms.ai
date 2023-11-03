@@ -96,8 +96,8 @@
                             <th style="width:30%">
                                 <b>Prompt:</b>
                             </th>
-                            <td>
-                            <textarea class="prompt" name="prompt" id="searchQuery"
+                            <td><span class="clearPromptX" id="searchQueryX" onclick="clearPrompt('searchQuery')" style="visibility: hidden">&#10006;</span>
+                                <textarea class="prompt" name="prompt" id="searchQuery" onkeyup="showClearPrompt('searchQuery')"
                                       placeholder="Search text or phrase"></textarea>
                             </td>
                         </tr>
@@ -121,8 +121,7 @@
                     <fieldset style="margin:10px 20px 0px 0px;border-bottom:0px;border-left: 0px;border-right: 0px;">
                         <legend style="background-color:white;font-weight: normal;padding: 10px 20px"
                                 class="button" onclick="toggleAdvancedSearchOptionsTable()">Advanced
-                            &nbsp; <span id="showAdvancedArrow" class="fa fa-chevron-right" style="color: #444444"
-                                         class="fa fa-chevron-right"></span>
+                            &nbsp; <i id="showAdvancedArrow" class="fa fa-chevron-right" style="color: #444444"></i>
                         </legend>
                         <table id="advancedSearchOptionsTable" style="display: none" class="aiSearchResultsTable">
                             <th style="width:30%">
@@ -234,8 +233,8 @@
                             <th style="width:30%">
                                 Content to Index by Query:
                             </th>
-                            <td>
-                                    <textarea class="prompt" name="query" id="contentQueryTextArea"
+                            <td><span class="clearPromptX" id="contentQueryX" onclick="clearPrompt('contentQuery')" style="visibility: hidden">&#10006;</span>
+                                    <textarea class="prompt" name="query" id="contentQuery" onkeyup="showClearPrompt('contentQuery')"
                                               placeholder="e.g. +contentType:blog"></textarea>
                             </td>
                         </tr>
@@ -276,8 +275,8 @@
                                 <th style="width:30%">
                                     Velocity Template to embed:
                                 </th>
-                                <td>
-                                    <textarea class="prompt" name="velocityTemplate"
+                                <td><span class="clearPromptX" id="velocityTemplateX" onclick="clearPrompt('velocityTemplate')" style="visibility:hidden">&#10006;</span>
+                                    <textarea class="prompt" name="velocityTemplate" id="velocityTemplate" onkeyup="showClearPrompt('velocityTemplate')"
                                               placeholder="e.g.&#10;$contentlet.shortDescription&#10;$contentlet.body.toHtml()"></textarea>
                                     <br>
                                     Use velocity to build exactly how you want to embed your content.
