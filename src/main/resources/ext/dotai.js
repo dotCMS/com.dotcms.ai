@@ -31,6 +31,7 @@ const refreshIndexes = async () => {
                 entry.fragments = value.fragments;
                 entry.tokenTotal = value.tokenTotal;
                 entry.tokensPerChunk = value.tokensPerChunk;
+                entry.contentTypes=value.contentTypes!==null && value.contentTypes!=="" ? value.contentTypes.replaceAll(",","\n") : "";
                 dotAiState.indexes.push(entry);
 
             }
@@ -212,6 +213,7 @@ const writeIndexManagementTable = async () => {
         td1 = document.createElement("td");
         td1.style.textAlign = "center";
         td1.style.fontWeight = "bold";
+
         td2 = document.createElement("td");
         td2.style.textAlign = "center";
         td3 = document.createElement("td");
@@ -222,7 +224,7 @@ const writeIndexManagementTable = async () => {
         td5.style.textAlign = "center";
         td6 = document.createElement("td");
         td6.style.textAlign = "center";
-        td1.innerHTML = row.name;
+        td1.innerHTML = `<div title="${row.contentTypes}" style=cursor:pointer;">${row.name}</div>`;
         td2.innerHTML = row.fragments.toLocaleString();
         td3.innerHTML = row.contents;
         td4.innerHTML = `${row.tokenTotal.toLocaleString()} ${cost}`;

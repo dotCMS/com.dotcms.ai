@@ -303,7 +303,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     }
 
     @Override
-    public Map<String, Map<String, Long>> countEmbeddingsByIndex() {
+    public Map<String, Map<String, Object>> countEmbeddingsByIndex() {
         return EmbeddingsDB.impl.get().countEmbeddingsByIndex();
 
     }

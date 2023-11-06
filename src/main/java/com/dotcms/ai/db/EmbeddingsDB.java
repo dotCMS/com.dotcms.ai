@@ -334,16 +334,24 @@ public class EmbeddingsDB {
 
     }
 
-    public Map<String, Map<String, Long>> countEmbeddingsByIndex() {
+    public Map<String, Map<String, Object>> countEmbeddingsByIndex() {
         StringBuilder sql = new StringBuilder(EmbeddingsSQL.COUNT_EMBEDDINGS_BY_INDEX);
 
         try (Connection conn = getPGVectorConnection();
              PreparedStatement statement = conn.prepareStatement(sql.toString())) {
 
-            Map<String, Map<String, Long>> results = new TreeMap<>();
+            Map<String, Map<String, Object>> results = new TreeMap<>();
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
-                results.put(rs.getString("index_name"), Map.of("fragments", rs.getLong("embeddings"), "contents", rs.getLong("contents"), "tokenTotal", rs.getLong("token_total"), "tokensPerChunk", rs.getLong("token_per_chunk")));
+                results.put(
+                        rs.getString("index_name"),
+                        Map.of(
+                            "fragments", rs.getLong("embeddings"),
+                            "contents", rs.getLong("contents"),
+                            "tokenTotal", rs.getLong("token_total"),
+                            "tokensPerChunk", rs.getLong("token_per_chunk"),
+                            "contentTypes", rs.getString("content_types")
+                        ));
             }
             return results;
         } catch (SQLException e) {
