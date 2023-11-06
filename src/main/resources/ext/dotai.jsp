@@ -121,7 +121,7 @@
                     <fieldset style="margin:10px 20px 0px 0px;border-bottom:0px;border-left: 0px;border-right: 0px;">
                         <legend style="background-color:white;font-weight: normal;padding: 10px 20px"
                                 class="button" onclick="toggleAdvancedSearchOptionsTable()">Advanced
-                            &nbsp; <i id="showAdvancedArrow" class="fa fa-chevron-right" style="color: #444444"></i>
+                            &nbsp; <i id="showAdvancedArrow" class="fa fa-chevron-right aiChevron"></i>
                         </legend>
                         <table id="advancedSearchOptionsTable" style="display: none" class="aiSearchResultsTable">
                             <th style="width:30%">
@@ -257,8 +257,8 @@
                     <fieldset style="margin:20px 20px 20px 0px;border-bottom:0px;border-left: 0px;border-right: 0px;">
                         <legend style="background-color:rgba(0, 0, 0, 0); padding: 10px 20px;font-weight: normal"
                                 class="button" onclick="toggleWhatToEmbedTable()">Advanced
-                            &nbsp; <span id="showOptionalEmbeddingsArrow" style="color: #444444"
-                                         class="fa fa-chevron-right"></span>
+                            &nbsp; <span id="showOptionalEmbeddingsArrow"
+                                         class="fa fa-chevron-right aiChevron"></span>
                         </legend>
                         <table style="width:100%;display: none" id="whatToEmbedTable">
                             <tr>

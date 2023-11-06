@@ -14,7 +14,7 @@ public enum AppKeys {
     COMPLETION_MODEL("com.dotcms.ai.completion.model", "gpt-3.5-turbo-16k"),
     COMPLETION_TEMPERATURE("com.dotcms.ai.completion.default.temperature", "1"),
     COMPLETION_ROLE_PROMPT("com.dotcms.ai.completion.role.prompt",
-            "You are a helpful assistant that uses a descriptive writing style."),
+            "You are a helpful assistant with a descriptive writing style."),
     COMPLETION_TEXT_PROMPT("com.dotcms.ai.completion.text.prompt", "Answer this question\\n\\\"$!{prompt}?\\\"\\n\\nby using only the information in the following text:\\n\"\"\"\\n$!{supportingContent} \\n\"\"\"\\n"),
     EMBEDDINGS_MODEL("com.dotcms.ai.embeddings.model", "text-embedding-ada-002"),
     EMBEDDINGS_SPLIT_AT_TOKENS("com.dotcms.ai.embeddings.split.at.tokens", "512"),
