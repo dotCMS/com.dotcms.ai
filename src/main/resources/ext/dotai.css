@@ -391,7 +391,7 @@ select:focus {
 .aiChevron{
     border:0px solid green;
     display: inline-block;
-    color: #9D9D9D;
+    color: #666666;
 
 }
 .prompt {
