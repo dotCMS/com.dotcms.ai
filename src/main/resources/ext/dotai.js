@@ -2,7 +2,7 @@ const changeTabs = async () => {
     let ele = document.getElementsByName('tab-group');
     for (i = 0; i < ele.length; i++) {
         document.getElementById('content-' + (i + 1)).style.display = ele[i].checked ? "block" : "none";
-        document.getElementById('content-' + (i + 1)).className = ele[i].checked  ? + " dijitTabChecked" : "";
+        document.getElementById('content-' + (i + 1)).className = ele[i].checked ? +" dijitTabChecked" : "";
 
     }
     if (ele[0].checked) {
@@ -30,13 +30,14 @@ const refreshIndexes = async () => {
                 entry.contents = value.contents;
                 entry.fragments = value.fragments;
                 entry.tokenTotal = value.tokenTotal;
-                entry.tokensPerChunk=value.tokensPerChunk;
+                entry.tokensPerChunk = value.tokensPerChunk;
                 dotAiState.indexes.push(entry);
 
             }
         })
 
 };
+
 
 const refreshConfigs = async () => {
     dotAiState.config = {};
@@ -51,6 +52,7 @@ const refreshConfigs = async () => {
             dotAiState.config = entity;
         });
 };
+
 
 const refreshTypesAndFields = async () => {
     const contentTypes = [];
@@ -68,8 +70,9 @@ const refreshTypesAndFields = async () => {
         })
 };
 
+
 const reinitializeDatabase = async () => {
-    if(!confirm("Are you sure you want to recreate the whole db?  You will lose all saved embeddings.")){
+    if (!confirm("Are you sure you want to recreate the whole db?  You will lose all saved embeddings.")) {
         return;
     }
     const contentTypes = [];
@@ -78,17 +81,15 @@ const reinitializeDatabase = async () => {
         method: 'DELETE',
         headers: {
             'Content-type': 'application/json'
-        }} )
+        }
+    })
         .then(response => response.json())
         .then(data => {
-            document.getElementById("indexingMessages").innerHTML="DB dropped/created:" + data.created;
+            document.getElementById("indexingMessages").innerHTML = "DB dropped/created:" + data.created;
             setTimeout(tab2, 4000);
         });
-
-
-
-
 };
+
 
 const writeIndexesToDropdowns = async () => {
     const indexName = document.getElementById("indexNameChat");
@@ -100,7 +101,7 @@ const writeIndexesToDropdowns = async () => {
     }
 
     for (i = 0; i < dotAiState.indexes.length; i++) {
-        if(dotAiState.indexes[i].name==="cache"){
+        if (dotAiState.indexes[i].name === "cache") {
             continue;
         }
         const newOption = document.createElement("option");
@@ -110,6 +111,7 @@ const writeIndexesToDropdowns = async () => {
         indexName.appendChild(newOption);
     }
 };
+
 
 const writeModelToDropdown = async () => {
     const modelName = document.getElementById("modelName");
@@ -124,16 +126,13 @@ const writeModelToDropdown = async () => {
         const newOption = document.createElement("option");
         newOption.value = dotAiState.config.availableModels[i];
         newOption.text = `${dotAiState.config.availableModels[i]}`
-        if(dotAiState.config.availableModels[i]===dotAiState.config.model){
-            newOption.selected=true;
+        if (dotAiState.config.availableModels[i] === dotAiState.config.model) {
+            newOption.selected = true;
             newOption.text = `${dotAiState.config.availableModels[i]} (default)`
         }
-
-
         modelName.appendChild(newOption);
     }
 };
-
 
 
 const writeConfigTable = async () => {
@@ -160,15 +159,12 @@ const writeConfigTable = async () => {
         tr.appendChild(td);
         th.innerHTML = key;
         td.innerHTML = value;
-
-
     }
-
 };
 
 const writeIndexManagementTable = async () => {
     const indexTable = document.getElementById("indexManageTable")
-    const oldChunks = dotAiState.numberOfChunks!==undefined ? dotAiState.numberOfChunks : 0;
+    const oldChunks = dotAiState.numberOfChunks !== undefined ? dotAiState.numberOfChunks : 0;
     indexTable.innerHTML = "";
 
     let tr = document.createElement("tr");
@@ -204,36 +200,33 @@ const writeIndexManagementTable = async () => {
     tr.append(td6);
 
     indexTable.append(tr)
-    let newChunks=0;
+    let newChunks = 0;
 
     dotAiState.indexes.map(row => {
-       //console.log("row", row)
-        newChunks+=row.fragments;
-
-        const cost = row.name==='cache' ? "(~$" + ((parseInt(row.tokenTotal)/1000) * 0.0001).toFixed(2).toLocaleString() + ")" : "";
-
-
+        //console.log("row", row)
+        newChunks += row.fragments;
+        const cost = row.name === 'cache' ? "(~$" + ((parseInt(row.tokenTotal) / 1000) * 0.0001).toFixed(2).toLocaleString() + ")" : "";
 
         tr = document.createElement("tr");
         tr.style.borderBottom = "1px solid #eeeeee"
         td1 = document.createElement("td");
-        td1.style.textAlign="center";
-        td1.style.fontWeight="bold";
+        td1.style.textAlign = "center";
+        td1.style.fontWeight = "bold";
         td2 = document.createElement("td");
-        td2.style.textAlign="center";
+        td2.style.textAlign = "center";
         td3 = document.createElement("td");
-        td3.style.textAlign="center";
+        td3.style.textAlign = "center";
         td4 = document.createElement("td");
-        td4.style.textAlign="center";
+        td4.style.textAlign = "center";
         td5 = document.createElement("td");
-        td5.style.textAlign="center";
+        td5.style.textAlign = "center";
         td6 = document.createElement("td");
-        td6.style.textAlign="center";
+        td6.style.textAlign = "center";
         td1.innerHTML = row.name;
         td2.innerHTML = row.fragments.toLocaleString();
         td3.innerHTML = row.contents;
         td4.innerHTML = `${row.tokenTotal.toLocaleString()} ${cost}`;
-        td4.style.whiteSpace="nowrap"
+        td4.style.whiteSpace = "nowrap"
         td5.innerHTML = row.tokensPerChunk.toLocaleString();
         td6.innerHTML = `<a href="#" onclick="doDeleteIndex('${row.name}')">delete</a>`
 
@@ -249,28 +242,26 @@ const writeIndexManagementTable = async () => {
 
     tr = document.createElement("tr");
     td1 = document.createElement("td");
-    td1.id="indexingMessages"
-    td1.colSpan=5
+    td1.id = "indexingMessages"
+    td1.colSpan = 5
     tr.append(td1);
     td1 = document.createElement("td");
-    td1.style.textAlign="center";
-    td1.colSpan=1;
-    td1.innerHTML=`<a href="#" onclick="reinitializeDatabase()">rebuild db</a>`;
+    td1.style.textAlign = "center";
+    td1.colSpan = 1;
+    td1.innerHTML = `<a href="#" onclick="reinitializeDatabase()">rebuild db</a>`;
     tr.append(td1);
     indexTable.append(tr)
 
-    dotAiState.numberOfChunks=newChunks;
-    if(newChunks !== oldChunks){
+    dotAiState.numberOfChunks = newChunks;
+    if (newChunks !== oldChunks) {
         //console.log("reloading: newChunks:" + newChunks + " oldChunks:" +  oldChunks)
-        setTimeout(   ()=> {
+        setTimeout(() => {
             refreshIndexes()
                 .then(() => {
                     writeIndexManagementTable();
                 })
         }, 5000);
     }
-
-
 }
 
 
@@ -285,8 +276,8 @@ window.addEventListener('load', function () {
     refreshConfigs().then(() => {
         writeConfigTable();
         writeModelToDropdown();
-        if(dotAiState.config["apiKey"]!="*****"){
-            document.getElementById("openAIKeyWarn").style.display="block";
+        if (dotAiState.config["apiKey"] != "*****") {
+            document.getElementById("openAIKeyWarn").style.display = "block";
         }
     });
     showResultTables();
@@ -328,71 +319,70 @@ const preferences = () => {
 const savePreferences = (prefs) => {
 
     //console.log("saving prefs:", JSON.stringify(prefs))
-    return localStorage.setItem("com.dotcms.ai.settings", JSON.stringify(prefs)) ;
+    return localStorage.setItem("com.dotcms.ai.settings", JSON.stringify(prefs));
 };
 
-const toggleAdvancedSearchOptionsTable =() =>{
+const toggleAdvancedSearchOptionsTable = () => {
     const showingAdvanced = document.getElementById("advancedSearchOptionsTable").style.display;
-    if(showingAdvanced==="none"){
-        document.getElementById("advancedSearchOptionsTable").style.display="block"
-        document.getElementById("showAdvancedArrow").className+=" rotated"
-    }else{
-        document.getElementById("advancedSearchOptionsTable").style.display="none"
+    if (showingAdvanced === "none") {
+        document.getElementById("advancedSearchOptionsTable").style.display = "block"
+        document.getElementById("showAdvancedArrow").className += " rotated"
+    } else {
+        document.getElementById("advancedSearchOptionsTable").style.display = "none"
         document.getElementById("showAdvancedArrow").className = document.getElementById("showAdvancedArrow").className.replaceAll(" rotated", "");
     }
 
     const prefs = preferences();
-    prefs.showAdvancedSearchOptionsTable=showingAdvanced==="none"
+    prefs.showAdvancedSearchOptionsTable = showingAdvanced === "none"
     savePreferences(prefs);
 
 
 }
 
-const toggleWhatToEmbedTable =() =>{
+const toggleWhatToEmbedTable = () => {
     const showingAdvanced = document.getElementById("whatToEmbedTable").style.display;
-    if(showingAdvanced==="none"){
-        document.getElementById("whatToEmbedTable").style.display="block"
-        document.getElementById("showOptionalEmbeddingsArrow").className+=" rotated"
-    }else{
-        document.getElementById("whatToEmbedTable").style.display="none"
+    if (showingAdvanced === "none") {
+        document.getElementById("whatToEmbedTable").style.display = "block"
+        document.getElementById("showOptionalEmbeddingsArrow").className += " rotated"
+    } else {
+        document.getElementById("whatToEmbedTable").style.display = "none"
         document.getElementById("showOptionalEmbeddingsArrow").className = document.getElementById("showOptionalEmbeddingsArrow").className.replaceAll(" rotated", "");
     }
     const prefs = preferences();
-    prefs.showWhatToEmbedTable=showingAdvanced==="none"
+    prefs.showWhatToEmbedTable = showingAdvanced === "none"
     savePreferences(prefs);
 }
 
-const clearPrompt =(idToClear) => {
-    document.getElementById(idToClear).value="";
+const clearPrompt = (idToClear) => {
+    document.getElementById(idToClear).value = "";
     const prefs = preferences();
-    prefs[idToClear]=null;
+    prefs[idToClear] = null;
     savePreferences(prefs);
     showClearPrompt(idToClear);
 }
 
-const showClearPrompt =(idToClear) => {
-    if(document.getElementById(idToClear).value && document.getElementById(idToClear).value !== ""){
-        document.getElementById(idToClear + "X").style.visibility="";
-    }else{
-        document.getElementById(idToClear + "X").style.visibility="hidden";
+const showClearPrompt = (idToClear) => {
+    if (document.getElementById(idToClear).value && document.getElementById(idToClear).value !== "") {
+        document.getElementById(idToClear + "X").style.visibility = "";
+    } else {
+        document.getElementById(idToClear + "X").style.visibility = "hidden";
     }
 }
 
 
-
-const setUpValuesFromPreferences =() =>{
+const setUpValuesFromPreferences = () => {
     const prefs = preferences();
 
-    if(prefs.showWhatToEmbedTable && prefs.showWhatToEmbedTable !== false){
+    if (prefs.showWhatToEmbedTable && prefs.showWhatToEmbedTable !== false) {
         toggleWhatToEmbedTable();
     }
 
-    if(prefs.showAdvancedSearchOptionsTable && prefs.showAdvancedSearchOptionsTable !== false){
+    if (prefs.showAdvancedSearchOptionsTable && prefs.showAdvancedSearchOptionsTable !== false) {
         toggleAdvancedSearchOptionsTable();
     }
 
 
-    const textAreas = ["searchQuery","contentQuery","velocityTemplate"];
+    const textAreas = ["searchQuery", "contentQuery", "velocityTemplate"];
     for (i = 0; i < textAreas.length; i++) {
         const field = textAreas[i];
         if (prefs[field] && prefs[field] !== undefined && prefs[field] !== null) {
@@ -400,11 +390,7 @@ const setUpValuesFromPreferences =() =>{
         }
         showClearPrompt(textAreas[i])
     }
-
-
-
 }
-
 
 
 const showResultTables = () => {
@@ -418,6 +404,12 @@ const showResultTables = () => {
         document.getElementById("answerChat").style.display = "block";
         document.getElementById("semanticSearchResults").style.display = "none";
     }
+
+
+    const prefs = preferences();
+    prefs.showResultsSearching = searching;
+    ;
+    savePreferences(prefs);
 
 }
 
@@ -436,7 +428,7 @@ const doSearchChatJsonDebounced = async () => {
     const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
 
     const prompt = document.getElementById("searchQuery").value;
-    formData.prompt=prompt;
+    formData.prompt = prompt;
 
 
     const responseType = formData.responseType
@@ -449,18 +441,9 @@ const doSearchChatJsonDebounced = async () => {
     }
 
     const prefs = preferences();
-    prefs.searchQuery=formData.prompt.trim();
-
-    prefs.lastIndex=formData.indexName.trim();
-
-
-
+    prefs.searchQuery = formData.prompt.trim();
+    prefs.lastIndex = formData.indexName.trim();
     savePreferences(prefs);
-
-
-
-
-
     if (responseType === "search") {
         doSearch(formData)
 
@@ -470,6 +453,7 @@ const doSearchChatJsonDebounced = async () => {
         return doChatResponse(formData);
     }
 }
+
 
 const doDeleteIndex = async (indexName) => {
     if (!confirm("Are you sure you want to delete " + indexName + "?")) {
@@ -493,6 +477,7 @@ const doDeleteIndex = async (indexName) => {
         });
 }
 
+
 const doBuildIndex = async () => {
 
     const formDataRaw = new FormData(document.getElementById("createUpdateIndex"))
@@ -508,9 +493,9 @@ const doBuildIndex = async () => {
         return;
     }
     const prefs = preferences();
-    prefs.lastIndex=formData.indexName.trim();
-    prefs.contentQuery=formData.query.trim()
-    prefs.velocityTemplate=formData.velocityTemplate.trim()
+    prefs.lastIndex = formData.indexName.trim();
+    prefs.contentQuery = formData.query.trim()
+    prefs.velocityTemplate = formData.velocityTemplate.trim()
     savePreferences(prefs);
 
     //console.log("formData", formData)
@@ -522,7 +507,6 @@ const doBuildIndex = async () => {
         .then(data => {
             document.getElementById("indexingMessages").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
             setTimeout(clearIndexMessage, 5000);
-
         });
 }
 
@@ -534,8 +518,6 @@ const clearIndexMessage = async () => {
             writeIndexesToDropdowns();
             writeIndexManagementTable();
         });
-
-
 }
 
 const doJsonResponse = async (formData) => {
@@ -550,7 +532,6 @@ const doJsonResponse = async (formData) => {
         document.getElementById("answerChat").value = json.openAiResponse.choices[0].message.content + "\n\n------\nJSON Response\n------\n" + JSON.stringify(json, null, 2);
     });
     resetLoader();
-
 }
 
 
@@ -559,24 +540,21 @@ const doChatResponse = async (formData) => {
     const stream = document.getElementById("streamingResponseType").checked;
 
     formData.stream = true;
-    let line="";
-    let lines =[];
+    let line = "";
+    let lines = [];
     try {
         const response = await fetch('/api/v1/ai/completions', {
             method: "POST", body: JSON.stringify(formData), headers: {
                 "Content-Type": "application/json"
             }
         });
-
-
-        document.getElementById("answerChat").value="";
+        document.getElementById("answerChat").value = "";
         // Read the response as a stream of data
         const reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
         if (!reader) return;
 
-
         while (true) {
-            const { value, done } = await reader.read();
+            const {value, done} = await reader.read();
             if (done) {
                 //console.log("got a done:" + done);
                 break;
@@ -594,31 +572,25 @@ const doChatResponse = async (formData) => {
                 }
                 try {
                     const json = JSON.parse(line);
-                    line="";
+                    line = "";
                     const value = json.choices[0].delta.content;
-                    if(value === undefined){
+                    if (value === undefined) {
                         continue;
                     }
-                    document.getElementById("answerChat").value +=value;
-                }
-                catch (e){
+                    document.getElementById("answerChat").value += value;
+                } catch (e) {
                     // line is half sent, will append to the next value
                     console.log("line:" + line);
                 }
-
-
-            };
-
+            }
         }
-    } catch(e) {
+    } catch (e) {
 
         console.log("got an error:", e);
         console.log("line:" + line);
         console.log("lines:" + lines);
     }
     resetLoader();
-
-
 };
 
 
@@ -630,18 +602,15 @@ const doSearch = async (formData) => {
 
 
     const table = document.createElement("table");
-    table.className="aiSearchResultsTable";
+    table.className = "aiSearchResultsTable";
     semanticSearchResults.appendChild(table);
 
-    const truncateString = (str,num) =>{
+    const truncateString = (str, num) => {
         if (str.length <= num) {
             return str
         }
         return str.slice(0, num) + '...'
-
-
     }
-
 
 
     fetch("/api/v1/ai/search", {
@@ -701,17 +670,12 @@ const doSearch = async (formData) => {
                 tr.append(td3);
                 tr.append(td4);
                 table.append(tr)
-
-
             })
             resetLoader()
         })
 };
 
 const resetLoader = () => {
-
     document.getElementById("submitChat").style.display = "";
     document.getElementById("loaderChat").style.display = "none";
-
-
 }

@@ -56,16 +56,6 @@
                         </tr>
                         <tr>
                             <th>
-                                Model:
-                            </th>
-                            <td>
-                                <select name="model" id="modelName" style="min-width:400px;">
-                                    <option disabled="true" placeholder="Select a Model">Select a Model</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>
                                 <label>Response Type:</label>
                             </th>
                             <td>
@@ -118,12 +108,22 @@
 
 
 
-                    <fieldset style="margin:10px 20px 0px 0px;border-bottom:0px;border-left: 0px;border-right: 0px;">
+                    <fieldset style="margin:10px 20px 0px 0px;border-bottom:1px;border-left: 0px;border-right: 0px;">
                         <legend style="background-color:white;font-weight: normal;padding: 10px 20px"
                                 class="button" onclick="toggleAdvancedSearchOptionsTable()">Advanced
                             &nbsp; <i id="showAdvancedArrow" class="fa fa-chevron-right aiChevron"></i>
                         </legend>
                         <table id="advancedSearchOptionsTable" style="display: none" class="aiSearchResultsTable">
+                            <tr>
+                                <th style="width:30%">
+                                    Model:
+                                </th>
+                                <td>
+                                    <select name="model" id="modelName" style="min-width:400px;">
+                                        <option disabled="true" placeholder="Select a Model">Select a Model</option>
+                                    </select>
+                                </td>
+                            </tr>
                             <th style="width:30%">
                                 Temperature:
                             </th>
@@ -158,7 +158,7 @@
                                     <input type="radio" name="operator" id="product" value="product">
                                     <label for="product">Inner Product</label>
                                     <br>
-                                    Search stored embeddings using this operator<br>(probably best to leave it alone).
+                                    Search stored embeddings using this operator<br>(probably best to leave this alone).
                                 </td>
                             </tr>
                             <tr>
@@ -168,7 +168,7 @@
                                 <td>
                                     <input type="number" step="0.05" value=".25" name="threshold" min="0.05" max="100"
                                            style="min-width:100px;"><br>
-                                    the lower this number, the more semantically similar the results
+                                    The lower this number, the more semantically similar the results.
                                 </td>
                             </tr>
 
@@ -178,7 +178,7 @@
                                 </th>
                                 <td>
                                     <input type="text" value="" name="site"><br>
-                                    Site id on which the content lives - leave blank for all
+                                    Limit search to content on this site - leave blank for all.
                                 </td>
                             </tr>
 
@@ -188,7 +188,7 @@
                                 </th>
                                 <td>
                                     <input type="text" value="" name="contentType" id="contentTypeSearch"><br>
-                                    Comma separated list of content types to drive the prompt
+                                    Limit search to these content types - can be a comma separated list.
                                 </td>
                             </tr>
                         </table>
