@@ -358,6 +358,7 @@ select {
     margin-top: -10px;
     border-color: var(--color-palette-primary-op-20);
     border-radius: 0.375rem;
+    width:80%;
 }
 
 select:hover {
@@ -395,9 +396,10 @@ select:focus {
 }
 
 .prompt {
-    width: 400px;
+    max-width: 400px;
     min-height: 100px;
     resize: vertical;
+    width:80%;
 }
 .clearPromptX {
     display: block;
@@ -449,6 +451,7 @@ td {
     width: 100%;
     table-layout: fixed;
     overflow: hidden;
+
 
 }
 

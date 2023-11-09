@@ -86,9 +86,12 @@
                             <th style="width:30%">
                                 <b>Prompt:</b>
                             </th>
-                            <td><span class="clearPromptX" id="searchQueryX" onclick="clearPrompt('searchQuery')" style="visibility: hidden">&#10006;</span>
-                                <textarea class="prompt" name="prompt" id="searchQuery" onkeyup="showClearPrompt('searchQuery')" onchange="showClearPrompt('searchQuery')"
-                                      placeholder="Search text or phrase"></textarea>
+                            <td><span class="clearPromptX" id="searchQueryX" onclick="clearPrompt('searchQuery')"
+                                      style="visibility: hidden">&#10006;</span>
+                                <textarea class="prompt" name="prompt" id="searchQuery"
+                                          onkeyup="showClearPrompt('searchQuery')"
+                                          onchange="showClearPrompt('searchQuery')"
+                                          placeholder="Search text or phrase"></textarea>
                             </td>
                         </tr>
                         <tr>
@@ -105,97 +108,92 @@
                         </tr>
                     </table>
 
+                    <button  class="button dijit dijitReset dijitInline dijitButton"
+                           onclick="toggleAdvancedSearchOptionsTable()">Advanced
+                        &nbsp; <i id="showAdvancedArrow" class="pi pi-chevron-right aiChevron"></i>
+                    </button>
+                    <div style="margin:-20px 0px 25px 0px;border-top:1px solid #eeeeee;"></div>
 
 
-
-                    <fieldset style="margin:10px 20px 0px 0px;border-bottom:1px;border-left: 0px;border-right: 0px;">
-                        <legend style="background-color:white;font-weight: normal;padding: 10px 20px"
-                                class="button" onclick="toggleAdvancedSearchOptionsTable()">Advanced
-                            &nbsp; <i id="showAdvancedArrow" class="pi pi-chevron-right aiChevron"></i>
-                        </legend>
-                        <table id="advancedSearchOptionsTable" style="display: none" class="aiSearchResultsTable">
-                            <tr>
-                                <th style="width:30%">
-                                    Model:
-                                </th>
-                                <td>
-                                    <select name="model" id="modelName" style="min-width:400px;">
-                                        <option disabled="true" placeholder="Select a Model">Select a Model</option>
-                                    </select>
-                                </td>
-                            </tr>
+                    <table id="advancedSearchOptionsTable" style="display: none" class="aiSearchResultsTable">
+                        <tr>
                             <th style="width:30%">
-                                Temperature:
+                                Model:
                             </th>
                             <td>
-                                <input name="temperature" type="number" step="0.1" value="1" min="0" max="2"
-                                       style="min-width:100px;"><br>
-                                (determines the randomness of the response. 0 = deterministic, 2 = most random
+                                <select name="model" id="modelName" style="min-width:400px;">
+                                    <option disabled="true" placeholder="Select a Model">Select a Model</option>
+                                </select>
                             </td>
-                            </tr>
-                            <tr>
-                                <th>
-                                    Response length:
-                                </th>
-                                <td>
-                                    <input type="number" step="1" value="500" min="10" max="2048"
-                                           style="min-width:100px;"
-                                           name="responseLengthTokens" id="responseLengthTokens"><br>
-                                    The general length of response you would like to generate. 75 words ~= 100 tokens
-                                </td>
-                            </tr>
+                        </tr>
+                        <th style="width:30%">
+                            Temperature:
+                        </th>
+                        <td>
+                            <input name="temperature" type="number" step="0.1" value="1" min="0" max="2"
+                                   style="min-width:100px;"><br>
+                            (determines the randomness of the response. 0 = deterministic, 2 = most random
+                        </td>
+                        </tr>
+                        <tr>
+                            <th>
+                                Response length:
+                            </th>
+                            <td>
+                                <input type="number" step="1" value="500" min="10" max="2048"
+                                       style="min-width:100px;"
+                                       name="responseLengthTokens" id="responseLengthTokens"><br>
+                                The general length of response you would like to generate. 75 words ~= 100 tokens
+                            </td>
+                        </tr>
 
-                            <tr>
-                                <th>Vector Operator:</th>
-                                <td>
+                        <tr>
+                            <th>Vector Operator:</th>
+                            <td>
 
-                                    <input type="radio" name="operator" id="cosine" checked="true" value="cosine">
-                                    <label for="cosine">Cosine Similarity</label>
-                                    &nbsp; &nbsp;
-                                    <input type="radio" name="operator" id="distance" value="distance">
-                                    <label for="distance">Distance</label>
-                                    &nbsp; &nbsp;
-                                    <input type="radio" name="operator" id="product" value="product">
-                                    <label for="product">Inner Product</label>
-                                    <br>
-                                    Search stored embeddings using this operator<br>(probably best to leave this alone).
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>
-                                    Distance Threshold:
-                                </th>
-                                <td>
-                                    <input type="number" step="0.05" value=".25" name="threshold" min="0.05" max="100"
-                                           style="min-width:100px;"><br>
-                                    The lower this number, the more semantically similar the results.
-                                </td>
-                            </tr>
+                                <input type="radio" name="operator" id="cosine" checked="true" value="cosine">
+                                <label for="cosine">Cosine Similarity</label>
+                                &nbsp; &nbsp;
+                                <input type="radio" name="operator" id="distance" value="distance">
+                                <label for="distance">Distance</label>
+                                &nbsp; &nbsp;
+                                <input type="radio" name="operator" id="product" value="product">
+                                <label for="product">Inner Product</label>
+                                <br>
+                                Search stored embeddings using this operator<br>(probably best to leave this alone).
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>
+                                Distance Threshold:
+                            </th>
+                            <td>
+                                <input type="number" step="0.05" value=".25" name="threshold" min="0.05" max="100"
+                                       style="min-width:100px;"><br>
+                                The lower this number, the more semantically similar the results.
+                            </td>
+                        </tr>
 
-                            <tr>
-                                <th>
-                                    Site:
-                                </th>
-                                <td>
-                                    <input type="text" value="" name="site"><br>
-                                    Limit search to content on this site - leave blank for all.
-                                </td>
-                            </tr>
+                        <tr>
+                            <th>
+                                Site:
+                            </th>
+                            <td>
+                                <input type="text" value="" name="site"><br>
+                                Limit search to content on this site - leave blank for all.
+                            </td>
+                        </tr>
 
-                            <tr>
-                                <th>
-                                    Content Types:
-                                </th>
-                                <td>
-                                    <input type="text" value="" name="contentType" id="contentTypeSearch"><br>
-                                    Limit search to these content types - can be a comma separated list.
-                                </td>
-                            </tr>
-                        </table>
-                    </fieldset>
-
-
-
+                        <tr>
+                            <th>
+                                Content Types:
+                            </th>
+                            <td>
+                                <input type="text" value="" name="contentType" id="contentTypeSearch"><br>
+                                Limit search to these content types - can be a comma separated list.
+                            </td>
+                        </tr>
+                    </table>
 
                 </form>
             </div>
@@ -233,9 +231,12 @@
                             <th style="width:30%">
                                 Content to Index by Query:
                             </th>
-                            <td><span class="clearPromptX" id="contentQueryX" onclick="clearPrompt('contentQuery')" style="visibility: hidden">&#10006;</span>
-                                    <textarea class="prompt" name="query" id="contentQuery" onkeyup="showClearPrompt('contentQuery')"  onchange="showClearPrompt('contentQuery')"
-                                              placeholder="e.g. +contentType:blog"></textarea>
+                            <td><span class="clearPromptX" id="contentQueryX" onclick="clearPrompt('contentQuery')"
+                                      style="visibility: hidden">&#10006;</span>
+                                <textarea class="prompt" name="query" id="contentQuery"
+                                          onkeyup="showClearPrompt('contentQuery')"
+                                          onchange="showClearPrompt('contentQuery')"
+                                          placeholder="e.g. +contentType:blog"></textarea>
                             </td>
                         </tr>
                     </table>
@@ -252,15 +253,13 @@
                     </table>
 
 
+                    <button  class="button dijit dijitReset dijitInline dijitButton"
+                             onclick="toggleWhatToEmbedTable()">Advanced
+                        &nbsp; <i id="showOptionalEmbeddingsArrow" class="pi pi-chevron-right aiChevron"></i>
+                    </button>
+                    <div style="margin:-20px 0px 25px 0px;border-top:1px solid #eeeeee;"></div>
 
-
-                    <fieldset style="margin:20px 20px 20px 0px;border-bottom:0px;border-left: 0px;border-right: 0px;">
-                        <legend style="background-color:rgba(0, 0, 0, 0); padding: 10px 20px;font-weight: normal"
-                                class="button" onclick="toggleWhatToEmbedTable()">Advanced
-                            &nbsp; <span id="showOptionalEmbeddingsArrow"
-                                         class="pi pi-chevron-right aiChevron"></span>
-                        </legend>
-                        <table style="width:100%;display: none" id="whatToEmbedTable">
+                        <table style="display: none" id="whatToEmbedTable">
                             <tr>
                                 <td colspan="2" style="text-align:justify ">
                                     <b>What To Embed (Optional)</b><br>
@@ -275,8 +274,12 @@
                                 <th style="width:30%">
                                     Velocity Template to embed:
                                 </th>
-                                <td><span class="clearPromptX" id="velocityTemplateX" onclick="clearPrompt('velocityTemplate')" style="visibility:hidden">&#10006;</span>
-                                    <textarea class="prompt" name="velocityTemplate" id="velocityTemplate" onkeyup="showClearPrompt('velocityTemplate')" onchange="showClearPrompt('velocityTemplate')"
+                                <td><span class="clearPromptX" id="velocityTemplateX"
+                                          onclick="clearPrompt('velocityTemplate')"
+                                          style="visibility:hidden">&#10006;</span>
+                                    <textarea class="prompt" name="velocityTemplate" id="velocityTemplate"
+                                              onkeyup="showClearPrompt('velocityTemplate')"
+                                              onchange="showClearPrompt('velocityTemplate')"
                                               placeholder="e.g.&#10;$contentlet.shortDescription&#10;$contentlet.body.toHtml()"></textarea>
                                     <br>
                                     Use velocity to build exactly how you want to embed your content.
@@ -294,7 +297,7 @@
                                 </td>
                             </tr>
                         </table>
-                    </fieldset>
+
                 </form>
                 <div id="buildResponse"></div>
             </div>
