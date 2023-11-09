@@ -7,9 +7,13 @@ import java.util.stream.Collectors;
 
 public enum OpenAIModel {
 
+
+
+
     GPT_3_5_TURBO("gpt-3.5-turbo", 3000, 3500, 4096, true),
     GPT_3_5_TURBO_16k("gpt-3.5-turbo-16k", 180000, 3500, 16384, true),
     GPT_4("gpt-4", 10000, 200, 8191, true),
+    GPT_4_TURBO("gpt-4-1106-preview", 10000, 200, 128000 , true),
     TEXT_EMBEDDING_ADA_002("text-embedding-ada-002", 1000000, 3000, 8191, false);
 
 

@@ -385,15 +385,15 @@ select:focus {
     border-color: var(--color-palette-primary-400);
 }
 
-
-
-
 .aiChevron{
+    padding: 0px;
+    width:12px;
+    height:12px;
     border:0px solid green;
     display: inline-block;
-    color: #666666;
-
+    font-size: .75em;
 }
+
 .prompt {
     width: 400px;
     min-height: 100px;
