@@ -57,7 +57,7 @@ public class EmbeddingsTool implements ViewTool {
         return -1;
     }
 
-    public Map<String, Map<String, Long>> getIndexCount() {
+    public Map<String, Map<String, Object>> getIndexCount() {
         return EmbeddingsAPI.impl().countEmbeddingsByIndex();
     }
 

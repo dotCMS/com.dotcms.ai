@@ -108,26 +108,28 @@ class EmbeddingsSQL {
 
 
     static final String COUNT_EMBEDDINGS_BY_INDEX=
-        "select  \n" +
-        "    embeddings,  \n" +
-        "    index_name,  \n" +
-        "    contents,  \n" +
-        "    token_total  ,\n" +
-        "    token_per_chunk\n" +
-        "from ( \n" +
-        "    select  \n" +
-        "        count(*) as embeddings,  \n" +
-        "        index_name,  \n" +
-        "        count(distinct(inode)) as contents,  \n" +
-        "        sum(token_count) as token_total,\n" +
-        "        avg(token_count) as token_per_chunk  \n" +
-        "    from  \n" +
-        "        dot_embeddings   \n" +
-        "    group by  \n" +
-        "        index_name  \n" +
-        "    order by  \n" +
-        "        index_name  \n" +
-        ") data;";
+        "SELECT  " +
+        "   embeddings,  " +
+        "   index_name,  " +
+        "   contents,  " +
+        "   token_total,  " +
+        "   content_types, " +
+        "   token_per_chunk " +
+        "FROM ( " +
+        "   SELECT  " +
+        "       COUNT(*) as embeddings,  " +
+        "       index_name,  " +
+        "       COUNT(distinct(inode)) as contents,  " +
+        "       SUM(token_count) as token_total, " +
+        "       STRING_AGG (distinct(content_type), ',') content_types, " +
+        "       AVG(token_count) as token_per_chunk  " +
+        "   FROM  " +
+        "       dot_embeddings   " +
+        "   GROUP BY        " +
+        "       index_name  " +
+        "   ORDER BY        " +
+        "       index_name  " +
+        ")  data;";
 
     private EmbeddingsSQL() {
     }

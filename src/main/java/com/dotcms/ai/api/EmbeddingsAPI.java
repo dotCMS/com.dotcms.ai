@@ -41,7 +41,7 @@ public interface EmbeddingsAPI {
 
     long countEmbeddings(EmbeddingsDTO searcher);
 
-    Map<String, Map<String, Long>> countEmbeddingsByIndex();
+    Map<String, Map<String, Object>> countEmbeddingsByIndex();
 
     void dropEmbeddingsTable();
 
