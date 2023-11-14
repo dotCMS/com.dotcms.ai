@@ -2,6 +2,7 @@ package com.dotcms.ai.service;
 
 import com.dotcms.ai.Marshaller;
 import com.dotcms.ai.app.AppConfig;
+import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.interceptor.RequestLoggingInterceptor;
 import com.dotcms.ai.model.AIImageResponseDTO;
 import com.dotcms.ai.model.ChatGptImageRequestDTO;
@@ -73,7 +74,7 @@ public class ChatGPTImageServiceImpl implements ChatGPTImageService{
     }
 
     private ChatGptImageRequestDTO createChatGptImageRequest(String prompt, boolean isRawPrompt) {
-        return new ChatGptImageRequestDTO(prompt, CHAT_GPT_IMAGE_COUNT, CHAT_GPT_IMAGE_SIZE, CHAT_GPT_PROMPT_IMAGE, isRawPrompt);
+        return new ChatGptImageRequestDTO(prompt, CHAT_GPT_IMAGE_COUNT, CHAT_GPT_IMAGE_SIZE, CHAT_GPT_PROMPT_IMAGE, isRawPrompt, ConfigService.INSTANCE.config().getImageModel());
     }
 
     /**

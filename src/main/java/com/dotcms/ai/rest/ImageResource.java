@@ -108,7 +108,7 @@ public class ImageResource {
             try {
 
 
-                file = tempApi.createTempFileFromUrl("ChatGPTImage", request, new URL(resp.getResponse()), 10, 1000);
+                file = tempApi.createTempFileFromUrl("ChatGPTImage", request, new URL(resp.getResponse()), 20, Integer.MAX_VALUE);
                 resp.setResponse(file.id);
             } catch (DotSecurityException e) {
                 resp.setResponse("Unable to create temp file. Error: " + e.getMessage());

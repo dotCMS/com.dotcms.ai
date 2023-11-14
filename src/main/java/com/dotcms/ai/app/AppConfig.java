@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 public class AppConfig implements Serializable {
 
     public final String model;
+    public final String imageModel;
     private final String apiUrl;
     private final String apiImageUrl;
     private final String apiKey;
@@ -33,12 +34,14 @@ public class AppConfig implements Serializable {
         imagePrompt = Try.of(() -> secrets.get(AppKeys.IMAGE_PROMPT.key).getString()).getOrElse(StringPool.BLANK);
         imageSize = Try.of(() -> secrets.get(AppKeys.IMAGE_SIZE.key).getString()).getOrElse(StringPool.BLANK);
         model = Try.of(() -> secrets.get(AppKeys.MODEL.key).getString()).getOrElse(StringPool.BLANK);
+        imageModel = Try.of(() -> secrets.get(AppKeys.IMAGE_MODEL.key).getString()).getOrElse("dall-e-3");
         Logger.debug(this.getClass().getName(), () -> "apiUrl: " + apiUrl);
         Logger.debug(this.getClass().getName(), () -> "apiImageUrl: " + apiImageUrl);
         Logger.debug(this.getClass().getName(), () -> "apiKey: " + apiKey);
         Logger.debug(this.getClass().getName(), () -> "rolePrompt: " + rolePrompt);
         Logger.debug(this.getClass().getName(), () -> "textPrompt: " + textPrompt);
         Logger.debug(this.getClass().getName(), () -> "imagePrompt: " + imagePrompt);
+        Logger.debug(this.getClass().getName(), () -> "imageModel: " + imageModel);
         Logger.debug(this.getClass().getName(), () -> "imageSize: " + imageSize);
         Logger.debug(this.getClass().getName(), () -> "model: " + model);
 
@@ -62,6 +65,7 @@ public class AppConfig implements Serializable {
         return rolePrompt;
     }
 
+    public String getImageModel() {return imageModel;}
 
     public String getTextPrompt() {
         return textPrompt;

@@ -8,9 +8,11 @@ import com.dotcms.ai.rest.EmbeddingsResource;
 import com.dotcms.ai.rest.ImageResource;
 import com.dotcms.ai.rest.SearchResource;
 import com.dotcms.ai.rest.TextResource;
+import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotcms.ai.viewtool.AIToolInfo;
 import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
-import com.dotcms.ai.workflow.OpenAIModifyContentActionlet;
+import com.dotcms.ai.workflow.OpenAIContentPromptActionlet;
+import com.dotcms.ai.workflow.OpenAIGenerateImageActionlet;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotcms.contenttype.model.type.KeyValueContentType;
@@ -58,7 +60,7 @@ public class Activator extends GenericBundleActivator {
             CompletionsResource.class,
             SearchResource.class
     };
-    private final List<WorkFlowActionlet> actionlets = List.of(new DotEmbeddingsActionlet(), new OpenAIModifyContentActionlet());
+    private final List<WorkFlowActionlet> actionlets = List.of(new DotEmbeddingsActionlet(), new OpenAIContentPromptActionlet(), new OpenAIGenerateImageActionlet());
 
     private LoggerContext pluginLoggerContext;
 
@@ -109,7 +111,7 @@ public class Activator extends GenericBundleActivator {
             Logger.info(this.getClass(), "Removing new Restful Service:" + clazz.getSimpleName());
             RestServiceUtil.removeResource(clazz);
         }
-        OpenAIModifyContentActionlet.scheduledExecutorService.shutdown();
+        OpenAIThreadPool.shutdown();
 
         //Unregister all the bundle services
         unregisterServices(context);

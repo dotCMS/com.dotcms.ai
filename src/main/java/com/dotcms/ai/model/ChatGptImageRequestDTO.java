@@ -7,11 +7,11 @@ public class ChatGptImageRequestDTO {
     private String prompt;
     private int n;
     private String size;
-
+    private String model;
     public ChatGptImageRequestDTO() {
     }
 
-    public ChatGptImageRequestDTO(String promptInput, int n, String size, String promptImage, boolean rawPrompt) {
+    public ChatGptImageRequestDTO(String promptInput, int n, String size, String promptImage, boolean rawPrompt, String model) {
         String input = rawPrompt ? promptInput : (promptImage + " " + promptInput);
         if (input.length() > 999) {
             Logger.debug(this.getClass(), "Input prompt truncated. Full input text: " + input);
@@ -20,6 +20,15 @@ public class ChatGptImageRequestDTO {
         this.prompt = input;
         this.n = n;
         this.size = size;
+        this.model=model;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
     }
 
     public String getPrompt() {
@@ -45,5 +54,6 @@ public class ChatGptImageRequestDTO {
     public void setSize(String size) {
         this.size = size;
     }
+
 
 }
