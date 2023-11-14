@@ -23,6 +23,7 @@ import com.dotcms.rest.api.v1.temp.DotTempFile;
 import com.dotcms.rest.api.v1.temp.TempFileAPI;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
+import com.dotmarketing.db.HibernateUtil;
 import com.dotmarketing.db.LocalTransaction;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotRuntimeException;
@@ -51,18 +52,22 @@ public class GenerateImageRunner implements Runnable {
     final long startTime;
     final WorkflowProcessor processor;
     final Map<String, WorkflowActionClassParameter> params;
-
+    final int runDelay;
 
     GenerateImageRunner(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
         this.processor = processor;
         this.params = params;
-        this.startTime = System.currentTimeMillis() + (Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5) * 1000);
+        this.runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
+        this.startTime = System.currentTimeMillis() + (runDelay * 1000);
     }
 
     @Override
     public void run() {
         try {
             LocalTransaction.wrap(this::runInternal);
+            if(runDelay>0){
+                HibernateUtil.commitTransaction();
+            }
         } catch (Throwable e) {
             Logger.warn(this.getClass(), e.getMessage());
             if (ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
@@ -81,9 +86,9 @@ public class GenerateImageRunner implements Runnable {
         }
 
 
-        final Contentlet workingContentlet = processor.getContentlet();
-        //final Contentlet workingContentlet = APILocator.getContentletAPI().findContentletByIdentifier(contentletIn.getIdentifier(), false, contentletIn.getLanguageId(), processor.getUser(), false);
-        final Host host = Try.of(() -> APILocator.getHostAPI().find(workingContentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
+        Contentlet workingContentlet = processor.getContentlet();
+        final Contentlet finalContentlet = workingContentlet;
+        final Host host = Try.of(() -> APILocator.getHostAPI().find(finalContentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
 
 
         final Optional<Field> fieldToWrite = resolveField(params, workingContentlet);
@@ -103,7 +108,7 @@ public class GenerateImageRunner implements Runnable {
             return;
         }
 
-        Optional<Object> fieldVal = Try.of(() -> APILocator.getContentletAPI().getFieldValue(workingContentlet, fieldToWrite.get())).toJavaOptional();
+        Optional<Object> fieldVal = Try.of(() -> APILocator.getContentletAPI().getFieldValue(finalContentlet, fieldToWrite.get())).toJavaOptional();
         if (fieldVal.isPresent() && UtilMethods.isSet(fieldVal.get()) && !overwriteField) {
             Logger.info(OpenAIContentPromptActionlet.class, "field:" + fieldToWrite.get().variable() + "  already set:" + fieldVal.get() + ", returning");
             return;
@@ -139,10 +144,16 @@ public class GenerateImageRunner implements Runnable {
             final TempFileAPI tempApi = APILocator.getTempFileAPI();
             final String url = resp.getResponse();
             DotTempFile tmpFile = tempApi.createTempFileFromUrl(StringUtils.camelCaseLower(workingContentlet.getTitle()) + ".png", requestProxy, new URL(url), 20, Integer.MAX_VALUE);
+            boolean isPublished = APILocator.getVersionableAPI().isLive(workingContentlet);
+
+            if(runDelay>0) {
+                workingContentlet = APILocator.getContentletAPI().findContentletByIdentifier(workingContentlet.getIdentifier(), false, workingContentlet.getLanguageId(), processor.getUser(), false);
+            }
+
             workingContentlet.setProperty(fieldToWrite.get().variable(), tmpFile.file);
             processor.setContentlet(workingContentlet);
 
-            boolean isPublished = APILocator.getVersionableAPI().isLive(workingContentlet);
+
             new SaveContentActionlet().executeAction(processor, Map.of());
             if (isPublished) {
                 new PublishContentActionlet().executeAction(processor, Map.of());

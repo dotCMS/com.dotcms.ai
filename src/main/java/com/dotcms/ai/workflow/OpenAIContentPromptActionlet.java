@@ -4,12 +4,18 @@ import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotmarketing.portlets.workflows.actionlet.WorkFlowActionlet;
+import com.dotmarketing.portlets.workflows.model.MultiKeyValue;
+import com.dotmarketing.portlets.workflows.model.MultiSelectionWorkflowActionletParameter;
+import com.dotmarketing.portlets.workflows.model.MultiValueProvider;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionClassParameter;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionFailureException;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionletParameter;
 import com.dotmarketing.portlets.workflows.model.WorkflowProcessor;
+import com.google.common.collect.ImmutableList;
+import com.liferay.portal.language.LanguageUtil;
 import io.vavr.control.Try;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -20,11 +26,19 @@ public class OpenAIContentPromptActionlet extends WorkFlowActionlet {
     @Override
     public List<WorkflowActionletParameter> getParameters() {
 
+        WorkflowActionletParameter overwriteParameter = new MultiSelectionWorkflowActionletParameter("overwriteField",
+                "Overwrite existing content (true|false)", Boolean.toString(true), true,
+                () -> ImmutableList.of(
+                        new MultiKeyValue(Boolean.toString(false), Boolean.toString(false)),
+                        new MultiKeyValue(Boolean.toString(true), Boolean.toString(true)))
+        );
+
+
         return List.of(
                 new WorkflowActionletParameter("fieldToWrite", "The field where you want to write the results.  " +
                         "<br>If your response is being returned as a json object, this field can be left blank" +
                         "<br>and the keys of the json object will be used to update the content fields.", "", false),
-                new WorkflowActionletParameter("overwriteField", "Overwrite existing content (true|false)", "true", true),
+                overwriteParameter,
                 new WorkflowActionletParameter("openAIPrompt", "The prompt that will be sent to the AI", "We need an attractive search result in Google. Return a json object that includes the fields \"pageTitle\" for a meta title of less than 55 characters and \"metaDescription\" for the meta description of less than 300 characters using this content:\\n\\n${fieldContent}\\n\\n", true),
                 new WorkflowActionletParameter("runDelay", "Update the content asynchronously, after X seconds. O means run in-process", "5", true),
                 new WorkflowActionletParameter("model", "The AI model to use, defaults to " + ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL), ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL), false),

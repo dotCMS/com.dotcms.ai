@@ -11,6 +11,7 @@ import com.dotcms.api.system.event.message.builder.SystemMessageBuilder;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotmarketing.business.APILocator;
+import com.dotmarketing.db.HibernateUtil;
 import com.dotmarketing.db.LocalTransaction;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
@@ -33,6 +34,7 @@ import java.util.Set;
 
 public class ContentPromptRunner implements Runnable {
     final long startTime;
+    final int runDelay;
     final WorkflowProcessor processor;
     final Map<String, WorkflowActionClassParameter> params;
 
@@ -40,7 +42,8 @@ public class ContentPromptRunner implements Runnable {
     ContentPromptRunner(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
         this.processor = processor;
         this.params = params;
-        this.startTime = System.currentTimeMillis() + (Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5) * 1000);
+        this.runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
+        this.startTime = System.currentTimeMillis() + (runDelay * 1000);
     }
 
 
@@ -48,6 +51,9 @@ public class ContentPromptRunner implements Runnable {
     public void run() {
         try {
             LocalTransaction.wrap(this::runInternal);
+            if(runDelay>0){
+                HibernateUtil.commitTransaction();
+            }
         } catch (
                 Throwable e) { //NOSONAR -this catches throwable because if one is thrown, it destroys the whole thread pool.
             Logger.warn(this.getClass(), e.getMessage());
@@ -67,11 +73,11 @@ public class ContentPromptRunner implements Runnable {
         }
 
 
-        final Contentlet contentlet = processor.getContentlet();
-        final ContentType type = contentlet.getContentType();
+        Contentlet workingContentlet = processor.getContentlet();
+        final ContentType type = workingContentlet.getContentType();
+        final Contentlet finalContentlet = workingContentlet;
 
-
-        Logger.info(this.getClass(), "Running OpenAI Modify Content for : " + contentlet.getTitle());
+        Logger.info(this.getClass(), "Running OpenAI Modify Content for : " + workingContentlet.getTitle());
         final boolean overwriteField = Try.of(() -> Boolean.parseBoolean(params.get("overwriteField").getValue())).getOrElse(true);
 
         final Optional<Field> fieldToWrite = Try.of(() -> type.fieldMap().get(params.get("fieldToWrite").getValue())).toJavaOptional();
@@ -86,7 +92,11 @@ public class ContentPromptRunner implements Runnable {
 
             JSONObject tryJson = openAIRequest();
 
-            boolean contentNeedsSaving = setJsonProperties(contentlet, tryJson, overwriteField);
+            if(runDelay>0) {
+                workingContentlet = APILocator.getContentletAPI().findContentletByIdentifier(workingContentlet.getIdentifier(), false, workingContentlet.getLanguageId(), processor.getUser(), false);
+            }
+
+            boolean contentNeedsSaving = setJsonProperties(workingContentlet, tryJson, overwriteField);
 
 
             if (!contentNeedsSaving) {
@@ -94,9 +104,9 @@ public class ContentPromptRunner implements Runnable {
             }
 
 
-            processor.setContentlet(contentlet);
+            processor.setContentlet(workingContentlet);
             if (contentNeedsSaving) {
-                boolean isPublished = APILocator.getVersionableAPI().isLive(contentlet);
+                boolean isPublished = APILocator.getVersionableAPI().isLive(workingContentlet);
                 new SaveContentActionlet().executeAction(processor, Map.of());
                 if (isPublished) {
                     new PublishContentActionlet().executeAction(processor, Map.of());
