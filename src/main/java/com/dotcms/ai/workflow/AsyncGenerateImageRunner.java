@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class GenerateImageRunnerAsync implements AsyncWorkflowRunner {
+public class AsyncGenerateImageRunner implements AsyncWorkflowRunner {
 
     final WorkflowProcessor processor;
     final Map<String, WorkflowActionClassParameter> params;
@@ -58,7 +58,7 @@ public class GenerateImageRunnerAsync implements AsyncWorkflowRunner {
         return params;
     }
 
-    GenerateImageRunnerAsync(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
+    AsyncGenerateImageRunner(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
         this.processor = processor;
         this.params = params;
         this.runDelay=Try.of(()->Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);

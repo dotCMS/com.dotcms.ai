@@ -1,6 +1,5 @@
 package com.dotcms.ai.workflow;
 
-import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotmarketing.portlets.workflows.actionlet.WorkFlowActionlet;
 import com.dotmarketing.portlets.workflows.model.MultiKeyValue;
 import com.dotmarketing.portlets.workflows.model.MultiSelectionWorkflowActionletParameter;
@@ -9,7 +8,6 @@ import com.dotmarketing.portlets.workflows.model.WorkflowActionFailureException;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionletParameter;
 import com.dotmarketing.portlets.workflows.model.WorkflowProcessor;
 import com.google.common.collect.ImmutableList;
-import io.vavr.control.Try;
 
 import java.util.List;
 import java.util.Map;
@@ -47,7 +45,7 @@ public class OpenAIGenerateImageActionlet extends WorkFlowActionlet {
 
     @Override
     public void executeAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
-        new AsyncWorkflowRunnerWrapper(new GenerateImageRunnerAsync(processor, params)).run();
+        new AsyncWorkflowRunnerWrapper(new AsyncGenerateImageRunner(processor, params)).run();
     }
 
 

@@ -41,8 +41,6 @@ public class AsyncWorkflowRunnerWrapper implements Runnable {
         }
         RUNNING_CONTENT.add(contentletKey);
         return true;
-
-
     }
 
     private void runLater() {

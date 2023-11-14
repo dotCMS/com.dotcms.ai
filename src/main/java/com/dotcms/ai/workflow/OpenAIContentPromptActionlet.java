@@ -57,7 +57,7 @@ public class OpenAIContentPromptActionlet extends WorkFlowActionlet {
 
     @Override
     public void executeAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
-            new AsyncWorkflowRunnerWrapper(new ContentPromptRunnerAsync(processor, params)).run();
+            new AsyncWorkflowRunnerWrapper(new AsyncContentPromptRunner(processor, params)).run();
     }
 
 
