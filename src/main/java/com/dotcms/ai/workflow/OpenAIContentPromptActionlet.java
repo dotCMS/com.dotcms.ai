@@ -2,20 +2,15 @@ package com.dotcms.ai.workflow;
 
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
-import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotmarketing.portlets.workflows.actionlet.WorkFlowActionlet;
 import com.dotmarketing.portlets.workflows.model.MultiKeyValue;
 import com.dotmarketing.portlets.workflows.model.MultiSelectionWorkflowActionletParameter;
-import com.dotmarketing.portlets.workflows.model.MultiValueProvider;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionClassParameter;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionFailureException;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionletParameter;
 import com.dotmarketing.portlets.workflows.model.WorkflowProcessor;
 import com.google.common.collect.ImmutableList;
-import com.liferay.portal.language.LanguageUtil;
-import io.vavr.control.Try;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -58,18 +53,11 @@ public class OpenAIContentPromptActionlet extends WorkFlowActionlet {
         return "This actionlet will send the value of the 'openAIPrompt' field to AI and write the returned results to a field or fields of your choosing.  If the AI returns a JSON object, the key/values of that JSON will be merged with your content's fields.  The prompt can also take velocity (content can be referenced as $dotContentMap)";
     }
 
-    @Override
-    public void executePreAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
-        if (Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5) > 0) {
-            OpenAIThreadPool.threadPool().submit(new ContentPromptRunner(processor, params));
-        }
-    }
+
 
     @Override
     public void executeAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
-        if (Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5) == 0) {
-            new ContentPromptRunner(processor, params).run();
-        }
+            new AsyncWorkflowRunnerWrapper(new ContentPromptRunnerAsync(processor, params)).run();
     }
 
 

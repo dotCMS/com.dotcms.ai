@@ -3,7 +3,6 @@ package com.dotcms.ai.workflow;
 import com.dotcms.ai.api.CompletionsAPI;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
-import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotcms.api.system.event.message.MessageSeverity;
 import com.dotcms.api.system.event.message.MessageType;
 import com.dotcms.api.system.event.message.SystemMessageEventUtil;
@@ -11,8 +10,6 @@ import com.dotcms.api.system.event.message.builder.SystemMessageBuilder;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotmarketing.business.APILocator;
-import com.dotmarketing.db.HibernateUtil;
-import com.dotmarketing.db.LocalTransaction;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.workflows.actionlet.PublishContentActionlet;
@@ -32,45 +29,32 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class ContentPromptRunner implements Runnable {
-    final long startTime;
-    final int runDelay;
+public class ContentPromptRunnerAsync implements AsyncWorkflowRunner {
+
     final WorkflowProcessor processor;
     final Map<String, WorkflowActionClassParameter> params;
-
-
-    ContentPromptRunner(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
+    final int runDelay;
+    @Override
+    public WorkflowProcessor getProcessor() {
+        return this.processor;
+    }
+    @Override
+    public Map<String, WorkflowActionClassParameter> getParams() {
+        return params;
+    }
+    ContentPromptRunnerAsync(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
         this.processor = processor;
         this.params = params;
-        this.runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
-        this.startTime = System.currentTimeMillis() + (runDelay * 1000);
+        this.runDelay=Try.of(()->Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
     }
 
 
-    @Override
-    public void run() {
-        try {
-            LocalTransaction.wrap(this::runInternal);
-            if(runDelay>0){
-                HibernateUtil.commitTransaction();
-            }
-        } catch (
-                Throwable e) { //NOSONAR -this catches throwable because if one is thrown, it destroys the whole thread pool.
-            Logger.warn(this.getClass(), e.getMessage());
-            if (ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
-                Logger.warn(this.getClass(), e.getMessage(), e);
-            }
-        }
-    }
+
 
 
     public void runInternal() {
 
-        if (startTime > System.currentTimeMillis()) {
-            Try.run(() -> Thread.sleep(1000));
-            OpenAIThreadPool.threadPool().submit(this);
-            return;
-        }
+
 
 
         Contentlet workingContentlet = processor.getContentlet();

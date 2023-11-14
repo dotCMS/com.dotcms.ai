@@ -41,7 +41,9 @@ public class OpenAIThreadPool {
         if(!running.getAndSet(false)){
             return;
         }
-        service.shutdown();
+        if(service!=null) {
+            service.shutdown();
+        }
     }
 
 }

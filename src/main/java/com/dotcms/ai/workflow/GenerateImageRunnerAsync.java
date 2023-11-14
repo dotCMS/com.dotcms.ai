@@ -1,12 +1,10 @@
 package com.dotcms.ai.workflow;
 
-import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.model.AIImageResponseDTO;
 import com.dotcms.ai.service.ChatGPTImageService;
 import com.dotcms.ai.service.ChatGPTImageServiceImpl;
 import com.dotcms.ai.util.Logger;
-import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotcms.api.system.event.message.MessageSeverity;
 import com.dotcms.api.system.event.message.MessageType;
 import com.dotcms.api.system.event.message.SystemMessageEventUtil;
@@ -23,11 +21,7 @@ import com.dotcms.rest.api.v1.temp.DotTempFile;
 import com.dotcms.rest.api.v1.temp.TempFileAPI;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
-import com.dotmarketing.db.HibernateUtil;
-import com.dotmarketing.db.LocalTransaction;
-import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotRuntimeException;
-import com.dotmarketing.exception.DotSecurityException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.workflows.actionlet.PublishContentActionlet;
 import com.dotmarketing.portlets.workflows.actionlet.SaveContentActionlet;
@@ -48,42 +42,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class GenerateImageRunner implements Runnable {
-    final long startTime;
+public class GenerateImageRunnerAsync implements AsyncWorkflowRunner {
+
     final WorkflowProcessor processor;
     final Map<String, WorkflowActionClassParameter> params;
     final int runDelay;
 
-    GenerateImageRunner(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
-        this.processor = processor;
-        this.params = params;
-        this.runDelay = Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
-        this.startTime = System.currentTimeMillis() + (runDelay * 1000);
+    @Override
+    public WorkflowProcessor getProcessor() {
+        return this.processor;
     }
 
     @Override
-    public void run() {
-        try {
-            LocalTransaction.wrap(this::runInternal);
-            if(runDelay>0){
-                HibernateUtil.commitTransaction();
-            }
-        } catch (Throwable e) {
-            Logger.warn(this.getClass(), e.getMessage());
-            if (ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
-                Logger.warn(this.getClass(), e.getMessage(), e);
-            }
-        }
+    public Map<String, WorkflowActionClassParameter> getParams() {
+        return params;
+    }
+
+    GenerateImageRunnerAsync(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
+        this.processor = processor;
+        this.params = params;
+        this.runDelay=Try.of(()->Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
     }
 
 
-    public void runInternal() throws DotDataException, DotSecurityException {
 
-        if (startTime > System.currentTimeMillis()) {
-            Try.run(() -> Thread.sleep(1000));
-            OpenAIThreadPool.threadPool().submit(this);
-            return;
-        }
+
+    public void runInternal()  {
+
+
 
 
         Contentlet workingContentlet = processor.getContentlet();
@@ -146,6 +132,8 @@ public class GenerateImageRunner implements Runnable {
             DotTempFile tmpFile = tempApi.createTempFileFromUrl(StringUtils.camelCaseLower(workingContentlet.getTitle()) + ".png", requestProxy, new URL(url), 20, Integer.MAX_VALUE);
             boolean isPublished = APILocator.getVersionableAPI().isLive(workingContentlet);
 
+
+            // if we are async, then get the latest
             if(runDelay>0) {
                 workingContentlet = APILocator.getContentletAPI().findContentletByIdentifier(workingContentlet.getIdentifier(), false, workingContentlet.getLanguageId(), processor.getUser(), false);
             }

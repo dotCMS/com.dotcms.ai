@@ -47,19 +47,10 @@ public class OpenAIGenerateImageActionlet extends WorkFlowActionlet {
 
     @Override
     public void executeAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
-        if (Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5) == 0) {
-            new GenerateImageRunner(processor, params).run();
-        }
+        new AsyncWorkflowRunnerWrapper(new GenerateImageRunnerAsync(processor, params)).run();
     }
 
-    @Override
-    public void executePreAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
 
-
-        if (Try.of(() -> Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5) > 0) {
-            OpenAIThreadPool.threadPool().submit(new GenerateImageRunner(processor, params));
-        }
-    }
 
 
 }
