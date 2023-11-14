@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class AsyncContentPromptRunner implements AsyncWorkflowRunner {
+public class ContentPromptRunner implements AsyncWorkflowRunner {
 
     final WorkflowProcessor processor;
     final Map<String, WorkflowActionClassParameter> params;
@@ -42,7 +42,7 @@ public class AsyncContentPromptRunner implements AsyncWorkflowRunner {
     public Map<String, WorkflowActionClassParameter> getParams() {
         return params;
     }
-    AsyncContentPromptRunner(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
+    ContentPromptRunner(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) {
         this.processor = processor;
         this.params = params;
         this.runDelay=Try.of(()->Integer.parseInt(params.get("runDelay").getValue())).getOrElse(5);
