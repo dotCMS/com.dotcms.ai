@@ -298,7 +298,7 @@ public class ContentToStringUtil {
         }
     }
 
-    private boolean isMarkdown(@NotNull String value) {
+    public boolean isMarkdown(@NotNull String value) {
         if (UtilMethods.isEmpty(value)) {
             return false;
         }

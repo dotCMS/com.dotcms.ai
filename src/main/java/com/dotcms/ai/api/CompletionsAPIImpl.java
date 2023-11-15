@@ -218,7 +218,19 @@ public class CompletionsAPIImpl implements CompletionsAPI {
     @Override
     public JSONObject raw(JSONObject jsonObject) {
 
+
+
+        if(ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
+            com.dotcms.ai.util.Logger.info(this.getClass(), "OpenAI request:" + jsonObject.toString(2));
+        }
+
+
         String response = OpenAIRequest.doRequest(config.get().getApiUrl(), "POST", config.get().getApiKey(), jsonObject);
+
+
+        if(ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
+            com.dotcms.ai.util.Logger.info(this.getClass(), "OpenAI response:" + response);
+        }
         return new JSONObject(response);
     }
 

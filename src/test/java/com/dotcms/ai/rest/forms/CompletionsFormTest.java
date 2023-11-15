@@ -116,12 +116,11 @@ public class CompletionsFormTest {
         CompletionsForm form2 = CompletionsForm.copy(form1).build();
 
 
-        Arrays.equals(form1.fields, form2.fields);
         System.out.println(form1);
         System.out.println(form2);
-        System.out.println(form1.fields);
-        System.out.println(form2.fields);
-        System.out.println(Arrays.equals(form1.fields, form2.fields));
+        System.out.println(form1.fieldVar);
+        System.out.println(form2.fieldVar);
+
 
 
         Assertions.assertTrue(form1.equals(form2));

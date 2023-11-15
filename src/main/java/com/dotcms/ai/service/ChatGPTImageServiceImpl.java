@@ -7,7 +7,7 @@ import com.dotcms.ai.interceptor.RequestLoggingInterceptor;
 import com.dotcms.ai.model.AIImageResponseDTO;
 import com.dotcms.ai.model.ChatGptImageRequestDTO;
 import com.dotcms.ai.model.ChatGptImageResponseDTO;
-import com.dotmarketing.util.Logger;
+import com.dotcms.ai.util.Logger;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import java.io.IOException;
 import java.util.Optional;
@@ -117,7 +117,7 @@ public class ChatGPTImageServiceImpl implements ChatGPTImageService{
      */
     private void handleApiError(IOException e, AIImageResponseDTO aiImageResponseDTO) {
         String errorMessage = "Error calling ChatGPT API: " + e.getMessage();
-        Logger.error(this.getClass(), errorMessage);
+        Logger.error(this.getClass(), errorMessage,e);
 
         aiImageResponseDTO.setResponse(errorMessage);
         aiImageResponseDTO.setHttpStatus(String.valueOf(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));

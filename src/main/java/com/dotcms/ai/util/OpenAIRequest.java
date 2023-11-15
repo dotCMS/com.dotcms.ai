@@ -4,7 +4,6 @@ package com.dotcms.ai.util;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotmarketing.exception.DotRuntimeException;
-import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.json.JSONObject;
 import io.vavr.control.Try;
 import org.apache.http.client.methods.CloseableHttpResponse;

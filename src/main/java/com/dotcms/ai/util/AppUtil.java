@@ -2,7 +2,6 @@ package com.dotcms.ai.util;
 
 import com.dotmarketing.business.CacheLocator;
 import com.dotmarketing.util.ConfigUtils;
-import com.dotmarketing.util.Logger;
 import org.apache.commons.io.IOUtils;
 
 import java.io.File;

@@ -1,6 +1,7 @@
 package com.dotcms.ai.workflow;
 
 import com.dotcms.ai.api.CompletionsAPI;
+import com.dotcms.ai.api.ContentToStringUtil;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.api.system.event.message.MessageSeverity;
@@ -134,10 +135,26 @@ public class ContentPromptRunner implements AsyncWorkflowRunner {
     }
 
     boolean setJsonProperties(Contentlet contentlet, JSONObject json, boolean overwriteField) {
+        com.dotcms.ai.util.Logger.info(this.getClass(), "Setting json:\n" + json.toString(2) );
         boolean contentNeedsSaving = false;
         for (Map.Entry entry : (Set<Map.Entry>) json.getAsMap().entrySet()) {
             if (overwriteField || UtilMethods.isEmpty(contentlet.getStringProperty(entry.getKey().toString()))) {
-                contentlet.setProperty(entry.getKey().toString(), entry.getValue());
+
+                if(ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
+                    Logger.info(this.getClass(),"setting field:" + entry.getKey().toString() +  " to " + entry.getValue());
+                }
+
+                Field field = contentlet.getContentType().fieldMap().get(entry.getKey().toString());
+
+                String value = String.valueOf(entry.getValue());
+                if(ContentToStringUtil.impl.get().isHtml(value)){
+                    value=value.replaceAll("\\s+"," ");
+                    value = value.replaceAll("\\>\\s+\\<","><");
+                }
+
+
+
+                contentlet.setProperty(entry.getKey().toString(), value);
                 contentNeedsSaving = true;
             }
         }
@@ -152,7 +169,7 @@ public class ContentPromptRunner implements AsyncWorkflowRunner {
         json.put("model", model);
         json.put("temperature", temperature);
         json.put("stream", false);
-
+        com.dotcms.ai.util.Logger.debug(this.getClass(),"Open AI Request:\n" + json.toString(2));
         return json;
     }
 

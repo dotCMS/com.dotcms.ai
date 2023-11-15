@@ -6,7 +6,7 @@ import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.model.AITextResponseDTO;
 import com.dotcms.ai.model.ChatGptRequestDTO;
 import com.dotcms.ai.model.ChatGptResponseDTO;
-import com.dotmarketing.util.Logger;
+import com.dotcms.ai.util.Logger;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import java.io.IOException;
 import java.util.Optional;
@@ -122,7 +122,7 @@ public class ChatGPTTextServiceImpl implements ChatGPTTextService {
      */
     private void handleApiError(IOException e, AITextResponseDTO aiTextResponseDTO) {
         String errorMessage = "Error calling ChatGPT API: " + e.getMessage();
-        Logger.error(this.getClass(), errorMessage);
+        Logger.error(this.getClass(), errorMessage,e);
         aiTextResponseDTO.setHttpStatus(String.valueOf(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
         aiTextResponseDTO.setResponse(errorMessage);
     }

@@ -1,5 +1,6 @@
 package com.dotcms.ai.listener;
 
+import com.dotcms.ai.util.Logger;
 import com.dotcms.content.elasticsearch.business.event.ContentletArchiveEvent;
 import com.dotcms.content.elasticsearch.business.event.ContentletCheckinEvent;
 import com.dotcms.content.elasticsearch.business.event.ContentletDeletedEvent;
@@ -7,7 +8,7 @@ import com.dotcms.content.elasticsearch.business.event.ContentletPublishEvent;
 import com.dotcms.system.event.local.model.Subscriber;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.contentlet.model.ContentletListener;
-import com.dotmarketing.util.Logger;
+
 
 public class EmbeddingContentListener implements ContentletListener<Contentlet> {
 
