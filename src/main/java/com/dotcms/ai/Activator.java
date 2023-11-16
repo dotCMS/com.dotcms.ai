@@ -53,7 +53,8 @@ public class Activator extends GenericBundleActivator {
 
     private static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
     private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server" + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
-    private Class[] clazzes = {
+
+    private final Class[] clazzes = {
             TextResource.class,
             ImageResource.class,
             EmbeddingsResource.class,
@@ -133,7 +134,7 @@ public class Activator extends GenericBundleActivator {
     /**
      * Deletes the App yaml to the apps directory and refreshes the apps
      */
-    private void deleteYml() throws IOException {
+    private void deleteYml() {
 
         Logger.info(this.getClass().getName(), "deleting the YAML File:" + installedAppYaml);
 
@@ -148,8 +149,8 @@ public class Activator extends GenericBundleActivator {
 
         Logger.info(this.getClass().getName(), "copying YAML File:" + installedAppYaml);
 
-        if (!installedAppYaml.exists()) {
-            installedAppYaml.createNewFile();
+        if (!installedAppYaml.exists() && ! installedAppYaml.createNewFile()) {
+            Logger.warn(this.getClass(), "Unable to create new App .yml file:" + installedAppYaml);
         }
 
         try (final InputStream in = this.getClass().getResourceAsStream("/" + AppKeys.APP_YAML_NAME); final OutputStream out = Files.newOutputStream(installedAppYaml.toPath())) {
@@ -231,7 +232,6 @@ public class Activator extends GenericBundleActivator {
         }
 
         ContentType languageVariableContentType = APILocator.getContentTypeAPI(APILocator.systemUser()).find(LanguageVariableAPI.LANGUAGEVARIABLE);
-        Map<String, Field> fields = languageVariableContentType.fieldMap();
 
         Contentlet languageVariable = new Contentlet();
 

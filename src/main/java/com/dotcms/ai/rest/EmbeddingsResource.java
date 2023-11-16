@@ -84,7 +84,7 @@ public class EmbeddingsResource {
                         .map(ContentletSearch::getInode)
                         .collect(Collectors.toList());
                 added+=inodes.size();
-                OpenAIThreadPool.threadPool().submit(new BulkEmbeddingsRunner(inodes,embeddingsForm));
+                OpenAIThreadPool.submit(new BulkEmbeddingsRunner(inodes,embeddingsForm));
 
             }
 

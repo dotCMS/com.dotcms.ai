@@ -29,7 +29,9 @@ Out of the box, it provides:
     - Create an AI generated image based on a prompt.  The resulting image will be stored as a temp file in dotCMS"
 ### Workflow Actions
   - **OpenAI Embeddings** (`DotEmbeddingsActionlet`)  This actionlet uses OpenAI to generate and save (or delete) the embeddings for content.  This is used so that an embedding index can be kept up to date as new content is published and/or unpublished from dotCMS.
-  - **OpenAI Modify Content** (`OpenAIModifyContentActionlet`).  This actionlet can be called to automatically populate/update fields of content as the content is pushed through a workflow.  It works by expecting OpenAI to return its data/answer in a json format which will then be used to update the content.  The example usage is to post content to OpenAI and have OpenAI automatically write appropriate SEO title and SEO short description for the content.
+  - **OpenAI Content Prompt** (`OpenAIContentPromptActionlet`).  This actionlet can be called to automatically populate/update fields of content as the content is pushed through a workflow.  It works by expecting OpenAI to return its data/answer in a json format which will then be used to update the content.  The example usage is to post content to OpenAI and have OpenAI automatically write appropriate SEO title and SEO short description for the content.
+  - **OpenAI Generate Image** (`OpenAIGenerateImageActionlet`).  This actionlet can automatically generate an image based on a content prompt.  This content prompt is a velocity template and can use the values of the content in it.  By default, this actionlet will add this image to the first binary field in the content.
+
 ### Velocity Viewtools
   - `$ai` can be used to generate content and/or images from a prompt.
   - `$ai.embeddings` - list embedding indexes, generate embeddings from a prompt, count the tokens in a prompt.  

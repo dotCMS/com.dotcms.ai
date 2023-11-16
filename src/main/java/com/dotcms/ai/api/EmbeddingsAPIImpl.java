@@ -66,7 +66,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
     @Override
     public void shutdown() {
-        Try.run(() -> OpenAIThreadPool.threadPool().shutdown());
+        Try.run(() -> OpenAIThreadPool.shutdown());
     }
 
     @Override
@@ -92,7 +92,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             return false;
         }
 
-        OpenAIThreadPool.threadPool().submit(new EmbeddingsRunner(this, contentlet, content.get(), indexName));
+        OpenAIThreadPool.submit(new EmbeddingsRunner(this, contentlet, content.get(), indexName));
         return true;
     }
 
@@ -126,7 +126,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         }
 
 
-        OpenAIThreadPool.threadPool().submit(new EmbeddingsRunner(this, contentlet, parsed.get(), indexName));
+        OpenAIThreadPool.submit(new EmbeddingsRunner(this, contentlet, parsed.get(), indexName));
         return true;
 
     }

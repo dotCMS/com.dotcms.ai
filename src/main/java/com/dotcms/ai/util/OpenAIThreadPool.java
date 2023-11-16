@@ -3,20 +3,26 @@ package com.dotcms.ai.util;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class OpenAIThreadPool {
+    private OpenAIThreadPool(){
 
+    }
 
-    private static ExecutorService service;
-    private static AtomicBoolean running = new AtomicBoolean(true);
+    private static final AtomicBoolean running = new AtomicBoolean(true);
+    private static ScheduledExecutorService service;
 
+    public static void schedule(Runnable task, long increment, TimeUnit unit) {
+        threadPool().schedule(task, increment, unit);
+    }
 
-    public static final ExecutorService threadPool() {
+    private static ScheduledExecutorService threadPool() {
 
         if (running.get() && service != null && !service.isShutdown() && !service.isTerminated()) {
             return service;
@@ -28,21 +34,37 @@ public class OpenAIThreadPool {
             }
             int threads = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS);
             int maxThreads = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_MAX);
-            int queue = ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_THREADS_QUEUE);
-            service = new ThreadPoolExecutor(threads, maxThreads, 20000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(queue), new ThreadPoolExecutor.CallerRunsPolicy());
+
+
+            service = Executors.newScheduledThreadPool(Math.max(threads, maxThreads), new SimpleThreadFactory());
+
         }
         return service;
     }
 
+    public static void submit(Runnable task) {
+        threadPool().schedule(task, 0, TimeUnit.MILLISECONDS);
+    }
 
 
-
-    public static final void shutdown() {
-        if(!running.getAndSet(false)){
+    public static void shutdown() {
+        if (!running.getAndSet(false)) {
             return;
         }
-        if(service!=null) {
+        if (service != null) {
             service.shutdown();
+        }
+    }
+
+    private static class SimpleThreadFactory implements ThreadFactory {
+
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "dotAI-thread-" + threadNumber.getAndIncrement());
+            t.setDaemon(true);
+            return t;
         }
     }
 
