@@ -24,6 +24,7 @@ import com.dotmarketing.util.StringUtils;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.VelocityUtil;
 import com.liferay.portal.model.User;
+import com.werken.xpath.impl.Op;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vavr.control.Try;
 import org.apache.velocity.context.Context;
@@ -87,12 +88,12 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
     public void runInternal() {
 
 
-        final Contentlet workingContentlet = checkoutLatest(identifier, language, user);
+        final Contentlet workingContentlet = getLatest(identifier, language, user);
 
         final Host host = Try.of(() -> APILocator.getHostAPI().find(workingContentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
 
 
-        final Optional<Field> fieldToWrite = resolveField(workingContentlet);
+        final Optional<Field> fieldToTry = resolveField(workingContentlet);
 
 
         if (UtilMethods.isEmpty(prompt)) {
@@ -102,14 +103,14 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
 
         Logger.info(this.getClass(), "Running OpenAI Generate Image Content for : " + workingContentlet.getTitle());
 
-        if (fieldToWrite.isEmpty()) {
+        if (fieldToTry.isEmpty()) {
             Logger.info(this.getClass(), "no binary field found, returning");
             return;
         }
 
-        Optional<Object> fieldVal = Try.of(() -> APILocator.getContentletAPI().getFieldValue(workingContentlet, fieldToWrite.get())).toJavaOptional();
+        Optional<Object> fieldVal = Try.of(() -> APILocator.getContentletAPI().getFieldValue(workingContentlet, fieldToTry.get())).toJavaOptional();
         if (fieldVal.isPresent() && UtilMethods.isSet(fieldVal.get()) && !overwriteField) {
-            Logger.info(OpenAIContentPromptActionlet.class, "field:" + fieldToWrite.get().variable() + "  already set:" + fieldVal.get() + ", returning");
+            Logger.info(OpenAIContentPromptActionlet.class, "field:" + fieldToTry.get().variable() + "  already set:" + fieldVal.get() + ", returning");
             return;
         }
 
@@ -133,7 +134,7 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
             DotTempFile tmpFile = tempApi.createTempFileFromUrl(StringUtils.camelCaseLower(workingContentlet.getTitle()) + ".png", request, new URL(url), 20, Integer.MAX_VALUE);
 
             final Contentlet contentToSave = checkoutLatest(identifier, language, user);
-            contentToSave.setProperty(fieldToWrite.get().variable(), tmpFile.file);
+            contentToSave.setProperty(fieldToTry.get().variable(), tmpFile.file);
             saveContentlet(contentToSave, user);
 
 
@@ -149,9 +150,9 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
 
     Optional<Field> resolveField(Contentlet contentlet) {
         final ContentType type = contentlet.getContentType();
-        final Optional<Field> fieldToWrite = Try.of(() -> type.fieldMap().get(this.fieldToWrite)).toJavaOptional();
-        if (fieldToWrite.isPresent()) {
-            return fieldToWrite;
+        final Optional<Field> fieldToTry = Try.of(() -> type.fieldMap().get(this.fieldToWrite)).toJavaOptional();
+        if (UtilMethods.isSet(this.fieldToWrite)) {
+            return fieldToTry;
         }
 
         return type.fields(BinaryField.class).stream().findFirst();

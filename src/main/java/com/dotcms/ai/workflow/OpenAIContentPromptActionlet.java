@@ -41,8 +41,6 @@ public class OpenAIContentPromptActionlet extends WorkFlowActionlet {
                 new WorkflowActionletParameter(OpenAIParams.RUN_DELAY.key, "Update the content asynchronously, after X seconds. O means run in-process", "5", true),
                 new WorkflowActionletParameter(OpenAIParams.MODEL.name(), "The AI model to use, defaults to " + ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL), ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL), false),
                 new WorkflowActionletParameter(OpenAIParams.TEMPERATURE.key, "The AI temperature for the response.  Between .1 and 2.0.  Defaults to " + ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_TEMPERATURE), ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_TEMPERATURE), false)
-
-
         );
     }
 
@@ -57,19 +55,16 @@ public class OpenAIContentPromptActionlet extends WorkFlowActionlet {
     }
 
 
-
     @Override
     public void executeAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
-        int delay= Try.of(() -> Integer.parseInt(params.get(OpenAIParams.RUN_DELAY.key).getValue())).getOrElse(5);
+        int delay = Try.of(() -> Integer.parseInt(params.get(OpenAIParams.RUN_DELAY.key).getValue())).getOrElse(5);
 
         Runnable task = new AsyncWorkflowRunnerWrapper(new OpenAIContentPromptRunner(processor, params));
         if (delay > 0) {
-            OpenAIThreadPool.schedule(task, delay , TimeUnit.SECONDS);
+            OpenAIThreadPool.schedule(task, delay, TimeUnit.SECONDS);
         } else {
             task.run();
         }
-
-
 
 
     }

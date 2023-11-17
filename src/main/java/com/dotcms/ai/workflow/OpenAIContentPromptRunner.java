@@ -55,7 +55,7 @@ public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
     }
 
     OpenAIContentPromptRunner(Contentlet contentlet, User user, String prompt, boolean overwriteField, String fieldToWrite, int runDelay, String model, float temperature) {
-        if (UtilMethods.isEmpty(() -> contentlet.getIdentifier())) {
+        if (UtilMethods.isEmpty(contentlet::getIdentifier)) {
             throw new DotRuntimeException("Content must be saved and have an identifier before running AI Content Prompt");
         }
         this.identifier = contentlet.getIdentifier();
@@ -84,31 +84,35 @@ public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
         return this.language;
     }
 
+    @Override
     public void runInternal() {
 
         if (UtilMethods.isEmpty(prompt)) {
             Logger.info(OpenAIContentPromptActionlet.class, "no prompt found");
             return;
         }
-        final Contentlet workingContentlet = checkoutLatest(identifier, language, user);
+        final Contentlet workingContentlet = getLatest(identifier, language, user);
 
         final ContentType type = workingContentlet.getContentType();
 
 
         Logger.info(this.getClass(), "Running OpenAI Modify Content for : " + workingContentlet.getTitle());
 
-        final Optional<Field> fieldToWrite = Try.of(() -> type.fieldMap().get(this.fieldToWrite)).toJavaOptional();
+        final Optional<Field> fieldToTry = Try.of(() -> type.fieldMap().get(this.fieldToWrite)).toJavaOptional();
 
-
+        boolean contentNeedsSaving = false;
         try {
-
-            JSONObject tryJson = openAIRequest(workingContentlet);
-
+            final String response = openAIRequest(workingContentlet);
             final Contentlet contentToSave = checkoutLatest(identifier, language, user);
-            boolean contentNeedsSaving = setJsonProperties(contentToSave, tryJson, overwriteField);
+            if (fieldToTry.isPresent()) {
+                contentNeedsSaving = setProperty(contentToSave, fieldToTry.get().variable(), response);
+            } else {
+                JSONObject tryJson = parseJsonResponse(response);
+                contentNeedsSaving = setJsonProperties(contentToSave, tryJson);
+            }
 
             if (!contentNeedsSaving) {
-                Logger.warn(this.getClass(), "Nothing to save for OpenAI response: " + tryJson);
+                Logger.warn(this.getClass(), "Nothing to save for OpenAI response: " + response);
                 return;
             }
             saveContentlet(contentToSave, user);
@@ -123,38 +127,52 @@ public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
         }
     }
 
-    private JSONObject openAIRequest(Contentlet workingContentlet) throws Exception {
+    private String openAIRequest(Contentlet workingContentlet) throws Exception {
         Context ctx = getMockContext(workingContentlet, user);
 
         final String parsedPrompt = VelocityUtil.eval(prompt, ctx);
 
         JSONObject openAIResponse = CompletionsAPI.impl().raw(buildRequest(parsedPrompt, model, temperature));
 
-        String response = openAIResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
+        return openAIResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
 
-        return parseJsonResponse(response);
     }
 
-    boolean setJsonProperties(Contentlet contentlet, JSONObject json, boolean overwriteField) {
+    private boolean setProperty(Contentlet contentlet, String fieldVar, String value) {
+        if (value == null) {
+            return false;
+        }
+
+        if (contentlet.getContentType().fieldMap().get(fieldVar) == null) {
+            return false;
+        }
+
+        if (overwriteField || UtilMethods.isEmpty(contentlet.getStringProperty(fieldVar))) {
+            Logger.info(this.getClass(), "setting field:" + fieldVar + " to " + value);
+            value = cleanHTML(value);
+            contentlet.setProperty(fieldVar, value);
+            return true;
+        }
+        Logger.info(this.getClass(), "field :" + fieldVar + " already set, skipping");
+        return false;
+    }
+
+    private JSONObject parseJsonResponse(String response) {
+        Logger.debug(this.getClass(), "---- response ----- ");
+        Logger.debug(this.getClass(), response);
+        Logger.debug(this.getClass(), "---- response ----- ");
+        response = response.replaceAll("\\R+", " ");
+        response = response.substring(response.indexOf("{"), response.lastIndexOf("}") + 1);
+
+        String finalResponse = response;
+        return Try.of(() -> new JSONObject(finalResponse)).onFailure(e -> Logger.warn(this.getClass(), e.getMessage())).getOrElse(new JSONObject());
+    }
+
+    private boolean setJsonProperties(Contentlet contentlet, JSONObject json) {
         com.dotcms.ai.util.Logger.info(this.getClass(), "Setting json:\n" + json.toString(2));
         boolean contentNeedsSaving = false;
         for (Map.Entry entry : (Set<Map.Entry>) json.getAsMap().entrySet()) {
-            if (overwriteField || UtilMethods.isEmpty(contentlet.getStringProperty(entry.getKey().toString()))) {
-
-                if (ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
-                    Logger.info(this.getClass(), "setting field:" + entry.getKey().toString() + " to " + entry.getValue());
-                }
-
-                Field field = contentlet.getContentType().fieldMap().get(entry.getKey().toString());
-
-                String value = String.valueOf(entry.getValue());
-                if (ContentToStringUtil.impl.get().isHtml(value)) {
-                    value = value.replaceAll("\\s+", " ");
-                    value = value.replaceAll("\\>\\s+\\<", "><");
-                }
-
-
-                contentlet.setProperty(entry.getKey().toString(), value);
+            if (setProperty(contentlet, entry.getKey().toString(), (String) entry.getValue())) {
                 contentNeedsSaving = true;
             }
         }
@@ -173,17 +191,12 @@ public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
         return json;
     }
 
-    private JSONObject parseJsonResponse(String response) {
-
-        Logger.debug(this.getClass(), "---- response ----- ");
-        Logger.debug(this.getClass(), response);
-        Logger.debug(this.getClass(), "---- response ----- ");
-        response = response.replaceAll("\\R+", " ");
-        response = response.substring(response.indexOf("{"), response.lastIndexOf("}") + 1);
-
-        String finalResponse = response;
-        return Try.of(() -> new JSONObject(finalResponse)).onFailure(e -> Logger.warn(this.getClass(), e.getMessage())).getOrElse(new JSONObject());
-
+    private String cleanHTML(String text) {
+        if (ContentToStringUtil.impl.get().isHtml(text)) {
+            text = text.replaceAll("\\s+", " ");
+            text = text.replaceAll("\\>\\s+\\<", "><");
+        }
+        return text;
 
     }
 

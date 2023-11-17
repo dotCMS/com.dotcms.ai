@@ -34,7 +34,7 @@ public class OpenAIGenerateImageActionlet extends WorkFlowActionlet {
         );
 
         return List.of(
-                new WorkflowActionletParameter(OpenAIParams.FIELD_TO_WRITE.key, "The field where you want to include the image.", "Will default to the first binary field", false),
+                new WorkflowActionletParameter(OpenAIParams.FIELD_TO_WRITE.key, "The field where you want to include the image. Leave blank for the first binary file field.", "", false),
                 overwriteParameter,
                 new WorkflowActionletParameter(OpenAIParams.OPEN_AI_PROMPT.key, "The prompt that will be sent to the AI", "Generate an abstract professional image about :\\n\\n${contentlet.blog}\\n\\n", true),
                 new WorkflowActionletParameter(OpenAIParams.RUN_DELAY.key, "Update the content asynchronously, after X seconds. O means run in-process", "10", true)
