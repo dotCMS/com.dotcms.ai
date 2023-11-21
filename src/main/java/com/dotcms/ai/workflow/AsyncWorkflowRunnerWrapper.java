@@ -33,13 +33,17 @@ public class AsyncWorkflowRunnerWrapper implements Runnable {
 
     }
 
-    AsyncWorkflowRunnerWrapper(AsyncWorkflowRunner runner, int rescheduled) {
+    public static int MAX_RESCHEDULES=720;
+
+
+
+    AsyncWorkflowRunnerWrapper(AsyncWorkflowRunner runner, int runNumbner) {
         this.asyncWorkflowRunner = runner;
         this.contentletKey = Try.of(() -> asyncWorkflowRunner.getIdentifier() + asyncWorkflowRunner.getLanguage()).getOrElseThrow(DotRuntimeException::new);
         if (UtilMethods.isEmpty(asyncWorkflowRunner.getIdentifier())) {
             throw new DotRuntimeException("Content must be saved before it can be run async - no identifier");
         }
-        this.rescheduled = rescheduled;
+        this.rescheduled = runNumbner;
     }
 
     @Override
@@ -52,8 +56,13 @@ public class AsyncWorkflowRunnerWrapper implements Runnable {
             }
             LocalTransaction.wrap(asyncWorkflowRunner::runInternal);
             HibernateUtil.commitTransaction();
-        } catch (
-                Throwable e) { //NOSONAR -this catches throwable because if one is thrown, it destroys the whole thread pool.
+        } catch ( BadAIJsonFormatException e) {
+            // OpenAI generally outputs valid json but sometimes it goes crazy and spits out a mess.
+            // If this happens, we try our request again.
+            Logger.warn(this.getClass(),"got bad json, rescheduling request");
+            Logger.warn(this.getClass(),"- error was :" + e.getMessage());
+            OpenAIThreadPool.schedule(new AsyncWorkflowRunnerWrapper(asyncWorkflowRunner, ++rescheduled), 5, TimeUnit.SECONDS);
+        } catch ( Throwable e) { //NOSONAR -this catches throwable because if one is thrown, it destroys the whole thread pool.
             Logger.warn(this.getClass(), e.getMessage());
             if (ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
                 Logger.warn(this.getClass(), e.getMessage(), e);
@@ -77,7 +86,7 @@ public class AsyncWorkflowRunnerWrapper implements Runnable {
 
 
     private void runLater() {
-        if (rescheduled > 720) {
+        if (rescheduled > MAX_RESCHEDULES) {
             RUNNING_CONTENT.remove(contentletKey);
             Logger.warn(this.getClass(), "Unable to schedule " + this.getClass().getSimpleName() + " for content id:" + contentletKey);
             Logger.warn(this.getClass(), "Unable to schedule " + this.getClass().getSimpleName() + " for content id:" + contentletKey);

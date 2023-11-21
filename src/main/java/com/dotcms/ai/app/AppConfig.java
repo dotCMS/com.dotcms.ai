@@ -25,7 +25,7 @@ public class AppConfig implements Serializable {
     private final Map<String, Secret> configValues;
 
     public AppConfig(Map<String, Secret> secrets) {
-        this.configValues = secrets.entrySet().stream().filter(e -> e.getKey().startsWith("com.dotcms.ai")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        this.configValues = secrets.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         apiUrl = Try.of(() -> secrets.get(AppKeys.API_URL.key).getString()).getOrElse(StringPool.BLANK);
         apiImageUrl = Try.of(() -> secrets.get(AppKeys.API_IMAGE_URL.key).getString()).getOrElse(StringPool.BLANK);
         apiKey = Try.of(() -> secrets.get(AppKeys.API_KEY.key).getString()).getOrElse(StringPool.BLANK);
@@ -101,7 +101,8 @@ public class AppConfig implements Serializable {
 
 
     private boolean blacklisted(AppKeys key) {
-        return !key.key.startsWith("com.dotcms.ai");
+        return false;
+        //return !key.key.startsWith("com.dotcms.ai");
     }
 
     public boolean getConfigBoolean(AppKeys appKey) {

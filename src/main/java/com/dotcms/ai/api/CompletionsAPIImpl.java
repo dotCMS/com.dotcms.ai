@@ -34,6 +34,31 @@ import java.util.Optional;
 
 public class CompletionsAPIImpl implements CompletionsAPI {
 
+    @Override
+    public JSONObject prompt(String systemPrompt, String userPrompt, String modelIn, float temperature, int maxTokens) {
+
+
+        OpenAIModel model = OpenAIModel.resolveModel(modelIn);
+        final JSONObject json = new JSONObject();
+
+        json.put("temperature", temperature);
+        final List<Map> messages = new ArrayList<>();
+        if (UtilMethods.isSet(systemPrompt)) {
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+        }
+        messages.add(Map.of("role", "user", "content", userPrompt));
+        json.put("messages", messages);
+        if (maxTokens > 0) {
+            json.put("max_tokens", maxTokens);
+        }
+        if (UtilMethods.isSet(model)) {
+            json.put("model", model.modelName);
+        }
+        return raw(json);
+
+
+
+    }
 
     final Lazy<AppConfig> config;
 

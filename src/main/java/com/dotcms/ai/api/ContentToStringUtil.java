@@ -138,6 +138,12 @@ public class ContentToStringUtil {
 
     }
 
+    public Optional<String> turnContentletIntoString(@NotNull Contentlet contentlet) {
+
+
+        return parseFields(contentlet, guessWhatFieldsToIndex(contentlet));
+    }
+
     /**
      * This method will index the first long_text field that has been marked as indexed
      *

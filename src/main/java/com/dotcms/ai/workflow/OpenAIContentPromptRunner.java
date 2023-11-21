@@ -4,6 +4,7 @@ import com.dotcms.ai.api.CompletionsAPI;
 import com.dotcms.ai.api.ContentToStringUtil;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
+import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotcms.api.system.event.message.MessageSeverity;
 import com.dotcms.api.system.event.message.MessageType;
 import com.dotcms.api.system.event.message.SystemMessageEventUtil;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
 
@@ -148,7 +150,7 @@ public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
         }
 
         if (overwriteField || UtilMethods.isEmpty(contentlet.getStringProperty(fieldVar))) {
-            Logger.info(this.getClass(), "setting field:" + fieldVar + " to " + value);
+            Logger.debug(this.getClass(), "setting field:" + fieldVar + " to " + value);
             value = cleanHTML(value);
             contentlet.setProperty(fieldVar, value);
             return true;
@@ -157,16 +159,19 @@ public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
         return false;
     }
 
-    private JSONObject parseJsonResponse(String response) {
-        Logger.debug(this.getClass(), "---- response ----- ");
-        Logger.debug(this.getClass(), response);
-        Logger.debug(this.getClass(), "---- response ----- ");
-        response = response.replaceAll("\\R+", " ");
+    private JSONObject parseJsonResponse(String responseIn) throws BadAIJsonFormatException {
+        String response = responseIn.replaceAll("\\R+", " ");
         response = response.substring(response.indexOf("{"), response.lastIndexOf("}") + 1);
-
         String finalResponse = response;
-        return Try.of(() -> new JSONObject(finalResponse)).onFailure(e -> Logger.warn(this.getClass(), e.getMessage())).getOrElse(new JSONObject());
+        return Try.of(() -> new JSONObject(finalResponse)).onFailure(
+                e -> {
+                    Logger.warn(this.getClass(), e.getMessage());
+                    Logger.warn(this.getClass(), "initial response:\n" + responseIn);
+                    Logger.warn(this.getClass(), "final response:\n" + responseIn);
+
+                }).getOrElseThrow(e->new BadAIJsonFormatException(e));
     }
+
 
     private boolean setJsonProperties(Contentlet contentlet, JSONObject json) {
         com.dotcms.ai.util.Logger.info(this.getClass(), "Setting json:\n" + json.toString(2));

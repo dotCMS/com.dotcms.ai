@@ -55,6 +55,12 @@ public interface CompletionsAPI {
      */
     JSONObject raw(JSONObject promptJSON);
 
+
+
+    JSONObject prompt(String systemPrompt, String userPrompt, String model, float temperature, int maxTokens);
+
+
+
     /**
      * this method takes a prompt in the form of json and returns streaming AI response based upon that prompt
      *

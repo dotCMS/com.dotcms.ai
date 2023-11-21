@@ -9,8 +9,8 @@ public enum OpenAIParams {
     RUN_DELAY("runDelay"),
     DOT_EMBEDDING_TYPES_FIELDS("dotEmbeddingTypes"),
     DOT_EMBEDDING_ACTION("dotEmbeddingAction"),
-    DOT_EMBEDDING_INDEX("default");
-
+    DOT_EMBEDDING_INDEX("default"),
+    LIMIT_TAGS_TO_HOST("limitTagsToHost");
 
     public final String key;
 

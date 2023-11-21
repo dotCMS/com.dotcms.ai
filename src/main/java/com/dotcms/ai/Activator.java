@@ -11,6 +11,7 @@ import com.dotcms.ai.rest.TextResource;
 import com.dotcms.ai.util.OpenAIThreadPool;
 import com.dotcms.ai.viewtool.AIToolInfo;
 import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
+import com.dotcms.ai.workflow.OpenAIAutoTagActionlet;
 import com.dotcms.ai.workflow.OpenAIContentPromptActionlet;
 import com.dotcms.ai.workflow.OpenAIGenerateImageActionlet;
 import com.dotcms.contenttype.model.field.Field;
@@ -61,7 +62,12 @@ public class Activator extends GenericBundleActivator {
             CompletionsResource.class,
             SearchResource.class
     };
-    private final List<WorkFlowActionlet> actionlets = List.of(new DotEmbeddingsActionlet(), new OpenAIContentPromptActionlet(), new OpenAIGenerateImageActionlet());
+    private final List<WorkFlowActionlet> actionlets = List.of(
+            new DotEmbeddingsActionlet(),
+            new OpenAIContentPromptActionlet(),
+            new OpenAIGenerateImageActionlet(),
+            new OpenAIAutoTagActionlet()
+    );
 
     private LoggerContext pluginLoggerContext;
 
