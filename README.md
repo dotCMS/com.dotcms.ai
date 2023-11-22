@@ -43,18 +43,40 @@ Out of the box, it provides:
 
 
 
-### How to build/install this plugin
-
-To install this plugin all you need to do is build the JAR. to do this run
-`./gradlew jar`
-
+## How to build/install this plugin
+### Building
+To build this plugin all you need to do is build the JAR. to do this run
+```
+./gradlew clean jar
+```
 
 ### Installation
-
-1. Upload the bundle jar files using the dotCMS UI `Dev Tools -> Plugins -> Upload Plugin`.  It should go ultimately go to the "Active" state.  If it is not "Active" it has not been successfully started.  Try to manually start it.  If it does not go to "Active", check your logs to see why the plugin is failing to start.  Trying tailing the logs while you try to start the plugin again.
-2. Add the **dotAI** tool to your admin screen from the **Roles & Tools** tool. 
+1. After building, upload the bundle jar found in `./build/libs/com.dotcms.ai***.jar` using the dotCMS UI `Dev Tools -> Plugins -> Upload Plugin`.  It should go ultimately go to the "Active" state.  If it is not "Active" it has not been successfully started.  Try to manually start it.  If it does not go to "Active", check your logs to see why the plugin is failing to start.  Trying tailing the logs while you try to start the plugin again.
 3. Note that choosing to "undeploy" a plugin is somewhat destructive and is generally not needed before uploading a newer version of the plugin. If you undeploy the plugin, dotCMS will automatically remove the portlet from your tools and delete any associated workflow actions you might have configured. 
 
+### Releasing
+The plugin uses the maven release workflow found here: https://github.com/researchgate/gradle-release
+If you are ready to tag/release a new version, all you have to do is run
+
+
+```
+./gradlew clean release
+```
+It will 
+- prompt you for input
+- make sure that you are on a clean branch
+- increment the version number
+- create a tag in git
+- push the tag to GitHub
+
+### Publishing to Artifactory
+GitHub will pick up any new tag and will build and publish it to artifactory automatically.
+
+If you need/want to publish to artifactory manually, set the environmental variables `ARTIFACTORY_USER` & `ARTIFACTORY_PASSWD` with your artifactory creds and then run:
+```
+./gradlew publish
+```
+which will build and publish your snapshot or release.
 
 
 ## Configuration
