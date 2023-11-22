@@ -5,7 +5,6 @@ plugins {
 }
 
 group = 'com.dotcms'
-version = '1.0-SNAPSHOT'
 
 configurations {
     osgiLibs
@@ -55,8 +54,9 @@ publishing {
                 username = "$System.env.ARTIFACTORY_USER"
                 password = "$System.env.ARTIFACTORY_PASSWD"
             }
-
+            println 'PROJECT VERSION' + project.version
             if(project.version.endsWith('-SNAPSHOT')) {
+
                 println 'PUBLISHING dotAI SNAPSHOT'
                 url "https://repo.dotcms.com/artifactory/libs-snapshot-local"
             } else {
