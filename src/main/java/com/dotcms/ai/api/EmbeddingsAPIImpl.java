@@ -64,10 +64,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         Try.run(OpenAIThreadPool::shutdown);
     }
 
-    @Override
-    public boolean generateEmbeddingsforContent(Contentlet contentlet, String indexName) {
-        return generateEmbeddingsforContent(contentlet, List.of(), indexName);
-    }
+
 
     @Override
     public int deleteEmbedding(@NotNull EmbeddingsDTO dto) {
@@ -144,10 +141,8 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             match.put("extractedText", UtilMethods.truncatify(result.extractedText, 255));
             matches.add(match);
             contentObject.put(MATCHES, matches);
+            reducedResults.putIfAbsent(result.inode,contentObject);
 
-            if (!reducedResults.containsKey(result.inode)) {
-                reducedResults.put(result.inode, contentObject);
-            }
 
         }
 

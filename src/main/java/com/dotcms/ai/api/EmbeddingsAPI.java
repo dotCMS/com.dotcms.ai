@@ -24,8 +24,6 @@ public interface EmbeddingsAPI {
 
     void shutdown();
 
-    boolean generateEmbeddingsforContent(Contentlet contentlet, String index);
-
     boolean generateEmbeddingsforContent(Contentlet contentlet, List<Field> fields, String index);
 
     boolean generateEmbeddingsforContent(@NotNull Contentlet contentlet, String velocityTemplate, String indexName);
