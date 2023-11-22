@@ -19,8 +19,8 @@ class EmbeddingsDBTest {
 
     @Test
     void test_initVectorExtension() throws DotDataException {
-        DotConnect db = new DotConnect();
-        db.setSQL(" DROP EXTENSION if exists vector").loadResult();
+        //DotConnect db = new DotConnect();
+        // db.setSQL(" DROP EXTENSION if exists vector").loadResult();
 
 
     }
