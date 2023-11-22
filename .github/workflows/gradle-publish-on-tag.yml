@@ -13,9 +13,8 @@ jobs:
         with:
           distribution: temurin
           java-version: 11
-      - name: Set up secrets
+      - name: Run gradlew publish
         run: |
           export ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
           export ARTIFACTORY_PASSWD=${{ secrets.ARTIFACTORY_PASSWD }}
-      - name: Run gradlew publish
-        run: ./gradlew publish
+          ./gradlew publish
