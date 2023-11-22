@@ -42,14 +42,6 @@ dependencies {
     //osgiLibs 'com.github.jtidy:jtidy:1.0.5'
 }
 
-if (file('secrets.gradle').exists()) {
-    apply from: 'secrets.gradle'
-}
-else {
-    project.ext.mySecretUser = System.getenv('ARTIFACTORY_USER')
-    project.ext.mySecretPassword = System.getenv('ARTIFACTORY_PASSWD')
-}
-
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -59,11 +51,11 @@ publishing {
     repositories {
         maven {
             credentials {
-                username = project.ext.mySecretUser
-                password = project.ext.mySecretPassword
+                username = "$System.env.ARTIFACTORY_USER"
+                password = "$System.env.ARTIFACTORY_PASSWD"
             }
+            println 'PROJECT USER' + $System.env.ARTIFACTORY_USER
             println 'PROJECT VERSION' + project.version
-            println 'PROJECT USER' + project.ext.mySecretPassword
             if(project.version.endsWith('-SNAPSHOT')) {
 
                 println 'PUBLISHING dotAI SNAPSHOT'
