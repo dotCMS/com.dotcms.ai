@@ -6,6 +6,7 @@ on:
 jobs:
   gradle-rc:
     runs-on: ubuntu-latest
+    environment: publish-artifactory
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
