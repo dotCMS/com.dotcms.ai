@@ -42,6 +42,14 @@ dependencies {
     //osgiLibs 'com.github.jtidy:jtidy:1.0.5'
 }
 
+if (file('secrets.gradle').exists()) {
+    apply from: 'secrets.gradle'
+}
+else {
+    project.ext.mySecretUser = System.getenv('ARTIFACTORY_USER')
+    project.ext.mySecretPassword = System.getenv('ARTIFACTORY_PASSWD')
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
