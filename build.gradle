@@ -54,8 +54,7 @@ publishing {
                 username = "$System.env.ARTIFACTORY_USER"
                 password = "$System.env.ARTIFACTORY_PASSWD"
             }
-            println 'PROJECT USER' + "$System.env.ARTIFACTORY_USER"
-            println 'PROJECT VERSION' + project.version
+            println 'dotAI VERSION' + project.version
             if(project.version.endsWith('-SNAPSHOT')) {
 
                 println 'PUBLISHING dotAI SNAPSHOT'
