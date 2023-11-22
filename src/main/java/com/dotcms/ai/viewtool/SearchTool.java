@@ -1,6 +1,6 @@
 package com.dotcms.ai.viewtool;
 
-import com.dotcms.ai.api.ContentToStringUtil;
+import com.dotcms.ai.util.ContentToStringUtil;
 import com.dotcms.ai.api.EmbeddingsAPI;
 import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.ConfigService;

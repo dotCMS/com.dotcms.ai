@@ -5,6 +5,7 @@ import com.dotcms.ai.model.AIImageResponseDTO;
 import com.dotcms.ai.service.ChatGPTImageService;
 import com.dotcms.ai.service.ChatGPTImageServiceImpl;
 import com.dotcms.ai.util.Logger;
+import com.dotcms.ai.util.VelocityContextFactory;
 import com.dotcms.api.system.event.message.MessageSeverity;
 import com.dotcms.api.system.event.message.MessageType;
 import com.dotcms.api.system.event.message.SystemMessageEventUtil;
@@ -116,7 +117,8 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
 
 
         try {
-            Context ctx = getMockContext(workingContentlet, user);
+            Context ctx = VelocityContextFactory.getMockContext(workingContentlet, user);
+
             String finalPrompt = VelocityUtil.eval(prompt, ctx);
 
             ChatGPTImageService service = new ChatGPTImageServiceImpl(ConfigService.INSTANCE.config(host));

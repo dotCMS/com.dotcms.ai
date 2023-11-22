@@ -1,16 +1,21 @@
 package com.dotcms.ai.workflow;
 
 import com.dotcms.ai.api.CompletionsAPI;
-import com.dotcms.ai.api.ContentToStringUtil;
+import com.dotcms.ai.util.ContentToStringUtil;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
-import com.dotcms.ai.util.OpenAIThreadPool;
+import com.dotcms.ai.util.VelocityContextFactory;
+import com.dotcms.api.system.event.Payload;
+import com.dotcms.api.system.event.SystemEventType;
+import com.dotcms.api.system.event.UserSessionBean;
+import com.dotcms.api.system.event.Visibility;
 import com.dotcms.api.system.event.message.MessageSeverity;
 import com.dotcms.api.system.event.message.MessageType;
 import com.dotcms.api.system.event.message.SystemMessageEventUtil;
 import com.dotcms.api.system.event.message.builder.SystemMessageBuilder;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
+import com.dotmarketing.business.APILocator;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionClassParameter;
@@ -28,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
 
@@ -118,7 +122,16 @@ public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
                 return;
             }
             saveContentlet(contentToSave, user);
-
+            APILocator.getSystemEventsAPI().push(SystemEventType.SWITCH_SITE,
+                    new Payload(
+                            contentToSave.getHost(),
+                            Visibility.USER_SESSION,
+                            new UserSessionBean(
+                                    user.getUserId(),
+                                    "35EAA2C95AAED8DAD04EEE31329EDD6B"
+                            )
+                    )
+            );
 
         } catch (Exception e) {
             final SystemMessageBuilder message = new SystemMessageBuilder().setMessage("Error:" + e.getMessage()).setLife(5000).setType(MessageType.SIMPLE_MESSAGE).setSeverity(MessageSeverity.ERROR);
@@ -130,14 +143,20 @@ public class OpenAIContentPromptRunner implements AsyncWorkflowRunner {
     }
 
     private String openAIRequest(Contentlet workingContentlet) throws Exception {
-        Context ctx = getMockContext(workingContentlet, user);
+        Context ctx = VelocityContextFactory.getMockContext(workingContentlet, user);
 
         final String parsedPrompt = VelocityUtil.eval(prompt, ctx);
 
         JSONObject openAIResponse = CompletionsAPI.impl().raw(buildRequest(parsedPrompt, model, temperature));
 
-        return openAIResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
-
+        try {
+            return openAIResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message")
+                    .getString("content");
+        }
+        catch (Exception e){
+            Logger.warn(this.getClass(), "unable to parse json:" + e.getMessage(), e);
+            throw new BadAIJsonFormatException(e.getMessage(),e);
+        }
     }
 
     private boolean setProperty(Contentlet contentlet, String fieldVar, String value) {

@@ -5,37 +5,32 @@ import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.db.EmbeddingsDTO;
+import com.dotcms.ai.util.ContentToStringUtil;
 import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIRequest;
 import com.dotcms.ai.util.OpenAIThreadPool;
+import com.dotcms.ai.util.VelocityContextFactory;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.api.web.HttpServletResponseThreadLocal;
 import com.dotcms.contenttype.model.field.Field;
-import com.dotcms.mock.request.FakeHttpRequest;
-import com.dotcms.mock.response.BaseResponse;
-import com.dotcms.rendering.velocity.viewtools.content.ContentMap;
+import com.dotcms.rendering.velocity.util.VelocityUtil;
 import com.dotcms.rest.ContentResource;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
-import com.dotmarketing.util.PageMode;
 import com.dotmarketing.util.UtilMethods;
-import com.dotmarketing.util.VelocityUtil;
 import com.dotmarketing.util.json.JSONArray;
 import com.dotmarketing.util.json.JSONObject;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.liferay.portal.model.User;
-import com.liferay.portal.util.PortalUtil;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
 import io.vavr.control.Try;
 import org.apache.velocity.context.Context;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.Arrays;
@@ -55,7 +50,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
             .maximumSize(ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_CACHE_SIZE))
             .build();
 
-
+    static final String CACHE="cache";
     static final String MATCHES = "matches";
     final AppConfig config;
 
@@ -66,7 +61,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
     @Override
     public void shutdown() {
-        Try.run(() -> OpenAIThreadPool.shutdown());
+        Try.run(OpenAIThreadPool::shutdown);
     }
 
     @Override
@@ -101,18 +96,8 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         if (UtilMethods.isEmpty(velocityTemplate)) {
             return false;
         }
-        final Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
-        User user = PortalUtil.getUser() != null ? PortalUtil.getUser() : APILocator.systemUser();
 
-
-        HttpServletRequest requestProxy = new FakeHttpRequest("localhost", null).request();
-        HttpServletResponse responseProxy = new BaseResponse().response();
-
-        Context ctx = VelocityUtil.getWebContext(requestProxy, responseProxy);
-        ContentMap contentMap = new ContentMap(contentlet, user, PageMode.EDIT_MODE, host, ctx);
-        ctx.put("dotContentMap", contentMap);
-        ctx.put("contentlet", contentMap);
-        ctx.put("content", contentMap);
+        Context ctx = VelocityContextFactory.getMockContext(contentlet);
 
         String textToEmbed = Try.of(() -> VelocityUtil.eval(velocityTemplate, ctx)).getOrNull();
 
@@ -137,7 +122,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         long startTime = System.currentTimeMillis();
 
         Map<String, JSONObject> reducedResults = new LinkedHashMap<>();
-        Set<String> fields = (searcher.showFields != null)
+        Set<String> fieldsToShow = (searcher.showFields != null)
                 ? Arrays.stream(searcher.showFields).collect(Collectors.toSet())
                 : Set.of();
 
@@ -150,9 +135,8 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
                 continue;
             }
 
-            if (fields.size() > 0) {
-                contentObject.keySet().removeIf(k -> !fields.contains(k));
-            }
+            //fieldsToShow.stream().forEach(c->contentObject.keySet().removeIf(k -> !fieldsToShow.contains(c)));
+
 
             JSONArray matches = contentObject.optJSONArray(MATCHES) == null ? new JSONArray() : contentObject.optJSONArray(MATCHES);
             JSONObject match = new JSONObject();
@@ -234,15 +218,15 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     private void saveEmbeddingsForCache(String content, Tuple2<Integer, List<Float>> embeddings) {
 
         EmbeddingsDTO embeddingsDTO = new EmbeddingsDTO.Builder()
-                .withContentType("cache")
+                .withContentType(CACHE)
                 .withTokenCount(embeddings._1)
-                .withInode("cache")
+                .withInode(CACHE)
                 .withLanguage(0)
-                .withTitle("cache")
-                .withIdentifier("cache")
-                .withHost("cache")
+                .withTitle(CACHE)
+                .withIdentifier(CACHE)
+                .withHost(CACHE)
                 .withExtractedText(content)
-                .withIndexName("cache")
+                .withIndexName(CACHE)
                 .withEmbeddings(embeddings._2).build();
 
 
@@ -280,7 +264,6 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
     public List<EmbeddingsDTO> getEmbeddingResults(EmbeddingsDTO searcher) {
 
         List<Float> queryEmbeddings = pullOrGenerateEmbeddings(searcher.query)._2;
-
 
         EmbeddingsDTO newSearcher = EmbeddingsDTO.copy(searcher).withEmbeddings(queryEmbeddings)
                 .build();
@@ -354,7 +337,7 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
         Tuple3<String, Integer, List<Float>> dbEmbeddings = EmbeddingsDB.impl.get().searchExistingEmbeddings(content);
         if (dbEmbeddings != null && !dbEmbeddings._3.isEmpty()) {
-            if (!"cache".equalsIgnoreCase(dbEmbeddings._1)) {
+            if (!CACHE.equalsIgnoreCase(dbEmbeddings._1)) {
                 saveEmbeddingsForCache(content, Tuple.of(dbEmbeddings._2, dbEmbeddings._3));
             }
             embeddingCache.put(hashed, Tuple.of(dbEmbeddings._2, dbEmbeddings._3));

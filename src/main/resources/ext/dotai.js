@@ -278,6 +278,7 @@ window.addEventListener('load', function () {
     refreshConfigs().then(() => {
         writeConfigTable();
         writeModelToDropdown();
+        alert
         if (dotAiState.config["apiKey"] != "*****") {
             document.getElementById("openAIKeyWarn").style.display = "block";
         }
@@ -292,8 +293,8 @@ const tab1 = () => {
             writeIndexesToDropdowns();
             writeIndexManagementTable();
         });
-
 }
+
 const tab2 = () => {
     refreshIndexes()
         .then(() => {

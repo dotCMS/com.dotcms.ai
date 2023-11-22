@@ -17,7 +17,6 @@ import com.dotmarketing.portlets.workflows.model.WorkflowProcessor;
 import com.dotmarketing.util.UtilMethods;
 import com.google.common.collect.ImmutableList;
 import io.vavr.control.Try;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,16 +30,18 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
 
     @Override
     public List<WorkflowActionletParameter> getParameters() {
-        WorkflowActionletParameter deleteOrInsert = new MultiSelectionWorkflowActionletParameter(OpenAIParams.DOT_EMBEDDING_ACTION.key,
-                "Delete or insert the embeddings",  "INSERT", true,
+        WorkflowActionletParameter deleteOrInsert = new MultiSelectionWorkflowActionletParameter(
+                OpenAIParams.DOT_EMBEDDING_ACTION.key,
+                "Delete or insert the embeddings", "INSERT", true,
                 () -> ImmutableList.of(
                         new MultiKeyValue("INSERT", "INSERT"),
                         new MultiKeyValue("DELETE", "DELETE"))
         );
 
         final List<WorkflowActionletParameter> params = new ArrayList<>();
-        params.add(new WorkflowActionletParameter(OpenAIParams.DOT_EMBEDDING_TYPES_FIELDS.key, "List of {contentType}.{fieldVar} to use to generate the embeddings.  " +
-                "Each type.field should be on its own line, e.g. blog.title<br>blog.blogContent", "", false));
+        params.add(new WorkflowActionletParameter(OpenAIParams.DOT_EMBEDDING_TYPES_FIELDS.key,
+                "List of {contentType}.{fieldVar} to use to generate the embeddings.  " +
+                        "Each type.field should be on its own line, e.g. blog.title<br>blog.blogContent", "", false));
         params.add(new WorkflowActionletParameter(OpenAIParams.DOT_EMBEDDING_INDEX.key, "Index Name", "", false));
         params.add(deleteOrInsert);
 
@@ -54,7 +55,8 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
 
     @Override
     public String getHowTo() {
-        return "This Actionlet will generate and save the the OpenAI 'embeddings' for a piece of content.  You can specify the index in which to store the embeddings and the list content types and fields you want to include in the index. " +
+        return "This Actionlet will generate and save the the OpenAI 'embeddings' for a piece of content.  You can specify the index in which to store the embeddings and the list content types and fields you want to include in the index. "
+                +
                 "Each {type.field} should be on its own line, e.g. <br>blog.title<br>blog.blogContent<br>.  " +
                 "If no field is specified, dotCMS will attempt to guess how the content " +
                 "should be indexed based on its content type and/or its fields. Example usage is to add this Actionlet to the publish action, so a piece of content is added when published and also add it to the unpublish action, specifing 'DELETE', which will remove it from the index";
@@ -62,21 +64,26 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
 
 
     @Override
-    public void executeAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params) throws WorkflowActionFailureException {
+    public void executeAction(WorkflowProcessor processor, Map<String, WorkflowActionClassParameter> params)
+            throws WorkflowActionFailureException {
 
         final Contentlet contentlet = processor.getContentlet();
         final ContentType type = processor.getContentlet().getContentType();
 
+        final String updateOrDelete =
+                "DELETE".equalsIgnoreCase(params.get(OpenAIParams.DOT_EMBEDDING_ACTION.key).getValue()) ? "DELETE"
+                        : "INSERT";
+        final Host host = Try.of(
+                () -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), false)).getOrNull();
+        final String indexName =
+                UtilMethods.isSet(params.get(OpenAIParams.DOT_EMBEDDING_INDEX.key).getValue()) ? params.get(
+                        OpenAIParams.DOT_EMBEDDING_INDEX.key).getValue() : "default";
 
-        final String updateOrDelete = "DELETE".equalsIgnoreCase(params.get(OpenAIParams.DOT_EMBEDDING_ACTION.key).getValue()) ? "DELETE" : "INSERT";
-        final Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), false)).getOrNull();
-        final String indexName = UtilMethods.isSet(params.get(OpenAIParams.DOT_EMBEDDING_INDEX.key).getValue()) ? params.get(OpenAIParams.DOT_EMBEDDING_INDEX.key).getValue() : "default";
-
-
-        final Map<String, List<Field>> typesAndfields = parseTypesAndFields(params.get(OpenAIParams.DOT_EMBEDDING_TYPES_FIELDS.key).getValue());
+        final Map<String, List<Field>> typesAndfields = parseTypesAndFields(
+                params.get(OpenAIParams.DOT_EMBEDDING_TYPES_FIELDS.key).getValue());
 
         List<Field> fields = typesAndfields.getOrDefault(type.variable(), List.of());
-        
+
         EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, fields, indexName);
 
     }
@@ -88,13 +95,13 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
             return Map.of();
         }
 
-
         final Map<String, List<Field>> typesAndFields = new HashMap<>();
         final String[] typeFieldArr = typeAndFieldParam.trim().split("\\r?\\n");
 
         for (String typeField : typeFieldArr) {
             String[] typeOptField = typeField.trim().split("\\.");
-            Optional<ContentType> type = Try.of(() -> APILocator.getContentTypeAPI(APILocator.systemUser()).find(typeOptField[0])).toJavaOptional();
+            Optional<ContentType> type = Try.of(
+                    () -> APILocator.getContentTypeAPI(APILocator.systemUser()).find(typeOptField[0])).toJavaOptional();
             if (type.isEmpty()) {
                 continue;
             }
@@ -108,7 +115,6 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
             typesAndFields.put(type.get().variable(), fields);
 
         }
-
 
         return typesAndFields;
     }

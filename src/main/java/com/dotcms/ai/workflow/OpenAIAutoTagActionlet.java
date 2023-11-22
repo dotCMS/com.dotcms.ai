@@ -3,6 +3,10 @@ package com.dotcms.ai.workflow;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.util.OpenAIThreadPool;
+import com.dotcms.api.system.event.message.MessageSeverity;
+import com.dotcms.api.system.event.message.MessageType;
+import com.dotcms.api.system.event.message.SystemMessageEventUtil;
+import com.dotcms.api.system.event.message.builder.SystemMessageBuilder;
 import com.dotmarketing.portlets.workflows.actionlet.WorkFlowActionlet;
 import com.dotmarketing.portlets.workflows.model.MultiKeyValue;
 import com.dotmarketing.portlets.workflows.model.MultiSelectionWorkflowActionletParameter;
@@ -66,6 +70,16 @@ public class OpenAIAutoTagActionlet extends WorkFlowActionlet {
         Runnable task = new AsyncWorkflowRunnerWrapper(new OpenAIAutoTagRunner(processor, params));
         if (delay > 0) {
             OpenAIThreadPool.schedule(task, delay, TimeUnit.SECONDS);
+
+            final SystemMessageBuilder message = new SystemMessageBuilder().setMessage(
+                            "Content being tagged in the background")
+                    .setLife(5000)
+                    .setType(MessageType.SIMPLE_MESSAGE)
+                    .setSeverity(MessageSeverity.SUCCESS);
+
+            SystemMessageEventUtil.getInstance()
+                    .pushMessage(message.create(), List.of(processor.getUser().getUserId()));
+
         } else {
             task.run();
         }

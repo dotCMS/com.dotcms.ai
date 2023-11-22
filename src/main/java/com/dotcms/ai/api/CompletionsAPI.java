@@ -56,9 +56,7 @@ public interface CompletionsAPI {
     JSONObject raw(JSONObject promptJSON);
 
 
-
     JSONObject prompt(String systemPrompt, String userPrompt, String model, float temperature, int maxTokens);
-
 
 
     /**

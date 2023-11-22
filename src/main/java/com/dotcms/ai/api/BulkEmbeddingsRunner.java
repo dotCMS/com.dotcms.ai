@@ -1,12 +1,10 @@
 package com.dotcms.ai.api;
 
-import com.dotcms.ai.app.AppKeys;
-import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.rest.forms.EmbeddingsForm;
+import com.dotcms.ai.util.Logger;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
-import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import com.liferay.portal.model.User;
 import io.vavr.control.Try;
@@ -24,8 +22,6 @@ public class BulkEmbeddingsRunner implements Runnable {
         user = Try.of(() -> APILocator.getUserAPI().loadUserById(embeddingsForm.userId)).getOrElse(APILocator.systemUser());
         this.embeddingsForm = embeddingsForm;
         this.inodes = inodes;
-
-
     }
 
     @Override
@@ -45,17 +41,11 @@ public class BulkEmbeddingsRunner implements Runnable {
                     EmbeddingsAPI.impl().generateEmbeddingsforContent(contentlet, fields, embeddingsForm.indexName);
                 }
             } catch (Exception e) {
-                if(ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)){
-                    Logger.warn(this.getClass(), "unable to embed content:" + inode + " error:" + e.getMessage(), e);
-                }else{
-                    Logger.warnAndDebug(this.getClass(), "unable to embed content:" + inode + " error:" + e.getMessage(), e);
-                }
+                Logger.warn(this.getClass(), "unable to embed content:" + inode + " error:" + e.getMessage(), e);
 
             }
 
-
         }
-
 
     }
 }

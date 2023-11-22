@@ -1,4 +1,4 @@
-package com.dotcms.ai.api;
+package com.dotcms.ai.util;
 
 
 import com.dotcms.ai.app.AppKeys;
@@ -39,6 +39,14 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+
+/**
+ * This class is intended turn a contentlet into an "indexable" String.  It take a contentlet and
+ * does its best guess as what field or fields
+ * hold the important content and then returns them as a RAW string, stripped of any markup or HTML.
+ * If the there are file fields on the content, and they are "indexable",  it will try to use
+ * TIKA to extract the content from them
+ */
 public class ContentToStringUtil {
 
     public static final Lazy<ContentToStringUtil> impl = Lazy.of(ContentToStringUtil::new);
@@ -56,9 +64,10 @@ public class ContentToStringUtil {
 
 
     };
+
     private static final Lazy<List<Pattern>> MARKDOWN_PATTERNS = Lazy.of(() -> Arrays.stream(MARKDOWN_STRING_PATTERNS).map(Pattern::compile).collect(Collectors.toList()));
+
     private static final Pattern HTML_PATTERN = Pattern.compile(".*\\<[^>]+>.*");
-    static MarkdownTool markdown = new MarkdownTool();
 
 
     private final Lazy<TikaProxyService> tikaService = Lazy.of(() -> {
@@ -115,8 +124,6 @@ public class ContentToStringUtil {
             return Optional.empty();
         }
         return Optional.of(val);
-
-
     }
 
     private Optional<String> parseBlockEditor(@NotNull String val) {
@@ -124,14 +131,12 @@ public class ContentToStringUtil {
         final StoryBlockMap storyBlockMap = new StoryBlockMap(val);
         return parseHTML(storyBlockMap.toHtml());
 
-
     }
 
     private Optional<String> parseMarkdown(@NotNull String val) {
 
         try {
-            MarkdownTool tool = new MarkdownTool();
-            return parseHTML(tool.parse(val));
+            return parseHTML(new MarkdownTool().parse(val));
         } catch (Throwable e) {
             throw new DotRuntimeException(e);
         }
@@ -139,7 +144,6 @@ public class ContentToStringUtil {
     }
 
     public Optional<String> turnContentletIntoString(@NotNull Contentlet contentlet) {
-
 
         return parseFields(contentlet, guessWhatFieldsToIndex(contentlet));
     }
@@ -172,14 +176,13 @@ public class ContentToStringUtil {
             return List.of();
         }
 
-
         final String ignoreUrlMapFields = (contentlet.getContentType().urlMapPattern() != null) ? contentlet.getContentType().urlMapPattern() : "";
 
         contentlet.getContentType()
                 .fields()
                 .stream().filter(f -> !ignoreUrlMapFields.contains("{" + f.variable() + "}"))
                 .filter(f -> f instanceof StoryBlockField || f instanceof WysiwygField || f instanceof BinaryField ||  f instanceof TextAreaField || f instanceof FileField)
-                .forEach(f -> embedMe.add(f));
+                .forEach(embedMe::add);
 
         if (!embedMe.isEmpty()) {
             return embedMe;
@@ -247,6 +250,9 @@ public class ContentToStringUtil {
 
         final String value = contentlet.getStringProperty(field.variable());
 
+        if(UtilMethods.isEmpty(value)){
+            return Optional.empty();
+        }
 
         // handle attached files
         if (field instanceof FileField) {
@@ -288,7 +294,7 @@ public class ContentToStringUtil {
 
 
     private Optional<String> parsePage(Contentlet pageContentlet) {
-        if (UtilMethods.isEmpty(() -> pageContentlet.getIdentifier())) {
+        if (UtilMethods.isEmpty(pageContentlet::getIdentifier)) {
             return Optional.empty();
         }
         try {
@@ -309,7 +315,7 @@ public class ContentToStringUtil {
             return false;
         }
 
-        String converted = Try.of(() -> markdown.parse(value.substring(0, Math.min(value.length(), 10000)))).getOrNull();
+        String converted = Try.of(() -> new MarkdownTool().parse(value.substring(0, Math.min(value.length(), 10000)))).getOrNull();
         if (converted == null || value.equals(converted)) {
             return false;
         }

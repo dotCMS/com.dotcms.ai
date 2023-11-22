@@ -1,9 +1,10 @@
 package com.dotcms.ai.workflow;
 
 import com.dotcms.ai.api.CompletionsAPI;
-import com.dotcms.ai.api.ContentToStringUtil;
+import com.dotcms.ai.util.ContentToStringUtil;
 import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
+import com.dotcms.ai.util.VelocityContextFactory;
 import com.dotcms.api.system.event.message.MessageSeverity;
 import com.dotcms.api.system.event.message.MessageType;
 import com.dotcms.api.system.event.message.SystemMessageEventUtil;
@@ -65,7 +66,6 @@ public class OpenAIAutoTagRunner implements AsyncWorkflowRunner {
     final long runAt;
     final String model;
     final float temperature;
-
 
 
 
@@ -171,7 +171,7 @@ public class OpenAIAutoTagRunner implements AsyncWorkflowRunner {
 
 
     private String openAIRequest(Contentlet workingContentlet, String contentToTag) throws Exception {
-        Context ctx = getMockContext(workingContentlet, user);
+        Context ctx = VelocityContextFactory.getMockContext(workingContentlet, user);
         String systemPrompt = this.limitTags ? SYSTEM_PROMPT_TAGGING_CONSTRAIN : SYSTEM_PROMPT_TAGGING_FREEFORM;
         List<String> constrainTags = this.limitTags ? findTopTags(workingContentlet) : List.of();
         ctx.put("constrainTags", String.join("\n", constrainTags));
@@ -211,6 +211,11 @@ public class OpenAIAutoTagRunner implements AsyncWorkflowRunner {
             contentlet.setProperty(field.variable(), tags);
             return true;
         }
+        else if(existingTags.contains(DOT_AI_TAGGED)){
+            Logger.info(this.getClass(), "Already autotagged, skipping");
+            return false;
+        }
+
         Logger.info(this.getClass(), "field :" + field.variable() + " already set, skipping");
         return false;
     }

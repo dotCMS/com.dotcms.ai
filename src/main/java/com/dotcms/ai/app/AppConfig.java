@@ -1,6 +1,5 @@
 package com.dotcms.ai.app;
 
-import com.dotcms.ai.util.ConfigProperties;
 import com.dotcms.security.apps.Secret;
 import com.dotmarketing.util.Logger;
 import com.liferay.util.StringPool;

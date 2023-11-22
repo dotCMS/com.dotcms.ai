@@ -14,7 +14,6 @@ import com.dotcms.ai.workflow.DotEmbeddingsActionlet;
 import com.dotcms.ai.workflow.OpenAIAutoTagActionlet;
 import com.dotcms.ai.workflow.OpenAIContentPromptActionlet;
 import com.dotcms.ai.workflow.OpenAIGenerateImageActionlet;
-import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
 import com.dotcms.contenttype.model.type.KeyValueContentType;
 import com.dotcms.languagevariable.business.LanguageVariableAPI;
@@ -22,9 +21,9 @@ import com.dotcms.languagevariable.business.LanguageVariableAPIImpl;
 import com.dotcms.rest.config.RestServiceUtil;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.business.CacheLocator;
+import com.dotmarketing.business.Layout;
 import com.dotmarketing.exception.DotDataException;
 import com.dotmarketing.exception.DotSecurityException;
-import com.dotmarketing.loggers.Log4jUtil;
 import com.dotmarketing.osgi.GenericBundleActivator;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.contentlet.model.IndexPolicy;
@@ -36,8 +35,6 @@ import com.dotmarketing.util.Logger;
 import com.liferay.portal.model.User;
 import io.vavr.control.Try;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.LoggerContext;
 import org.osgi.framework.BundleContext;
 
 import java.io.File;
@@ -45,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +51,8 @@ import java.util.Set;
 public class Activator extends GenericBundleActivator {
 
     private static final EmbeddingContentListener LISTENER = new EmbeddingContentListener();
+    private static final String PORTLET_ID = "dotAI";
     private final File installedAppYaml = new File(ConfigUtils.getAbsoluteAssetsRootPath() + File.separator + "server" + File.separator + "apps" + File.separator + AppKeys.APP_YAML_NAME);
-
     private final Class[] clazzes = {
             TextResource.class,
             ImageResource.class,
@@ -69,13 +67,8 @@ public class Activator extends GenericBundleActivator {
             new OpenAIAutoTagActionlet()
     );
 
-    private LoggerContext pluginLoggerContext;
 
     public void start(BundleContext context) throws Exception {
-        //Initializing log4j...
-        LoggerContext dotcmsLoggerContext = Log4jUtil.getLoggerContext();
-        //Initialing the log4j context of this plugin based on the dotCMS logger context
-        pluginLoggerContext = (LoggerContext) LogManager.getContext(this.getClass().getClassLoader(), false, dotcmsLoggerContext, dotcmsLoggerContext.getConfigLocation());
 
 
         //Registering the ViewTool service
@@ -89,9 +82,7 @@ public class Activator extends GenericBundleActivator {
 
 
         // Register Embedding Actionlet
-        actionlets.forEach(a->{
-            this.registerActionlet(context, a);
-        });
+        actionlets.forEach(a -> this.registerActionlet(context, a));
 
 
         //Initializing services...
@@ -129,8 +120,7 @@ public class Activator extends GenericBundleActivator {
         unsubscribeEmbeddingsListener();
         EmbeddingsAPI.impl(null).shutdown();
         deleteYml();
-        //Shutting down log4j in order to avoid memory leaks
-        Log4jUtil.shutdown(pluginLoggerContext);
+
     }
 
     private void unsubscribeEmbeddingsListener() {
@@ -155,8 +145,9 @@ public class Activator extends GenericBundleActivator {
 
         Logger.info(this.getClass().getName(), "copying YAML File:" + installedAppYaml);
 
-        if (!installedAppYaml.exists() && ! installedAppYaml.createNewFile()) {
+        if (!installedAppYaml.exists() && !installedAppYaml.createNewFile()) {
             Logger.warn(this.getClass(), "Unable to create new App .yml file:" + installedAppYaml);
+            return;
         }
 
         try (final InputStream in = this.getClass().getResourceAsStream("/" + AppKeys.APP_YAML_NAME); final OutputStream out = Files.newOutputStream(installedAppYaml.toPath())) {
@@ -211,19 +202,46 @@ public class Activator extends GenericBundleActivator {
         // force a reload for the velocity portlet
         CacheLocator.getVeloctyResourceCache().clearCache();
 
-        createLanguageVariable(com.dotcms.repackage.javax.portlet.Portlet.class.getPackage().getName() + ".title.dotAI", "dotAI", APILocator.getLanguageAPI().getDefaultLanguage().getId());
+        createLanguageVariable(com.dotcms.repackage.javax.portlet.Portlet.class.getPackage().getName() + ".title.dotAI", PORTLET_ID, APILocator.getLanguageAPI().getDefaultLanguage().getId());
 
 
         // Add language key
         final Map<String, String> keys = Map.of(
                 com.dotcms.repackage.javax.portlet.Portlet.class.getPackage().getName() + ".title.dotAI",
-                "dotAI");
+                PORTLET_ID);
         APILocator.getLanguageAPI().getLanguages().forEach(l -> {
             Try.run(() -> APILocator.getLanguageAPI().saveLanguageKeys(l, keys, new HashMap<>(), Set.of()));
         });
 
+        // add the portlet to Tools layout
+        for (Layout layout : findTheToolsLayout()) {
+            List<String> portletIds = new ArrayList<>(layout.getPortletIds());
+            if(portletIds.contains(PORTLET_ID)){
+                continue;
+            }
+            portletIds.add(PORTLET_ID);
+            APILocator.getLayoutAPI().setPortletIdsToLayout(layout, portletIds);
+        }
 
     }
+
+    private List<Layout> findTheToolsLayout() throws DotDataException {
+        String[] portlets = {"dynamic-plugins", "query-tool", "es-search", "site-search"};
+        List<Layout> addToLayouts = new ArrayList<>();
+        List<Layout> layouts = APILocator.getLayoutAPI().findAllLayouts();
+        for (Layout layout : layouts) {
+            if (layout.getPortletIds().contains(PORTLET_ID)) {
+                continue;
+            }
+            for (String portletId : portlets) {
+                if (layout.getPortletIds().contains(portletId)) {
+                    addToLayouts.add(layout);
+                }
+            }
+        }
+        return addToLayouts;
+    }
+
 
     private boolean languageVariableExists(String key, long languageId, User systemUser) {
         LanguageVariableAPI languageVariableAPI = new LanguageVariableAPIImpl();

@@ -316,10 +316,6 @@
 
     <div id="content-3">
         <h2>AI/Embeddings Config</h2>
-        <div id="configTable" style="max-width: 800px">
-
-
-        </div>
 
         <div style="padding:20px;border:1px solid darkgray;max-width:800px;margin:30px;">
             These values can be changed by adding/editing them in the <a
@@ -328,6 +324,13 @@
             setting or
             as a custom property.
         </div>
+
+        <div id="configTable" style="max-width: 800px">
+
+
+        </div>
+
+
 
     </div>
 </div>

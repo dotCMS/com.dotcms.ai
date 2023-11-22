@@ -1,27 +1,15 @@
 package com.dotcms.ai.workflow;
 
-import com.dotcms.mock.request.FakeHttpRequest;
-import com.dotcms.mock.request.MockHeaderRequest;
-import com.dotcms.mock.request.MockSessionRequest;
-import com.dotcms.mock.response.BaseResponse;
-import com.dotcms.rendering.velocity.viewtools.content.ContentMap;
-import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
-import com.dotmarketing.business.DotValidationException;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.categories.model.Category;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.contentlet.model.ContentletVersionInfo;
 import com.dotmarketing.portlets.structure.model.ContentletRelationships;
-import com.dotmarketing.util.PageMode;
 import com.dotmarketing.util.UtilMethods;
-import com.dotmarketing.util.VelocityUtil;
-import com.dotmarketing.util.WebKeys;
 import com.liferay.portal.model.User;
 import io.vavr.control.Try;
-import org.apache.velocity.context.Context;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
@@ -41,30 +29,10 @@ interface AsyncWorkflowRunner extends Runnable, Serializable {
         throw new DotRuntimeException("not implemented");
     }
 
-    default Context getMockContext(Contentlet contentlet, User user) {
-        Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
-        String hostname = "SYSTEM_HOST".equalsIgnoreCase(host.getIdentifier()) ? "localhost" : host.getHostname();
-
-        HttpServletRequest requestProxy =
-                new MockSessionRequest(new MockHeaderRequest(new FakeHttpRequest(hostname, null).request(), "referer", "https://" + hostname + "/fakeRefer").request());
-        requestProxy.setAttribute(WebKeys.CMS_USER, user);
-        requestProxy.getSession().setAttribute(WebKeys.CMS_USER, user);
-        requestProxy.setAttribute(com.liferay.portal.util.WebKeys.USER_ID, user.getUserId());
-
-        Context ctx = VelocityUtil.getWebContext(requestProxy, new BaseResponse().response());
-        ContentMap contentMap = new ContentMap(contentlet, user, PageMode.EDIT_MODE, host, ctx);
-        ctx.put("contentMap", contentMap);
-        ctx.put("dotContentMap", contentMap);
-        ctx.put("contentlet", contentMap);
-        return ctx;
 
 
-    }
-
-    default Contentlet saveContentlet(Contentlet workingContentlet, User user) {
+    default void saveContentlet(Contentlet workingContentlet, User user) {
         try {
-
-
 
             workingContentlet.setProperty(Contentlet.WORKFLOW_IN_PROGRESS, Boolean.TRUE);
             workingContentlet.setProperty(Contentlet.SKIP_RELATIONSHIPS_VALIDATION, Boolean.TRUE);
@@ -84,7 +52,7 @@ interface AsyncWorkflowRunner extends Runnable, Serializable {
         } catch (Exception e) {
             throw new DotRuntimeException(e);
         }
-        return workingContentlet;
+
     }
 
     private boolean validateContentlet(Contentlet contentlet, User user){

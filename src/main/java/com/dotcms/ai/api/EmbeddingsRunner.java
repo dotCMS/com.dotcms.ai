@@ -76,9 +76,9 @@ class EmbeddingsRunner implements Runnable {
             }
 
         } catch (Exception e) {
-            if(ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)){
+            if (ConfigService.INSTANCE.config().getConfigBoolean(AppKeys.DEBUG_LOGGING)) {
                 Logger.warn(this.getClass(), "unable to embed content:" + contentlet.getIdentifier() + " error:" + e.getMessage(), e);
-            }else{
+            } else {
                 Logger.warnAndDebug(this.getClass(), "unable to embed content:" + contentlet.getIdentifier() + " error:" + e.getMessage(), e);
             }
 
@@ -87,17 +87,15 @@ class EmbeddingsRunner implements Runnable {
 
     }
 
-    private void saveEmbedding(@NotNull String content, @NotNull Contentlet
-            contentlet, String indexName) {
+    private void saveEmbedding(@NotNull String content, @NotNull Contentlet contentlet, String indexName) {
         if (UtilMethods.isEmpty(content)) {
             return;
         }
 
-        if(EmbeddingsDB.impl.get().embeddingExists(contentlet.getInode(), indexName, content)){
+        if (EmbeddingsDB.impl.get().embeddingExists(contentlet.getInode(), indexName, content)) {
             Logger.info(this.getClass(), "embedding already exists for content:" + contentlet.getTitle() + ", inode:" + contentlet.getInode());
             return;
         }
-
 
 
         Tuple2<Integer, List<Float>> embeddings = embeddingsAPI.pullOrGenerateEmbeddings(content);
