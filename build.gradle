@@ -63,6 +63,7 @@ publishing {
                 password = project.ext.mySecretPassword
             }
             println 'PROJECT VERSION' + project.version
+            println 'PROJECT USER' + project.ext.mySecretPassword
             if(project.version.endsWith('-SNAPSHOT')) {
 
                 println 'PUBLISHING dotAI SNAPSHOT'
