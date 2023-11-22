@@ -15,7 +15,7 @@ jobs:
           java-version: 11
       - name: Set up secrets
         run: |
-          echo '${{ secrets.ARTIFACTORY_USER }}' > ./secrets.gradle
-          echo '${{ secrets.ARTIFACTORY_PASSWD }}' >> ./secrets.gradle
+          echo 'project.ext.mySecretUser=${{ secrets.ARTIFACTORY_USER }}' > ./secrets.gradle
+          echo 'project.ext.mySecretPassword=${{ secrets.ARTIFACTORY_PASSWD }}' >> ./secrets.gradle
       - name: Run gradlew publish
         run: ./gradlew publish
