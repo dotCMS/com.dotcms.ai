@@ -569,7 +569,7 @@ const saveImage = async (tempId) => {
     const contentlets = [{
         baseType: 'dotAsset',
         asset: tempId,
-        hostFolder: ''
+        tags: 'dot:openai'
     }];
 
     console.log("newAsset", contentlets)
@@ -581,13 +581,16 @@ const saveImage = async (tempId) => {
     })
     .then(response => response.json())
     .catch(data =>{
-        document.getElementById("imageSavedMessage").innerHTML="error:" + data;
-
         console.log("error", data)
+        document.getElementById("imageSavedMessage").innerHTML="error:" + data;
+        setTimeout(function () {
+            clearSaveMessage();
+        }, 10000);
+
 
     })
     .then(data => {
-        console.log("worked", data);
+        //console.log("worked", data);
         document.getElementById("imageSavedMessage").innerHTML="content saved";
 
         setTimeout(function () {
@@ -597,9 +600,9 @@ const saveImage = async (tempId) => {
     });
 
 }
+
 const clearSaveMessage =() =>{
     document.getElementById("imageSavedMessage").innerHTML="&nbsp;";
-
 }
 
 

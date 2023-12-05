@@ -4,6 +4,7 @@ import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.model.AIImageRequestDTO;
 import com.dotcms.ai.util.Logger;
 import com.dotcms.ai.util.OpenAIRequest;
+import com.dotcms.ai.util.StopwordsUtil;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.mock.request.FakeHttpRequest;
 import com.dotcms.mock.request.MockHeaderRequest;
@@ -132,10 +133,13 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
     }
 
     private String generateFileName(String originalPrompt){
+        final SimpleDateFormat dateToString = new SimpleDateFormat("yyyyMMdd_hhmmss");
         try {
-            String newFileName = originalPrompt.replaceAll("[^A-Za-z0-9 -]", "").toLowerCase();
-            final SimpleDateFormat dateToString = new SimpleDateFormat("yyyyMMdd_hhmmss");
-            newFileName = String.join("-", originalPrompt.split("\\s+"));
+            String newFileName = originalPrompt.toLowerCase();
+            newFileName = newFileName.replaceAll("[^a-z0-9 -]", "");
+            newFileName = new StopwordsUtil().removeStopwords(originalPrompt);
+
+            newFileName = String.join("-", newFileName.split("\\s+"));
             newFileName = newFileName.substring(0, Math.min(200,newFileName.length()));
             return newFileName.substring(0, newFileName.lastIndexOf("-"))
                     + "_"
@@ -149,6 +153,10 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
         }
 
     }
+
+
+
+
 
 
 }
