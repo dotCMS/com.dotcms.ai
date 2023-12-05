@@ -11,6 +11,7 @@ import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONObject;
+import com.liferay.portal.model.User;
 import java.io.IOException;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -55,11 +56,11 @@ public class ImageResource {
         return handleImageRequest(request, response, dto.build());
     }
 
+
     /**
-     * Logs incoming request to plugin API. First checks if config is available, and returns error if it is not or
-     * prompt is empty. Then it calls ImageService. If response is OK creates temp file and adds its name in response
      *
      * @param request
+     * @param response
      * @param aiImageRequestDTO
      * @return
      * @throws IOException
@@ -71,7 +72,7 @@ public class ImageResource {
             @Context HttpServletResponse response,
             AIImageRequestDTO aiImageRequestDTO) throws IOException {
 
-        new WebResource.InitBuilder(request, response)
+        User user = new WebResource.InitBuilder(request, response)
                 .requiredBackendUser(true)
                 .requiredFrontendUser(true)
                 .init().getUser();
@@ -98,7 +99,7 @@ public class ImageResource {
 
         }
 
-        OpenAIImageService service = new OpenAIImageServiceImpl(config);
+        OpenAIImageService service = new OpenAIImageServiceImpl(config,user);
         JSONObject resp = service.sendRequest(aiImageRequestDTO);
 
         return Response.ok(Marshaller.marshal(resp)).type(MediaType.APPLICATION_JSON_TYPE).build();

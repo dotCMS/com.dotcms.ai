@@ -14,7 +14,9 @@ import com.dotcms.rest.api.v1.temp.TempFileAPI;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.util.UtilMethods;
+import com.dotmarketing.util.WebKeys;
 import com.dotmarketing.util.json.JSONObject;
+import com.liferay.portal.model.User;
 import io.vavr.control.Try;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -25,9 +27,10 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
 
 
     private final AppConfig config;
-
-    public OpenAIImageServiceImpl(AppConfig appConfig) {
+    private final User user;
+    public OpenAIImageServiceImpl(AppConfig appConfig, User user) {
         config = appConfig;
+        this.user=user;
     }
 
     @Override
@@ -47,6 +50,18 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
             throw new DotRuntimeException("Image request missing `prompt` key:" + jsonObject);
         }
 
+        if(jsonObject.getString("prompt").length()>400){
+            StringBuilder builder=new StringBuilder();
+            for(String token : jsonObject.getString("prompt").split("\\s+")){
+                builder.append(token).append(" ");
+                if(builder.length() + token.length() + 5>400){
+                    break;
+                }
+
+            }
+            jsonObject.put("prompt", builder.toString());
+        }
+
         jsonObject.putIfAbsent("model", config.getImageModel());
         jsonObject.putIfAbsent("size", config.getImageSize());
         jsonObject.putIfAbsent("n", 1);
@@ -57,7 +72,6 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
 
             JSONObject returnObject = new JSONObject(responseString).getJSONArray("data").getJSONObject(0);
             returnObject.put("originalPrompt", jsonObject.getString("prompt"));
-            returnObject.put("tempFileName", generateFileName(jsonObject.getString("prompt")));
 
 
             return createTempFile(returnObject);
@@ -91,6 +105,7 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
 
 
 
+
         if (UtilMethods.isEmpty(() -> url)) {
             Logger.warn(this.getClass(), "imageResponse does not include URL:" + imageResponse.toString());
             throw new DotRuntimeException("Image Response does not include URL:" + imageResponse);
@@ -99,6 +114,7 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
         try {
 
             final String fileName = generateFileName(imageResponse.getString("originalPrompt"));
+            imageResponse.put("tempFileName", fileName);
             final TempFileAPI tempApi = APILocator.getTempFileAPI();
             DotTempFile file = tempApi.createTempFileFromUrl(fileName, getRequest(),
                     new URL(url), 20, Integer.MAX_VALUE);
@@ -109,7 +125,7 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
 
             imageResponse.put("response", e.getMessage());
             imageResponse.put("error", e.getMessage());
-            Logger.warn(this.getClass(), "Error building tempfile:" + e.getMessage(), e);
+            Logger.error(this.getClass(), "Error building tempfile:" + e.getMessage(), e);
             throw new DotRuntimeException("Error building tempfile from:" + imageResponse);
         }
     }
@@ -122,12 +138,16 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
         String hostName = Try.of(
                         () -> APILocator.getHostAPI().findDefaultHost(APILocator.systemUser(), false).getHostname())
                 .getOrElse("localhost");
-        return new MockSessionRequest(
+        HttpServletRequest requestProxy = new MockSessionRequest(
                 new MockHeaderRequest(
                         new FakeHttpRequest(hostName, "/").request(), "referer",
                         "https://" + hostName + "/fakeRefer"
-                ).request()
-        );
+                ).request());
+        requestProxy.setAttribute(WebKeys.CMS_USER, user);
+        requestProxy.getSession().setAttribute(WebKeys.CMS_USER, user);
+        requestProxy.setAttribute(com.liferay.portal.util.WebKeys.USER_ID, user.getUserId());
+
+        return requestProxy;
 
 
     }
@@ -137,10 +157,10 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
         try {
             String newFileName = originalPrompt.toLowerCase();
             newFileName = newFileName.replaceAll("[^a-z0-9 -]", "");
-            newFileName = new StopwordsUtil().removeStopwords(originalPrompt);
+            newFileName = new StopwordsUtil().removeStopwords(newFileName);
 
             newFileName = String.join("-", newFileName.split("\\s+"));
-            newFileName = newFileName.substring(0, Math.min(200,newFileName.length()));
+            newFileName = newFileName.substring(0, Math.min(100,newFileName.length()));
             return newFileName.substring(0, newFileName.lastIndexOf("-"))
                     + "_"
                     + dateToString.format(new Date())

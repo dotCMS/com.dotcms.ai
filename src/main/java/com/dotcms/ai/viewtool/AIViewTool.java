@@ -8,6 +8,8 @@ import com.dotcms.ai.service.OpenAIImageService;
 import com.dotcms.ai.service.OpenAIImageServiceImpl;
 import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.util.json.JSONObject;
+import com.liferay.portal.model.User;
+import com.liferay.portal.util.PortalUtil;
 import java.io.IOException;
 import java.util.Map;
 import org.apache.velocity.tools.view.context.ViewContext;
@@ -23,7 +25,6 @@ public class AIViewTool implements ViewTool {
         context = (ViewContext) obj;
         this.config = ConfigService.INSTANCE.config(
                 WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(context.getRequest()));
-
 
     }
 
@@ -67,8 +68,8 @@ public class AIViewTool implements ViewTool {
      * @return
      */
     private JSONObject generateImage(String prompt) {
-
-        OpenAIImageService service = new OpenAIImageServiceImpl(config);
+        User user = PortalUtil.getUser(context.getRequest());
+        OpenAIImageService service = new OpenAIImageServiceImpl(config, user);
         try {
 
             return service.sendTextPrompt(prompt);
@@ -81,8 +82,8 @@ public class AIViewTool implements ViewTool {
     }
 
     private JSONObject generateImage(Map prompt) {
-
-        OpenAIImageService service = new OpenAIImageServiceImpl(config);
+        User user = PortalUtil.getUser(context.getRequest());
+        OpenAIImageService service = new OpenAIImageServiceImpl(config, user);
         try {
 
             return service.sendRequest(new JSONObject(prompt));

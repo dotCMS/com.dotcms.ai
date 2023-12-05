@@ -308,7 +308,7 @@ const tab2 = () => {
 const tab3 = () => {
 
     displayImagePrompts()
-    document.getElementById("imagePrompt").value = preferences().imageQuery;
+    document.getElementById("imagePrompt").value = (preferences().imageQuery) ? preferences().imageQuery : "" ;
 
 };
 

@@ -9,6 +9,7 @@ import com.dotcms.api.system.event.message.MessageSeverity;
 import com.dotcms.api.system.event.message.MessageType;
 import com.dotcms.api.system.event.message.SystemMessageEventUtil;
 import com.dotcms.api.system.event.message.builder.SystemMessageBuilder;
+import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.contenttype.model.field.BinaryField;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
@@ -26,6 +27,7 @@ import io.vavr.control.Try;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.servlet.http.HttpServletRequest;
 import org.apache.velocity.context.Context;
 
 public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
@@ -110,13 +112,16 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
                     "field:" + fieldToTry.get().variable() + "  already set:" + fieldVal.get() + ", returning");
             return;
         }
-
+        boolean setRequest=false;
         try {
             Context ctx = VelocityContextFactory.getMockContext(workingContentlet, user);
-
+            if (HttpServletRequestThreadLocal.INSTANCE.getRequest() == null) {
+                setRequest = true;
+                HttpServletRequestThreadLocal.INSTANCE.setRequest((HttpServletRequest) ctx.get("request"));
+            }
             String finalPrompt = VelocityUtil.eval(prompt, ctx);
 
-            OpenAIImageService service = new OpenAIImageServiceImpl(ConfigService.INSTANCE.config(host));
+            OpenAIImageService service = new OpenAIImageServiceImpl(ConfigService.INSTANCE.config(host), user);
 
             JSONObject resp = Try.of(() -> service.sendTextPrompt(finalPrompt))
                     .onFailure(e -> Logger.warn(OpenAIGenerateImageRunner.class, "error generating image:" + e))
@@ -127,6 +132,8 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
                         "Unable to generate image for contentlet: " + workingContentlet.getTitle());
                 return;
             }
+
+
 
             final Contentlet contentToSave = checkoutLatest(identifier, language, user);
             contentToSave.setProperty(fieldToTry.get().variable(), tempFile);
@@ -140,6 +147,11 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
             SystemMessageEventUtil.getInstance().pushMessage(message.create(), List.of(user.getUserId()));
             Logger.warn(this.getClass(), "Error:" + e.getMessage(), e);
             throw new DotRuntimeException(e);
+        }
+        finally{
+            if(setRequest){
+                HttpServletRequestThreadLocal.INSTANCE.setRequest(null);
+            }
         }
     }
 

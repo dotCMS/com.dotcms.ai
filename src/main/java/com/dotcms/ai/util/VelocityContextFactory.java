@@ -14,6 +14,7 @@ import com.dotmarketing.util.PageMode;
 import com.dotmarketing.util.WebKeys;
 import com.liferay.portal.model.User;
 import io.vavr.control.Try;
+import java.util.Optional;
 import org.apache.velocity.context.Context;
 
 import javax.servlet.http.HttpServletRequest;
@@ -47,12 +48,18 @@ public class VelocityContextFactory {
         requestProxy.getSession().setAttribute(WebKeys.CMS_USER, user);
         requestProxy.setAttribute(com.liferay.portal.util.WebKeys.USER_ID, user.getUserId());
 
+
+
+
         Context ctx = VelocityUtil.getWebContext(requestProxy, new BaseResponse().response());
         ContentMap contentMap = new ContentMap(contentlet, user, PageMode.EDIT_MODE, host, ctx);
         ctx.put("contentMap", contentMap);
         ctx.put("dotContentMap", contentMap);
         ctx.put("contentlet", contentMap);
-        ctx.put("contentletToString", ContentToStringUtil.impl.get().turnContentletIntoString(contentlet));
+        Optional<String> contentletToString = ContentToStringUtil.impl.get().turnContentletIntoString(contentlet);
+        if(contentletToString.isPresent()) {
+            ctx.put("contentletToString", contentletToString.get());
+        }
         return ctx;
     }
 
