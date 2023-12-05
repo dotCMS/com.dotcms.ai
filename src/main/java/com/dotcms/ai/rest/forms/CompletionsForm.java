@@ -122,7 +122,7 @@ public class CompletionsForm {
 
     String validateBuilderQuery(String query) {
         if (UtilMethods.isEmpty(query)) {
-            throw new DotRuntimeException("query cannot be null");
+            throw new DotRuntimeException("query/prompt cannot be null");
         }
         return String.join(" ", query.trim().split("\\s+"));
     }

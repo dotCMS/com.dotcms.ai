@@ -33,7 +33,6 @@ class EmbeddingsRunner implements Runnable {
     public void run() {
         try {
 
-
             if (embeddingsAPI.config.getConfigBoolean(AppKeys.EMBEDDINGS_DB_DELETE_OLD_ON_UPDATE)) {
 
                 EmbeddingsDTO deleteOldVersions = new EmbeddingsDTO.Builder()

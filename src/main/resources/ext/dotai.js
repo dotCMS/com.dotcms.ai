@@ -307,6 +307,13 @@ const tab2 = () => {
 
 const tab3 = () => {
 
+    displayImagePrompts()
+    document.getElementById("imagePrompt").value = preferences().imageQuery;
+
+};
+
+const tab4 = () => {
+
     refreshConfigs().then(() => {
         writeConfigTable();
     });
@@ -411,10 +418,191 @@ const showResultTables = () => {
 
     const prefs = preferences();
     prefs.showResultsSearching = searching;
-    ;
     savePreferences(prefs);
 
 }
+
+const readImagePromptsFromPrefs = (prefs)=> {
+
+    //console.log("prefs:", prefs)
+    const storedData = prefs.imagePrompts;
+    //console.log("storedData", storedData)
+    if (storedData && Array.isArray(storedData)) {
+        return storedData;
+    }
+    else if(storedData){
+        return JSON.parse(storedData);
+    } else {
+        return [];
+    }
+}
+
+const readImagePrompts = ()=> {
+
+    return readImagePromptsFromPrefs(preferences())
+}
+
+
+const addPromptToArrayAndStore = (prefs) => {
+    const inputValue=prefs.imageQuery;
+    const oldData = readImagePromptsFromPrefs(prefs);
+
+    const newData = []
+    for(let i=0;i<oldData.length;i++){
+        if(oldData[i] !== inputValue){
+            newData.push(oldData[i]);
+        }
+        if(newData.length>15){
+            break;
+        }
+    }
+    newData.unshift(inputValue);
+
+    prefs.imagePrompts = newData;
+    console.log("prefs",prefs)
+    savePreferences(prefs);
+    displayImagePrompts();
+}
+
+const displayImagePrompts = () => {
+
+    const dataArray = readImagePrompts();
+    const listContainer = document.getElementById('image-prompts');
+    listContainer.innerHTML = ''; // Clear previous content
+
+    dataArray.forEach((item, index) => {
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `<a href="javascript:loadPrompt(${index})">${item}</a>`;
+        listContainer.appendChild(listItem);
+    });
+}
+
+const loadPrompt = (num) =>{
+    const dataArray = readImagePrompts();
+    document.getElementById("imagePrompt").value = dataArray[num];
+}
+
+const doImageJson = () => {
+    document.getElementById("submitImage").style.display = "none";
+    document.getElementById("loaderImage").style.display = "block";
+    setTimeout(function () {
+        doImageJsonDebounced();
+    }, 300);
+}
+
+const doImageJsonDebounced = async () => {
+    const formDataRaw = new FormData(document.getElementById("imageForm"))
+
+    const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
+
+    const prompt = document.getElementById("imagePrompt").value;
+
+    formData.prompt = prompt;
+
+    if (formData.prompt == undefined || formData.prompt.trim().length == 0) {
+        alert("please enter a prompt");
+        document.getElementById("submitImage").style.display = "";
+        document.getElementById("loaderImage").style.display = "none";
+        return;
+    }
+
+
+
+    const prefs = preferences();
+    prefs.imageQuery = formData.prompt.trim();
+    prefs.imageSize = formData.size.trim();
+    addPromptToArrayAndStore(prefs);
+
+    //console.log("formData", formData)
+
+    const response = await fetch('/api/v1/ai/image/generate', {
+        method: "POST", body: JSON.stringify(formData), headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+
+
+
+
+    response.json().then(json => {
+
+        const temp =  json.response;
+        const width = formData.size.split("x")[0];
+        const height = formData.size.split("x")[1];
+        const jsonString=JSON.stringify(json, 2);
+        const rewrittenPrompt = json.revised_prompt;
+        const imageTemplate =`
+            <div style="width:100%;max-width:800px;position:relative;text-align:center;border:1px solid silver;padding:1rem;">
+                <img src="/dA/${temp}/asset.png" style="max-width:750px;max-height:750px;display: block;margin:auto;"  />
+                
+                <div style="padding:1rem;margin:auto;text-align: center">
+                    <button id="saveImageButton" class="button dijit dijitReset dijitInline dijitButton"
+                            onclick="saveImage('${temp}')">
+                        Save
+                    </button><br>
+                    <div id="imageSavedMessage">&nbsp;</div>
+                </div>
+                <div style="border:1px solid silver;padding:1rem;margin:auto;text-align: left">
+                    <b>OpenAI Prompt (Rewritten):</b> <br>
+                    ${rewrittenPrompt}
+                </div>
+                <div style="border:1px solid silver;padding:1rem;margin:auto;text-align: left">
+                    <b>JSON Response:</b> <br>${jsonString}
+                </div>
+            </div>
+
+    `
+
+
+
+        document.getElementById("imageRequest").innerHTML = imageTemplate;
+        document.getElementById("submitImage").style.display = "";
+        document.getElementById("loaderImage").style.display = "none";
+    });
+
+}
+
+const saveImage = async (tempId) => {
+
+
+    const contentlets = [{
+        baseType: 'dotAsset',
+        asset: tempId,
+        hostFolder: ''
+    }];
+
+    console.log("newAsset", contentlets)
+
+    const response = await fetch('/api/v1/workflow/actions/default/fire/PUBLISH', {
+    method: "POST", body: JSON.stringify({ contentlets }), headers: {
+        "Content-Type": "application/json"
+    }
+    })
+    .then(response => response.json())
+    .catch(data =>{
+        document.getElementById("imageSavedMessage").innerHTML="error:" + data;
+
+        console.log("error", data)
+
+    })
+    .then(data => {
+        console.log("worked", data);
+        document.getElementById("imageSavedMessage").innerHTML="content saved";
+
+        setTimeout(function () {
+            clearSaveMessage();
+        }, 3000);
+
+    });
+
+}
+const clearSaveMessage =() =>{
+    document.getElementById("imageSavedMessage").innerHTML="&nbsp;";
+
+}
+
+
 
 const doSearchChatJson = () => {
     document.getElementById("submitChat").style.display = "none";
