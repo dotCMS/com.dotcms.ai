@@ -31,8 +31,11 @@
     <input id="tab-2" type="radio" name="tab-group" onclick="changeTabs()"/>
     <label for="tab-2">Manage Embeddings/Indexes</label>
 
-    <input id="tab-3" type="radio" name="tab-group" onclick="changeTabs();"/>
-    <label for="tab-3">Config Values</label>
+    <input id="tab-3" type="radio" name="tab-group" onclick="changeTabs()"/>
+    <label for="tab-3">Image Playground</label>
+
+    <input id="tab-4" type="radio" name="tab-group" onclick="changeTabs();"/>
+    <label for="tab-4">Config Values</label>
 
 </div>
 
@@ -313,8 +316,79 @@
         </div>
     </div>
 
-
     <div id="content-3">
+        <h2>Image Playground</h2>
+
+        <div style="display: grid;grid-template-columns: 45% 55%;">
+            <div style="border-right:1px solid #eeeeee;margin-right:40px;padding-right: 40px">
+                <form action="POST" id="imageForm" onsubmit="return false;">
+                    <table class="aiSearchResultsTable">
+                        <tr>
+                            <th style="width:30%">
+                                <b>Prompt:</b>
+                            </th>
+                            <td><span class="clearPromptX" id="imagePromptX" onclick="clearPrompt('imagePrompt')"
+                                      style="visibility: hidden">&#10006;</span>
+                                <textarea class="prompt" name="prompt" id="imagePrompt"
+                                          onkeyup="showClearPrompt('imagePrompt')"
+                                          onchange="showClearPrompt('imagePrompt')"
+                                          placeholder="Image prompt"></textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>
+                                Size:
+                            </th>
+                            <td>
+                                <select name="size" style="min-width:400px;">
+                                    <option value="1024x1024">1024x1024 (Square)</option>
+                                    <option value="1024x1792">1024x1792 (Vertical)</option>
+                                    <option value="1792x1024" selected>1792x1024 (Horizontal)</option>
+
+
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align: center">
+                                <div style="padding:10px;height:75px; text-align: center">
+                                    <div class="loader" style="display:none;height:40px;padding:10px;" id="loaderImage"></div>
+                                    <button id="submitImage" class="button dijit dijitReset dijitInline dijitButton"
+                                            onclick="doImageJson()">
+                                        Submit &nbsp; &nbsp; <i>&rarr;</i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <div>
+                                    <h4>Recent Prompts</h4>
+                                    <ol id="image-prompts">
+
+
+                                    </ol>
+
+
+                                </div>
+
+
+                            </td>
+                        </tr>
+                    </table>
+
+
+                </form>
+            </div>
+            <div>
+                <div id="imageRequest">
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="content-4">
         <h2>AI/Embeddings Config</h2>
 
         <div style="padding:20px;border:1px solid darkgray;max-width:800px;margin:30px;">
@@ -329,10 +403,8 @@
 
 
         </div>
-
-
-
     </div>
+
 </div>
 
 </body>

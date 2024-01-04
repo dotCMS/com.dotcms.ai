@@ -34,8 +34,8 @@ class EmbeddingsSQL {
             "create index if not exists dot_embeddings_idx_type on dot_embeddings(inode,lower(content_type))",
             "create index if not exists dot_embeddings_idx_id_lang on dot_embeddings(identifier,language)",
             "create index if not exists dot_embeddings_idx_host on dot_embeddings(host)",
-            "create index if not exists dot_embeddings_idx_text_hash on dot_embeddings(extracted_text_hash)",
-            "create index if not exists dot_embeddings_idx_vector ON dot_embeddings USING hnsw (embeddings vector_cosine_ops);"
+            "create index if not exists dot_embeddings_idx_text_hash on dot_embeddings(extracted_text_hash);"
+            //"create index if not exists dot_embeddings_idx_vector ON dot_embeddings USING hnsw (embeddings vector_cosine_ops);"
     };
 
 

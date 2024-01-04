@@ -2,41 +2,40 @@ package com.dotcms.ai.viewtool;
 
 import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.app.ConfigService;
-import com.dotcms.ai.model.AIImageResponseDTO;
-import com.dotcms.ai.model.AITextResponseDTO;
-import com.dotcms.ai.model.AIVelocityImageResponseDTO;
-import com.dotcms.ai.model.AIVelocityTextResponseDTO;
-import com.dotcms.ai.service.ChatGPTImageService;
-import com.dotcms.ai.service.ChatGPTImageServiceImpl;
-import com.dotcms.ai.service.ChatGPTTextService;
-import com.dotcms.ai.service.ChatGPTTextServiceImpl;
-import com.dotcms.rest.api.v1.temp.DotTempFile;
-import com.dotcms.rest.api.v1.temp.TempFileAPI;
-import com.dotmarketing.business.APILocator;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import com.dotcms.ai.service.OpenAIChatService;
+import com.dotcms.ai.service.OpenAIChatServiceImpl;
+import com.dotcms.ai.service.OpenAIImageService;
+import com.dotcms.ai.service.OpenAIImageServiceImpl;
+import com.dotmarketing.business.web.WebAPILocator;
+import com.dotmarketing.util.json.JSONObject;
+import com.liferay.portal.model.User;
+import com.liferay.portal.util.PortalUtil;
+import java.io.IOException;
+import java.util.Map;
 import org.apache.velocity.tools.view.context.ViewContext;
 import org.apache.velocity.tools.view.tools.ViewTool;
 
-import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.net.URL;
-
 public class AIViewTool implements ViewTool {
-    private ViewContext context;
 
+    AppConfig config;
+    private ViewContext context;
 
     @Override
     public void init(Object obj) {
         context = (ViewContext) obj;
+        this.config = ConfigService.INSTANCE.config(
+                WebAPILocator.getHostWebAPI().getCurrentHostNoThrow(context.getRequest()));
+
     }
 
     /**
-     * Generate a response from the AI prompt service with adding config data to original prompt (rolePrompt, textPrompt, imagePrompt)
+     * Generate a response from the AI prompt service with adding config data to original prompt (rolePrompt,
+     * textPrompt, imagePrompt)
      *
-     * @return AIVelocityTextResponseDTO
+     * @return JSONObject
      */
-    public AIVelocityTextResponseDTO textGenerate(final String prompt) throws IOException {
-        return generateTextResponse(prompt, false);
+    public JSONObject generateText(final String prompt) throws IOException {
+        return generateText(prompt, false);
     }
 
     /**
@@ -47,80 +46,53 @@ public class AIViewTool implements ViewTool {
      * @return
      * @throws IOException
      */
-    private AIVelocityTextResponseDTO generateTextResponse(String prompt, boolean raw) throws IOException {
-        final AppConfig config = ConfigService.INSTANCE.config();
+    private JSONObject generateText(String prompt, boolean raw) throws IOException {
 
+        OpenAIChatService service = new OpenAIChatServiceImpl(config);
+        return raw ? service.sendRawRequest(new JSONObject(prompt)) : service.sendTextPrompt(prompt);
 
-        try {
-            ChatGPTTextService service = new ChatGPTTextServiceImpl(config);
-            AITextResponseDTO resp = service.sendChatGPTRequest(prompt, raw);
-            return new AIVelocityTextResponseDTO(resp.getModel(), "200", resp.getPrompt(), resp.getResponse());
-        } catch (Exception e) {
-            return new AIVelocityTextResponseDTO(null, "500", prompt, e.getMessage());
-        }
 
     }
 
-    /**
-     * Generate a raw response from the AI prompt service w/o adding data from config to prompt
-     *
-     * @return AIVelocityTextResponseDTO
-     */
-    public AIVelocityTextResponseDTO textGenerateRaw(final String prompt) throws IOException {
-        return generateTextResponse(prompt, true);
+    public JSONObject generateText(final JSONObject prompt) throws IOException {
+
+        OpenAIChatService service = new OpenAIChatServiceImpl(config);
+        return service.sendRawRequest(prompt);
     }
 
     /**
-     * Generate a response from the AI image service with adding config data to original prompt (imagePrompt). Image size is set in configuration file. Temp
-     * File id is being returned in response
-     *
-     * @return AIVelocityImageResponseDTO
-     */
-    public AIVelocityImageResponseDTO imageGenerate(String prompt) {
-        return processImageRequest(prompt, false);
-    }
-
-    /**
-     * Processes image request by calling ImageService. If response is OK creates temp file and adds its name in response
+     * Processes image request by calling ImageService. If response is OK creates temp file and adds its name in
+     * response
      *
      * @param prompt
-     * @param isRaw
      * @return
      */
-    private AIVelocityImageResponseDTO processImageRequest(String prompt, boolean isRaw) {
-        final AppConfig config = ConfigService.INSTANCE.config();
-
-
+    private JSONObject generateImage(String prompt) {
+        User user = PortalUtil.getUser(context.getRequest());
+        OpenAIImageService service = new OpenAIImageServiceImpl(config, user);
         try {
-            ChatGPTImageService service = new ChatGPTImageServiceImpl(config);
-            final AIImageResponseDTO aiImageResponseDTO = service.sendChatGPTRequest(prompt, config, isRaw);
-            String fileId = null;
-            if (aiImageResponseDTO.getHttpStatus().equals(String.valueOf(HttpResponseStatus.OK.code()))) {
-                final TempFileAPI tempApi = APILocator.getTempFileAPI();
-                DotTempFile file = tempApi.createTempFileFromUrl("ChatGPTImage", getRequest(), new URL(aiImageResponseDTO.getResponse()), 10, 1000);
-                return new AIVelocityImageResponseDTO(aiImageResponseDTO.getModel(), aiImageResponseDTO.getHttpStatus(), prompt,
-                        file.id);
-            } else {
-                return new AIVelocityImageResponseDTO(aiImageResponseDTO.getModel(), aiImageResponseDTO.getHttpStatus(), prompt,
-                        aiImageResponseDTO.getResponse());
-            }
+
+            return service.sendTextPrompt(prompt);
+
         } catch (Exception e) {
-            return new AIVelocityImageResponseDTO(null, "500", prompt, e.getMessage());
+            final JSONObject jsonResponse = new JSONObject();
+            jsonResponse.put("response", e.getMessage());
+            return jsonResponse;
         }
     }
 
-    HttpServletRequest getRequest() {
-        return context.getRequest();
-    }
+    private JSONObject generateImage(Map prompt) {
+        User user = PortalUtil.getUser(context.getRequest());
+        OpenAIImageService service = new OpenAIImageServiceImpl(config, user);
+        try {
 
-    /**
-     * Generate a response from the AI image service  service w/o adding data from config to prompt. Image size is set in configuration file. Temp File id is
-     * being returned in response
-     *
-     * @return AIVelocityImageResponseDTO
-     */
-    public AIVelocityImageResponseDTO imageGenerateRaw(String prompt) {
-        return processImageRequest(prompt, true);
+            return service.sendRequest(new JSONObject(prompt));
+
+        } catch (Exception e) {
+            final JSONObject jsonResponse = new JSONObject();
+            jsonResponse.put("response", e.getMessage());
+            return jsonResponse;
+        }
     }
 
     public EmbeddingsTool getEmbeddings() {

@@ -1,40 +1,34 @@
 package com.dotcms.ai.workflow;
 
 import com.dotcms.ai.app.ConfigService;
-import com.dotcms.ai.model.AIImageResponseDTO;
-import com.dotcms.ai.service.ChatGPTImageService;
-import com.dotcms.ai.service.ChatGPTImageServiceImpl;
+import com.dotcms.ai.service.OpenAIImageService;
+import com.dotcms.ai.service.OpenAIImageServiceImpl;
 import com.dotcms.ai.util.Logger;
 import com.dotcms.ai.util.VelocityContextFactory;
 import com.dotcms.api.system.event.message.MessageSeverity;
 import com.dotcms.api.system.event.message.MessageType;
 import com.dotcms.api.system.event.message.SystemMessageEventUtil;
 import com.dotcms.api.system.event.message.builder.SystemMessageBuilder;
+import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.contenttype.model.field.BinaryField;
 import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.contenttype.model.type.ContentType;
-import com.dotcms.rest.api.v1.temp.DotTempFile;
-import com.dotcms.rest.api.v1.temp.TempFileAPI;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.workflows.model.WorkflowActionClassParameter;
 import com.dotmarketing.portlets.workflows.model.WorkflowProcessor;
-import com.dotmarketing.util.StringUtils;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.VelocityUtil;
+import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
-import com.werken.xpath.impl.Op;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vavr.control.Try;
-import org.apache.velocity.context.Context;
-
-import javax.servlet.http.HttpServletRequest;
-import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.servlet.http.HttpServletRequest;
+import org.apache.velocity.context.Context;
 
 public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
 
@@ -53,14 +47,16 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
                 processor.getContentlet(),
                 processor.getUser(),
                 params.get(OpenAIParams.OPEN_AI_PROMPT.key).getValue(),
-                Try.of(() -> Boolean.parseBoolean(params.get(OpenAIParams.OVERWRITE_FIELDS.key).getValue())).getOrElse(false),
+                Try.of(() -> Boolean.parseBoolean(params.get(OpenAIParams.OVERWRITE_FIELDS.key).getValue()))
+                        .getOrElse(false),
                 params.get(OpenAIParams.FIELD_TO_WRITE.key).getValue(),
                 Try.of(() -> Integer.parseInt(params.get(OpenAIParams.RUN_DELAY.key).getValue())).getOrElse(5)
 
         );
     }
 
-    OpenAIGenerateImageRunner(Contentlet contentlet, User user, String prompt, boolean overwriteField, String fieldToWrite, int runDelay) {
+    OpenAIGenerateImageRunner(Contentlet contentlet, User user, String prompt, boolean overwriteField,
+            String fieldToWrite, int runDelay) {
         this.identifier = contentlet.getIdentifier();
         this.language = contentlet.getLanguageId();
         this.prompt = prompt;
@@ -88,14 +84,13 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
 
     public void runInternal() {
 
-
         final Contentlet workingContentlet = getLatest(identifier, language, user);
 
-        final Host host = Try.of(() -> APILocator.getHostAPI().find(workingContentlet.getHost(), APILocator.systemUser(), true)).getOrElse(APILocator.systemHost());
-
+        final Host host = Try.of(
+                        () -> APILocator.getHostAPI().find(workingContentlet.getHost(), APILocator.systemUser(), true))
+                .getOrElse(APILocator.systemHost());
 
         final Optional<Field> fieldToTry = resolveField(workingContentlet);
-
 
         if (UtilMethods.isEmpty(prompt)) {
             Logger.info(OpenAIContentPromptActionlet.class, "no prompt found, returning");
@@ -109,34 +104,39 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
             return;
         }
 
-        Optional<Object> fieldVal = Try.of(() -> APILocator.getContentletAPI().getFieldValue(workingContentlet, fieldToTry.get())).toJavaOptional();
+        Optional<Object> fieldVal = Try.of(
+                        () -> APILocator.getContentletAPI().getFieldValue(workingContentlet, fieldToTry.get()))
+                .toJavaOptional();
         if (fieldVal.isPresent() && UtilMethods.isSet(fieldVal.get()) && !overwriteField) {
-            Logger.info(OpenAIContentPromptActionlet.class, "field:" + fieldToTry.get().variable() + "  already set:" + fieldVal.get() + ", returning");
+            Logger.info(OpenAIContentPromptActionlet.class,
+                    "field:" + fieldToTry.get().variable() + "  already set:" + fieldVal.get() + ", returning");
             return;
         }
-
-
+        boolean setRequest=false;
         try {
             Context ctx = VelocityContextFactory.getMockContext(workingContentlet, user);
-
+            if (HttpServletRequestThreadLocal.INSTANCE.getRequest() == null) {
+                setRequest = true;
+                HttpServletRequestThreadLocal.INSTANCE.setRequest((HttpServletRequest) ctx.get("request"));
+            }
             String finalPrompt = VelocityUtil.eval(prompt, ctx);
 
-            ChatGPTImageService service = new ChatGPTImageServiceImpl(ConfigService.INSTANCE.config(host));
-            AIImageResponseDTO resp = service.sendChatGPTRequest(finalPrompt, ConfigService.INSTANCE.config(host), false);
+            OpenAIImageService service = new OpenAIImageServiceImpl(ConfigService.INSTANCE.config(host), user);
 
-            if (!resp.getHttpStatus().equals(String.valueOf(HttpResponseStatus.OK.code()))) {
-                Logger.warn(this.getClass(), "API Request error:" + resp.getHttpStatus());
-                Logger.warn(this.getClass(), "API Request error:" + resp.getResponse());
+            JSONObject resp = Try.of(() -> service.sendTextPrompt(finalPrompt))
+                    .onFailure(e -> Logger.warn(OpenAIGenerateImageRunner.class, "error generating image:" + e))
+                    .getOrElse(JSONObject::new);
+            String tempFile = resp.optString("response");
+            if (UtilMethods.isEmpty(tempFile)) {
+                Logger.warn(this.getClass(),
+                        "Unable to generate image for contentlet: " + workingContentlet.getTitle());
                 return;
             }
 
-            final TempFileAPI tempApi = APILocator.getTempFileAPI();
-            final String url = resp.getResponse();
-            HttpServletRequest request = (HttpServletRequest) ctx.get("request");
-            DotTempFile tmpFile = tempApi.createTempFileFromUrl(StringUtils.camelCaseLower(workingContentlet.getTitle()) + ".png", request, new URL(url), 20, Integer.MAX_VALUE);
+
 
             final Contentlet contentToSave = checkoutLatest(identifier, language, user);
-            contentToSave.setProperty(fieldToTry.get().variable(), tmpFile.file);
+            contentToSave.setProperty(fieldToTry.get().variable(), tempFile);
             saveContentlet(contentToSave, user);
 
 
@@ -147,6 +147,11 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
             SystemMessageEventUtil.getInstance().pushMessage(message.create(), List.of(user.getUserId()));
             Logger.warn(this.getClass(), "Error:" + e.getMessage(), e);
             throw new DotRuntimeException(e);
+        }
+        finally{
+            if(setRequest){
+                HttpServletRequestThreadLocal.INSTANCE.setRequest(null);
+            }
         }
     }
 

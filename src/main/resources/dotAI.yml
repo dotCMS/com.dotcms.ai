@@ -56,16 +56,18 @@ params:
     hint: "Image size to generate"
     required: true
     value:
-      - label: "1024x1024"
-        value: "1024x1024"
-      - label: "1024x1792"
-        value: "1024x1792"
-      - label: "1792x1024"
-        value: "1792x1024"
+      - label: "1280x720 (Hero Image 16:9)"
+        value: "1280x720"
+      - label: "1200x630 (Blog Image 3:2)"
+        value: "1200x630"
+      - label: "630x1200 (Blog Image Vertical 2:3)"
+        value: "630x1200"
         selected: true
-      - label: "512x512"
+      - label: "512x512 (Large Square 1:1)"
         value: "512x512"
-      - label: "256x256"
+      - label: "1920x1080 (Background 16:9)"
+        value: "1920x1080"
+      - label: "256x256 (Small Square 1:1)"
         value: "256x256"
   model:
     value: "gpt-3.5-turbo-16k"

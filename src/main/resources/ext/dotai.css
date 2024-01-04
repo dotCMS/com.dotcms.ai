@@ -458,3 +458,16 @@ td {
 .rotated {
     transform: rotate(90deg);
 }
+
+#imageSavedMessage{
+    display: block;
+    padding: 10px 5px;
+    color: darkgreen;
+
+}
+
+#image-prompts >li{
+    padding:5px;
+    list-style-type: decimal ;
+    display: list-item;
+}
