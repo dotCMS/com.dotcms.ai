@@ -65,9 +65,9 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
         jsonObject.putIfAbsent("model", config.getImageModel());
         jsonObject.putIfAbsent("size", config.getImageSize());
         jsonObject.putIfAbsent("n", 1);
-
+        String responseString = "";
         try {
-            String responseString = OpenAIRequest.doRequest(config.getApiImageUrl(), "POST", config.getApiKey(),
+            responseString = OpenAIRequest.doRequest(config.getApiImageUrl(), "POST", config.getApiKey(),
                     jsonObject);
 
             JSONObject returnObject = new JSONObject(responseString).getJSONArray("data").getJSONObject(0);
@@ -77,7 +77,9 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
             return createTempFile(returnObject);
 
         } catch (Exception e) {
-            Logger.warn(this.getClass(), "image request failed:" + e.getMessage(), e);
+            Logger.warn(this.getClass(), "image request failed:" + e.getMessage(),e);
+            Logger.warn(this.getClass(), "     --- response   :" +responseString);
+
             throw new DotRuntimeException("Error generating image:" + e, e);
         }
     }

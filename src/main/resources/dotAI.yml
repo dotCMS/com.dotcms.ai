@@ -7,20 +7,6 @@ description: |
   by placing all config on the SYSTEM_HOST or provide a configuration PER site. 
 
 params:
-  apiUrl:
-    value: "https://api.openai.com/v1/chat/completions"
-    hidden: false
-    type: "STRING"
-    label: "API URL"
-    hint: "Completions API URL address.  This is "
-    required: true
-  apiImageUrl:
-    value: "https://api.openai.com/v1/images/generations"
-    hidden: false
-    type: "STRING"
-    label: "API IMAGE URL"
-    hint: "ChatGPT IMAGE API URL address"
-    required: true
   apiKey:
     value: ""
     hidden: true
@@ -56,14 +42,20 @@ params:
     hint: "Image size to generate"
     required: true
     value:
+      - label: "1792x1024 (Blog Image 3:2)"
+        value: "1792x1024"
+        selected: true
+      - label: "1024x1792 (Blog Image Vertical 2:3)"
+        value: "1024x1792"
+      - label: "1024x1024 (Large Square 1:1)"
+        value: "1024x1024"
       - label: "1280x720 (Hero Image 16:9)"
         value: "1280x720"
-      - label: "1200x630 (Blog Image 3:2)"
+      - label: "1200x630 (Image 3:2)"
         value: "1200x630"
-      - label: "630x1200 (Blog Image Vertical 2:3)"
+      - label: "630x1200 (Image Vertical 2:3)"
         value: "630x1200"
-        selected: true
-      - label: "512x512 (Large Square 1:1)"
+      - label: "512x512 (Medium Square 1:1)"
         value: "512x512"
       - label: "1920x1080 (Background 16:9)"
         value: "1920x1080"

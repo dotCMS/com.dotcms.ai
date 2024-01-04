@@ -126,6 +126,10 @@ public class OpenAIGenerateImageRunner implements AsyncWorkflowRunner {
             JSONObject resp = Try.of(() -> service.sendTextPrompt(finalPrompt))
                     .onFailure(e -> Logger.warn(OpenAIGenerateImageRunner.class, "error generating image:" + e))
                     .getOrElse(JSONObject::new);
+            if(resp.isEmpty()){
+
+
+            }
             String tempFile = resp.optString("response");
             if (UtilMethods.isEmpty(tempFile)) {
                 Logger.warn(this.getClass(),

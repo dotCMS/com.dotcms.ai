@@ -283,9 +283,8 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         JSONObject json = new JSONObject();
         json.put("messages", messages);
-        if (!json.containsKey("model")) {
-            json.put("model", config.get().getConfig(AppKeys.COMPLETION_MODEL));
-        }
+        json.putIfAbsent("model", config.get().getConfig(AppKeys.COMPLETION_MODEL));
+
         json.put("temperature", form.temperature);
         if (form.responseLengthTokens > 0) {
             json.put("max_tokens", form.responseLengthTokens);

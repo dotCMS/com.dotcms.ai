@@ -29,10 +29,11 @@
     <label for="tab-1" class="p-tabview p-tabview-nav p-tabview-nav-link">Search and Chat with dotCMS</label>
 
     <input id="tab-2" type="radio" name="tab-group" onclick="changeTabs()"/>
-    <label for="tab-2">Manage Embeddings/Indexes</label>
+    <label for="tab-2">Image Playground</label>
+
 
     <input id="tab-3" type="radio" name="tab-group" onclick="changeTabs()"/>
-    <label for="tab-3">Image Playground</label>
+    <label for="tab-3">Manage Embeddings/Indexes</label>
 
     <input id="tab-4" type="radio" name="tab-group" onclick="changeTabs();"/>
     <label for="tab-4">Config Values</label>
@@ -212,7 +213,7 @@
     </div>
 
 
-    <div id="content-2">
+    <div id="content-3">
         <h2>Manage Embeddings / Indexes</h2>
 
         <div style="display: grid;grid-template-columns: 45% 55%;">
@@ -316,7 +317,7 @@
         </div>
     </div>
 
-    <div id="content-3">
+    <div id="content-2">
         <h2>Image Playground</h2>
 
         <div style="display: grid;grid-template-columns: 45% 55%;">
