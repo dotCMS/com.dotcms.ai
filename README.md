@@ -2,7 +2,7 @@
 
 This is plugin that a number of dotCMS specific tools that leverage AI tooling (Open AI specifically) for use in dotCMS.  
 This includes REST apis, Workflow Actions and Viewtools that let dotCMS interact with AI in a variety of ways.  For examples on how to use these endpoints and to create content embedding indexes, see 
-[this document](README-CURL.md). To see how OepnAI can be used in Velocity contexts, see this [this document](README-Velocity%20Tooling.md)
+[this document](README-CURL.md). To see how OpenAI can be used in Velocity contexts, see this [this document](README-Velocity%20Tooling.md)
 
 Out of the box, it provides:
 ### An App
