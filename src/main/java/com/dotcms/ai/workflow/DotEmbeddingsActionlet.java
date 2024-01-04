@@ -79,7 +79,7 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
                 UtilMethods.isSet(params.get(OpenAIParams.DOT_EMBEDDING_INDEX.key).getValue()) ? params.get(
                         OpenAIParams.DOT_EMBEDDING_INDEX.key).getValue() : "default";
 
-        final Map<String, List<Field>> typesAndfields = parseTypesAndFields(
+        final Map<String, List<Field>> typesAndfields = EmbeddingsAPI.impl().parseTypesAndFields(
                 params.get(OpenAIParams.DOT_EMBEDDING_TYPES_FIELDS.key).getValue());
 
         List<Field> fields = typesAndfields.getOrDefault(type.variable(), List.of());
@@ -89,35 +89,7 @@ public class DotEmbeddingsActionlet extends WorkFlowActionlet {
     }
 
 
-    private Map<String, List<Field>> parseTypesAndFields(final String typeAndFieldParam) {
 
-        if (UtilMethods.isEmpty(typeAndFieldParam)) {
-            return Map.of();
-        }
-
-        final Map<String, List<Field>> typesAndFields = new HashMap<>();
-        final String[] typeFieldArr = typeAndFieldParam.trim().split("\\r?\\n");
-
-        for (String typeField : typeFieldArr) {
-            String[] typeOptField = typeField.trim().split("\\.");
-            Optional<ContentType> type = Try.of(
-                    () -> APILocator.getContentTypeAPI(APILocator.systemUser()).find(typeOptField[0])).toJavaOptional();
-            if (type.isEmpty()) {
-                continue;
-            }
-            List<Field> fields = typesAndFields.getOrDefault(type.get().variable(), new ArrayList<>());
-
-            Optional<Field> field = Try.of(() -> type.get().fieldMap().get(typeOptField[1])).toJavaOptional();
-            if (field.isPresent()) {
-                fields.add(field.get());
-            }
-
-            typesAndFields.put(type.get().variable(), fields);
-
-        }
-
-        return typesAndFields;
-    }
 
 
 }

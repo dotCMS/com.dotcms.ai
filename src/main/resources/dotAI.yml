@@ -75,3 +75,18 @@ params:
     label: "Image Model"
     hint: "Image Model used to generate AI Images"
     required: true
+  listenerIndexer:
+    value: ""
+    hidden: false
+    type: "STRING"
+    label: "Auto Index Content Config"
+    hint: |
+      this is a json map that automatically maps indexes:contentType and tells dotCMS which content types should be indexed and where, e.g.
+      ```
+      {
+          "default": "blog,news,webPageContent",
+          "blogsOnly": "blog"
+      }
+      ```
+      The list of content types is a comma separated list of glob patterns which will matched against when a contentlet is published (will be indexed) or unpublished (will be removed from the index).
+    required: false

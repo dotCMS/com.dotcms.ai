@@ -31,6 +31,8 @@ public interface EmbeddingsAPI {
     int deleteEmbedding(EmbeddingsDTO dto);
 
 
+    Map<String, List<Field>> parseTypesAndFields(String typeAndFieldParam);
+
     JSONObject reduceChunksToContent(EmbeddingsDTO searcher, List<EmbeddingsDTO> searchResults);
 
     JSONObject searchForContent(EmbeddingsDTO searcher);
@@ -52,4 +54,7 @@ public interface EmbeddingsAPI {
      * @return
      */
     Tuple2<Integer, List<Float>> pullOrGenerateEmbeddings(String content);
+
+
+
 }
