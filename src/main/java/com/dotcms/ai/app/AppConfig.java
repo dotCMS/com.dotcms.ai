@@ -2,6 +2,7 @@ package com.dotcms.ai.app;
 
 import com.dotcms.security.apps.Secret;
 import com.dotmarketing.util.Logger;
+import com.dotmarketing.util.UtilMethods;
 import com.liferay.util.StringPool;
 import io.vavr.control.Try;
 
@@ -49,11 +50,11 @@ public class AppConfig implements Serializable {
     public static final Pattern SPLITTER= Pattern.compile("\\s?,\\s?");
 
     public String getApiUrl() {
-        return apiUrl;
+        return UtilMethods.isEmpty(apiUrl) ? "https://api.openai.com/v1/chat/completions" : apiUrl;
     }
 
     public java.lang.String getApiImageUrl() {
-        return apiImageUrl;
+        return UtilMethods.isEmpty(apiImageUrl)? "https://api.openai.com/v1/images/generations" : apiImageUrl;
     }
 
     public String getApiKey() {

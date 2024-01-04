@@ -1,10 +1,18 @@
 package com.dotcms.ai.rest;
 
+import com.dotcms.ai.api.CompletionsAPI;
+import com.dotcms.ai.app.AppConfig;
+import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.rest.forms.CompletionsForm;
+import com.dotcms.repackage.org.directwebremoting.json.types.JsonObject;
 import com.dotcms.rest.WebResource;
+import com.dotmarketing.business.web.WebAPILocator;
 import com.dotmarketing.util.UtilMethods;
+import com.dotmarketing.util.json.JSONArray;
+import com.dotmarketing.util.json.JSONObject;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
@@ -45,8 +53,36 @@ public class TextResource {
                     .build();
         }
 
-        return new CompletionsResource().rawPrompt(request, response, formIn);
+        final AppConfig config = ConfigService.INSTANCE.config(WebAPILocator.getHostWebAPI().getHost(request));
+
+        ConfigService.INSTANCE.config();
+
+
+        return Response.ok(CompletionsAPI.impl().raw(generateRequest(formIn,config )).toString()).build();
 
     }
+
+    JSONObject generateRequest(CompletionsForm form, AppConfig config){
+
+        String systemPrompt = UtilMethods.isSet(config.getRolePrompt()) ? config.getRolePrompt() : null;
+        String prompt = form.prompt;
+        String model = form.model;
+        float temperature = form.temperature;
+        JSONObject request = new JSONObject();
+        JSONArray messages = new JSONArray();
+        if(UtilMethods.isSet(systemPrompt)) {
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+        }
+        messages.add(Map.of("role", "user", "content", form.prompt));
+        request.put("model", model);
+        request.put("temperature", temperature);
+        request.put("messages", messages);
+        return request;
+
+    }
+
+
+
+
 
 }

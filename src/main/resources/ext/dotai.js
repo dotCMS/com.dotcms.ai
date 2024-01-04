@@ -295,7 +295,7 @@ const tab1 = () => {
         });
 }
 
-const tab2 = () => {
+const tab3 = () => {
     refreshIndexes()
         .then(() => {
             writeIndexesToDropdowns();
@@ -305,7 +305,7 @@ const tab2 = () => {
 
 };
 
-const tab3 = () => {
+const tab2 = () => {
 
     displayImagePrompts()
     document.getElementById("imagePrompt").value = (preferences().imageQuery) ? preferences().imageQuery : "" ;
@@ -534,7 +534,9 @@ const doImageJsonDebounced = async () => {
         const rewrittenPrompt = json.revised_prompt;
         const imageTemplate =`
             <div style="width:100%;max-width:800px;position:relative;text-align:center;border:1px solid silver;padding:1rem;">
-                <img src="/dA/${temp}/asset.png" style="max-width:750px;max-height:750px;display: block;margin:auto;"  />
+                <a href="/dA/${temp}/asset.png" target="_blank">
+                    <img src="/dA/${temp}/asset.png" style="max-width:750px;max-height:750px;display: block;margin:auto;"  />
+                </a>
                 
                 <div style="padding:1rem;margin:auto;text-align: center">
                     <button id="saveImageButton" class="button dijit dijitReset dijitInline dijitButton"
