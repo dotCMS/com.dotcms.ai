@@ -9,6 +9,7 @@ import com.dotcms.content.elasticsearch.business.event.ContentletArchiveEvent;
 import com.dotcms.content.elasticsearch.business.event.ContentletCheckinEvent;
 import com.dotcms.content.elasticsearch.business.event.ContentletDeletedEvent;
 import com.dotcms.content.elasticsearch.business.event.ContentletPublishEvent;
+import com.dotcms.contenttype.model.field.Field;
 import com.dotcms.system.event.local.model.Subscriber;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
@@ -16,6 +17,8 @@ import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.contentlet.model.ContentletListener;
 import com.dotmarketing.util.json.JSONObject;
 import io.vavr.control.Try;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -87,11 +90,13 @@ public class EmbeddingContentListener implements ContentletListener<Contentlet> 
                 .getOrElse(APILocator.systemHost());
 
         return Try.of(() -> new JSONObject(ConfigService.INSTANCE.config(host).getConfig(AppKeys.LISTENER_INDEXER)))
+                .onFailure(e->Logger.warn(EmbeddingContentListener.class, "error in json config from app:" + e.getMessage()))
                 .getOrElse(new JSONObject());
     }
 
     /**
-     * Adds the content to the embeddings index based on the JSON configuration in the app
+     * Adds the content to the embeddings index based on the JSON configuration in the app.  The JSON key is the
+     * indexName and the property is a comma or br delimited string of contentType.field to index
      *
      * @param contentlet
      */
@@ -105,8 +110,9 @@ public class EmbeddingContentListener implements ContentletListener<Contentlet> 
 
         for (Entry<String, Object> entry : (Set<Entry<String, Object>>) config.entrySet()) {
             final String indexName = entry.getKey();
-            EmbeddingsAPI.impl()
-                    .parseTypesAndFields((String) entry.getValue()).entrySet()
+            Map<String, List<Field>> typesAndFields = EmbeddingsAPI.impl()
+                    .parseTypesAndFields((String) entry.getValue());
+            typesAndFields.entrySet()
                     .stream()
                     .filter(e -> contentType.equalsIgnoreCase(e.getKey()))
                     .forEach(e ->

@@ -4,7 +4,6 @@ import com.dotcms.ai.app.AppConfig;
 import com.dotcms.ai.rest.forms.CompletionsForm;
 import com.dotmarketing.util.json.JSONObject;
 import io.vavr.Lazy;
-
 import java.io.OutputStream;
 
 public interface CompletionsAPI {
@@ -19,8 +18,8 @@ public interface CompletionsAPI {
 
 
     /**
-     * this method takes the query/prompt, searches dotCMS content for matching
-     * embeddings and then returns an AI summary based on the matching content in dotCMS
+     * this method takes the query/prompt, searches dotCMS content for matching embeddings and then returns an AI
+     * summary based on the matching content in dotCMS
      *
      * @param searcher
      * @return
@@ -29,8 +28,8 @@ public interface CompletionsAPI {
 
 
     /**
-     * this method takes the query/prompt, searches dotCMS content for matching
-     * embeddings and then streams the AI response based on the matching content in dotCMS
+     * this method takes the query/prompt, searches dotCMS content for matching embeddings and then streams the AI
+     * response based on the matching content in dotCMS
      *
      * @param searcher
      * @return
@@ -55,7 +54,17 @@ public interface CompletionsAPI {
      */
     JSONObject raw(JSONObject promptJSON);
 
-
+    /**
+     * this method takes a prompt in the form of parameters and returns a json AI response based on the parameters
+     * passed in.
+     *
+     * @param systemPrompt
+     * @param userPrompt
+     * @param model
+     * @param temperature
+     * @param maxTokens
+     * @return
+     */
     JSONObject prompt(String systemPrompt, String userPrompt, String model, float temperature, int maxTokens);
 
 

@@ -135,7 +135,7 @@ class EmbeddingsAPIImpl implements EmbeddingsAPI {
             }
             List<Field> fields = typesAndFields.getOrDefault(type.get().variable(), new ArrayList<>());
 
-            Optional<Field> field = Try.of(() -> type.get().fieldMap().get(typeOptField[1])).toJavaOptional();
+            Optional<Field> field = Try.of(() -> type.get().fields().stream().filter(f->f.variable().equalsIgnoreCase(typeOptField[1])).findFirst()).getOrElse(Optional.empty());
             if (field.isPresent()) {
                 fields.add(field.get());
             }
