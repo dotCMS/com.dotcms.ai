@@ -112,7 +112,7 @@ public class Activator extends GenericBundleActivator {
         OpenAIThreadPool.shutdown();
 
         //Unregister all the bundle services
-        unregisterServices(context);
+        //unregisterServices(context);
 
         unregisterViewToolServices();
 
