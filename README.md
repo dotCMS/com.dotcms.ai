@@ -1,14 +1,20 @@
 # README
 
 This is plugin that a number of dotCMS specific tools that leverage AI tooling (Open AI specifically) for use in dotCMS.  
-This includes REST apis, Workflow Actions and Viewtools that let dotCMS interact with AI in a variety of ways.  For examples on how to use these endpoints and to create content embedding indexes, see 
-[this document](README-CURL.md). To see how OpenAI can be used in Velocity contexts, see this [this document](README-Velocity%20Tooling.md)
+This includes REST apis, Workflow Actions and Viewtools that let dotCMS interact with AI in a variety of ways.  
+
+* **RestAPIs**  - Examples on how to use these endpoints and to create content embedding indexes, see 
+[README-CURL.md](README-CURL.md). 
+* **Velocity Viewtools** - Examples on how OpenAI can be used in Velocity contexts, see [README-Velocity-Tooling.md](README-Velocity-Tooling.md)
+* **Workflow Actionlets** - Examples on how to use the included Workflow Actionlets, see [README-Workflow-Actionlets.md](README-Workflow-Actionlets.md)
+
 
 Out of the box, it provides:
 ### An App
-  Where credentials and defaults can be configured and/or overridden
+  Where credentials and defaults can be configured and/or overridden.  For a full list of possible configurations, see the config tab on the Portlet/Tool
 ### dotAI Portlet/Tool
   - Search and Chat with Content
+  - Generate and Save new AI Images
   - View/Update/Delete Content Embedding Indexes
   - View AI Plugin configuration values.  These are important because they can override and parameterize the prompts that we send to OpenAI.
 ### REST APIs
@@ -27,10 +33,12 @@ Out of the box, it provides:
     - Perform a `raw` chat request to OpenAIs completion endpoint
 - `/api/v1/ai/image/generate` - Image Resource
     - Create an AI generated image based on a prompt.  The resulting image will be stored as a temp file in dotCMS"
+
 ### Workflow Actions
   - **OpenAI Embeddings** (`DotEmbeddingsActionlet`)  This actionlet uses OpenAI to generate and save (or delete) the embeddings for content.  This is used so that an embedding index can be kept up to date as new content is published and/or unpublished from dotCMS.
   - **OpenAI Content Prompt** (`OpenAIContentPromptActionlet`).  This actionlet can be called to automatically populate/update fields of content as the content is pushed through a workflow.  It works by expecting OpenAI to return its data/answer in a json format which will then be used to update the content.  The example usage is to post content to OpenAI and have OpenAI automatically write appropriate SEO title and SEO short description for the content.
   - **OpenAI Generate Image** (`OpenAIGenerateImageActionlet`).  This actionlet can automatically generate an image based on a content prompt.  This content prompt is a velocity template and can use the values of the content in it.  By default, this actionlet will add this image to the first binary field in the content.
+  - **OpenAI Auto Tag Content** (`OpenAIAutoTagActionlet`).  This actionlet can automatically tag content based on its values.
 
 ### Velocity Viewtools
   - `$ai` can be used to generate content and/or images from a prompt.
