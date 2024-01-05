@@ -120,10 +120,7 @@ public class ContentToStringUtil {
                 ? val.replaceAll("\\s+", " ")
                 : null;
 
-        if (UtilMethods.isEmpty(val) || val.length() < ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_TEXT_LENGTH_TO_INDEX)) {
-            return Optional.empty();
-        }
-        return Optional.of(val);
+        return Optional.ofNullable(val);
     }
 
     private Optional<String> parseBlockEditor(@NotNull String val) {
@@ -235,7 +232,12 @@ public class ContentToStringUtil {
             parseField(contentlet, field)
                     .ifPresent(s -> builder.append(s).append(" "));
         }
-        return (builder.length() > 0) ? Optional.of(builder.toString()) : Optional.empty();
+
+        if (builder.length() < ConfigService.INSTANCE.config().getConfigInteger(AppKeys.EMBEDDINGS_MINIMUM_TEXT_LENGTH_TO_INDEX)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(builder.toString());
 
 
     }

@@ -13,6 +13,7 @@ import com.dotcms.ai.util.VelocityContextFactory;
 import com.dotcms.api.web.HttpServletRequestThreadLocal;
 import com.dotcms.api.web.HttpServletResponseThreadLocal;
 import com.dotcms.contenttype.model.field.Field;
+import com.dotcms.contenttype.model.type.ContentType;
 import com.dotcms.rendering.velocity.util.VelocityUtil;
 import com.dotcms.rest.ContentResource;
 import com.dotmarketing.beans.Host;
@@ -29,6 +30,8 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
 import io.vavr.control.Try;
+import java.util.ArrayList;
+import java.util.HashMap;
 import org.apache.velocity.context.Context;
 
 import javax.validation.constraints.NotNull;
@@ -42,7 +45,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 
-public class EmbeddingsAPIImpl implements EmbeddingsAPI {
+class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
 
     static final Cache<String, Tuple2<Integer, List<Float>>> embeddingCache = Caffeine.newBuilder()
@@ -112,6 +115,39 @@ public class EmbeddingsAPIImpl implements EmbeddingsAPI {
         return true;
 
     }
+
+    @Override
+    public  Map<String, List<Field>> parseTypesAndFields(final String typeAndFieldParam) {
+
+        if (UtilMethods.isEmpty(typeAndFieldParam)) {
+            return Map.of();
+        }
+
+        final Map<String, List<Field>> typesAndFields = new HashMap<>();
+        final String[] typeFieldArr = typeAndFieldParam.trim().split("[\\r?\\n,]");
+
+        for (String typeField : typeFieldArr) {
+            String[] typeOptField = typeField.trim().split("\\.");
+            Optional<ContentType> type = Try.of(
+                    () -> APILocator.getContentTypeAPI(APILocator.systemUser()).find(typeOptField[0])).toJavaOptional();
+            if (type.isEmpty()) {
+                continue;
+            }
+            List<Field> fields = typesAndFields.getOrDefault(type.get().variable(), new ArrayList<>());
+
+            Optional<Field> field = Try.of(() -> type.get().fields().stream().filter(f->f.variable().equalsIgnoreCase(typeOptField[1])).findFirst()).getOrElse(Optional.empty());
+            if (field.isPresent()) {
+                fields.add(field.get());
+            }
+
+            typesAndFields.put(type.get().variable(), fields);
+
+        }
+
+        return typesAndFields;
+    }
+
+
 
 
     @Override

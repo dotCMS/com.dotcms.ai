@@ -2,6 +2,7 @@ package com.dotcms.ai.api;
 
 
 import com.dotcms.ai.app.AppConfig;
+import com.dotcms.contenttype.model.field.Field;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -36,6 +37,19 @@ class EmbeddingsAPIImplTest {
 
 
     }
+
+
+    @Test
+    public void test_parse_types_and_fields() throws  Exception {
+
+        String test1="blog,contentType.field1";
+
+        Map<String,List<Field>> fields = new EmbeddingsAPIImpl(null).parseTypesAndFields(test1);
+
+
+    }
+
+
 
 
 }

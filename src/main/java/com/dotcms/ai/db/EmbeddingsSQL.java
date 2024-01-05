@@ -3,6 +3,11 @@ package com.dotcms.ai.db;
 class EmbeddingsSQL {
 
     static final String INIT_VECTOR_EXTENSION = "create extension if not exists vector with schema public;";
+
+    static final String CHECK_IF_VECTOR_EXISTS ="select * from pg_extension where extname='vector'";
+
+
+
     static final String DROP_EMBEDDINGS_TABLE = "drop table if exists dot_embeddings";
     /**
      * Our embeddings column has 1536 dimentions because that is the number of dimentions returned by

@@ -40,8 +40,13 @@ public class EmbeddingsDB {
     }
 
     public void initVectorExtension() {
-        Logger.info(EmbeddingsDB.class, "Adding PGVector extension to database");
-        runSQL(EmbeddingsSQL.INIT_VECTOR_EXTENSION);
+
+        if(!doesExtensionExist()) {
+            Logger.info(EmbeddingsDB.class, "Adding PGVector extension to database");
+            runSQL(EmbeddingsSQL.INIT_VECTOR_EXTENSION);
+        }else{
+            Logger.info(EmbeddingsDB.class, "PGVector exists, skipping extension installation");
+        }
     }
 
     public void initVectorDbTable() {
@@ -79,12 +84,23 @@ public class EmbeddingsDB {
 
     }
 
-    public void runSQL(String sql) {
+    void runSQL(String sql) {
         try (Connection db = getPGVectorConnection()) {
             new DotConnect().setSQL(sql).loadResult(db);
         } catch (SQLException | DotDataException e) {
             throw new DotRuntimeException(e);
         }
+    }
+
+    private boolean doesExtensionExist(){
+        try(Connection conn = DbConnectionFactory.getDataSource().getConnection()){
+            Logger.info(EmbeddingsDB.class, "Checking if Vector Extension Exists");
+            return !new DotConnect().setSQL(EmbeddingsSQL.CHECK_IF_VECTOR_EXISTS).loadObjectResults(conn).isEmpty();
+
+        } catch (Exception  e) {
+            throw new DotRuntimeException(e);
+        }
+
     }
 
     /**

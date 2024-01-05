@@ -28,6 +28,7 @@ public enum AppKeys {
     EMBEDDINGS_THREADS_QUEUE("com.dotcms.ai.embeddings.threads.queue", "10000"),
     EMBEDDINGS_CACHE_TTL_SECONDS("com.dotcms.ai.embeddings.cache.ttl.seconds", "600"),
     EMBEDDINGS_CACHE_SIZE("com.dotcms.ai.embeddings.cache.size", "1000"),
+    LISTENER_INDEXER("listenerIndexer", "{}"),
     EMBEDDINGS_DB_DELETE_OLD_ON_UPDATE("com.dotcms.ai.embeddings.delete.old.on.update", "true");
     public static final String APP_KEY = "dotAI";
     public static final String APP_YAML_NAME = APP_KEY + ".yml";

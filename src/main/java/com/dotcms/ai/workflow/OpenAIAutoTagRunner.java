@@ -41,22 +41,22 @@ public class OpenAIAutoTagRunner implements AsyncWorkflowRunner {
     static final String SELECT_TOP_TAGS =
               "select distinct(tagname), count(tinode) from " +
                       "( " +
-                      "   select tagname, tag_inode.inode as tinode " +
+                      "   select lower(tagname), tag_inode.inode as tinode " +
                       "   from  " +
                       "   tag, tag_inode  " +
                       "   where  " +
                       "   tag.tag_id=tag_inode.tag_id  " +
                       "   and tag.host_id=? " +
                       "UNION ALL " +
-                      "   select tagname, tag_inode.inode as tinode " +
+                      "   select lower(tagname), tag_inode.inode as tinode " +
                       "   from  " +
                       "   tag, tag_inode  " +
                       "   where  " +
                       "   tag.tag_id=tag_inode.tag_id  " +
                       ") as foo  " +
-                      "group by tagname  " +
+                      "group by lower(tagname)  " +
                       "order by count(tinode) desc " +
-                      "limit 250";
+                      "limit 1000";
 
     final String identifier;
     final long language;
@@ -142,10 +142,20 @@ public class OpenAIAutoTagRunner implements AsyncWorkflowRunner {
             final String response = openAIRequest(workingContentlet, contentToTag.get());
             final List<String> tags = new ArrayList<>();
             JSONArray tryArray = parseJsonResponse(response);
+
+            if (this.limitTags) {
+                List<String> constrainTags = findTopTags(workingContentlet);
+                tryArray.removeIf(t -> !constrainTags.contains(t.toString().toLowerCase()));
+            }
+
             if (tryArray.isEmpty()) {
                 Logger.info(this.getClass(), "No keywords found, returning :" + workingContentlet.getTitle());
                 return;
             }
+
+
+
+
             tryArray.add(DOT_AI_TAGGED);
             tryArray.forEach(t -> tags.add((String) t));
             final Contentlet contentToSave = checkoutLatest(identifier, language, user);

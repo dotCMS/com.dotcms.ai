@@ -35,11 +35,13 @@ public class OpenAIAutoTagActionlet extends WorkFlowActionlet {
                         new MultiKeyValue(Boolean.toString(true), Boolean.toString(true)))
         );
 
-        WorkflowActionletParameter limitTagsToHost = new MultiSelectionWorkflowActionletParameter(OpenAIParams.LIMIT_TAGS_TO_HOST.key,
-                "Limit the keywords to the pre-existing tags on host", "Limit", true,
+        WorkflowActionletParameter limitTagsToHost = new MultiSelectionWorkflowActionletParameter(
+                OpenAIParams.LIMIT_TAGS_TO_HOST.key,
+                "Limit the keywords to pre-existing tags", "Limit", false,
                 () -> ImmutableList.of(
-                        new MultiKeyValue(Boolean.toString(true), Boolean.toString(true)),
-                        new MultiKeyValue(Boolean.toString(false), Boolean.toString(false)))
+                        new MultiKeyValue(Boolean.toString(false), Boolean.toString(false)),
+                        new MultiKeyValue(Boolean.toString(true), Boolean.toString(true))
+                )
         );
         return List.of(
                 overwriteParameter,
