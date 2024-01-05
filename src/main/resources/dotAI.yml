@@ -81,12 +81,14 @@ params:
     type: "STRING"
     label: "Auto Index Content Config"
     hint: |
-      this is a json map that automatically maps indexes:contentType and tells dotCMS which content types should be indexed and where, e.g.
+      A json map that automatically maps indexes->contentTypes and tells dotCMS which content types should be indexed and where, e.g.
       ```
       {
           "default": "blog,news,webPageContent",
-          "blogsOnly": "blog"
+          "blogsOnly": "blog.blogcontent"
       }
       ```
-      The list of content types is a comma separated list of glob patterns which will matched against when a contentlet is published (will be indexed) or unpublished (will be removed from the index).
+      means that blog, news and webPageContent will be indexed in the `default` index and the blog field `blog.blogcontent` will be 
+      indexed into the `blogsOnly` index. The list of content types is a comma separated list content types and can optionally 
+      include the field that should be indexed when a contentlet is published.  All unpublished content will be removed from the index.
     required: false

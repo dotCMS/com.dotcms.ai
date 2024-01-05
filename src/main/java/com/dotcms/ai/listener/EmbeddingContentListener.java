@@ -6,7 +6,6 @@ import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.db.EmbeddingsDTO;
 import com.dotcms.ai.util.Logger;
 import com.dotcms.content.elasticsearch.business.event.ContentletArchiveEvent;
-import com.dotcms.content.elasticsearch.business.event.ContentletCheckinEvent;
 import com.dotcms.content.elasticsearch.business.event.ContentletDeletedEvent;
 import com.dotcms.content.elasticsearch.business.event.ContentletPublishEvent;
 import com.dotcms.contenttype.model.field.Field;
@@ -16,11 +15,14 @@ import com.dotmarketing.business.APILocator;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.portlets.contentlet.model.ContentletListener;
 import com.dotmarketing.util.json.JSONObject;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.vavr.control.Try;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 
 public class EmbeddingContentListener implements ContentletListener<Contentlet> {
@@ -32,6 +34,10 @@ public class EmbeddingContentListener implements ContentletListener<Contentlet> 
     }
 
 
+    LoadingCache<Host, JSONObject> cache = Caffeine.newBuilder()
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .maximumSize(10_000)
+            .build(this::getConfigJson);
 
 
     @Override
@@ -79,15 +85,15 @@ public class EmbeddingContentListener implements ContentletListener<Contentlet> 
         deleteFromIndexes(contentlet);
     }
 
+
     /**
      * JSONObject that has a list of indexes and the content types that should be indexed in them.
      *
-     * @param contentlet
+     * @param host
      * @return
      */
-    JSONObject getConfigJson(Contentlet contentlet) {
-        Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), false))
-                .getOrElse(APILocator.systemHost());
+    JSONObject getConfigJson(Host host) {
+
 
         return Try.of(() -> new JSONObject(ConfigService.INSTANCE.config(host).getConfig(AppKeys.LISTENER_INDEXER)))
                 .onFailure(e->Logger.warn(EmbeddingContentListener.class, "error in json config from app:" + e.getMessage()))
@@ -106,7 +112,9 @@ public class EmbeddingContentListener implements ContentletListener<Contentlet> 
         if (contentType == null) {
             return;
         }
-        JSONObject config = getConfigJson(contentlet);
+        Host host = Try.of(() -> APILocator.getHostAPI().find(contentlet.getHost(), APILocator.systemUser(), false))
+                .getOrElse(APILocator.systemHost());
+        JSONObject config = cache.get(host);
 
         for (Entry<String, Object> entry : (Set<Entry<String, Object>>) config.entrySet()) {
             final String indexName = entry.getKey();
@@ -121,6 +129,10 @@ public class EmbeddingContentListener implements ContentletListener<Contentlet> 
         }
     }
 
+    /**
+     * If a contentlet is unpublished, we delete it from the dot_embeddings no matter what index it is part of
+     * @param contentlet
+     */
     void deleteFromIndexes(Contentlet contentlet) {
         EmbeddingsDTO dto = new EmbeddingsDTO.Builder()
                 .withIdentifier(contentlet.getIdentifier())
