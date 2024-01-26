@@ -35,29 +35,8 @@ public class AIViewTool implements ViewTool {
      * @return JSONObject
      */
     public JSONObject generateText(final String prompt) throws IOException {
-        return generateText(prompt, false);
-    }
-
-    /**
-     * Processes image request by calling TextService.
-     *
-     * @param prompt
-     * @param raw
-     * @return
-     * @throws IOException
-     */
-    private JSONObject generateText(String prompt, boolean raw) throws IOException {
-
         OpenAIChatService service = new OpenAIChatServiceImpl(config);
-        return raw ? service.sendRawRequest(new JSONObject(prompt)) : service.sendTextPrompt(prompt);
-
-
-    }
-
-    public JSONObject generateText(final JSONObject prompt) throws IOException {
-
-        OpenAIChatService service = new OpenAIChatServiceImpl(config);
-        return service.sendRawRequest(prompt);
+        return service.sendTextPrompt(prompt);
     }
 
     /**
