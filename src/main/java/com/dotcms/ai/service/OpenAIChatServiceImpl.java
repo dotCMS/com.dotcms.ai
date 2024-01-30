@@ -17,18 +17,27 @@ public class OpenAIChatServiceImpl implements OpenAIChatService {
         this.config=appConfig;
     }
 
-    public JSONObject sendTextPrompt(String prompt) {
-        JSONObject request = new JSONObject();
-        request.putIfAbsent("model",config.getModel());
-        request.putIfAbsent("temperature",config.getConfigFloat(AppKeys.COMPLETION_TEMPERATURE));
-        if(UtilMethods.isEmpty(request.optString("messages"))){
+    @Override
+    public JSONObject sendTextPrompt(String textPrompt) {
+        JSONObject newPrompt = new JSONObject();
+        newPrompt.put("prompt", textPrompt);
+        return sendRawRequest(newPrompt);
+    }
+
+    @Override
+    public JSONObject sendRawRequest(JSONObject prompt) {
+        prompt.putIfAbsent("model",config.getModel());
+        prompt.putIfAbsent("temperature",config.getConfigFloat(AppKeys.COMPLETION_TEMPERATURE));
+
+        if(UtilMethods.isEmpty(prompt.optString("messages"))){
             List messages = List.of(
                     Map.of("role","system", "content", config.getRolePrompt()),
-                    Map.of("role","user", "content", prompt)
+                    Map.of("role","user", "content", prompt.getString("prompt"))
             );
-            request.put("messages", messages);
-
+            prompt.put("messages", messages);
         }
-        return new JSONObject(OpenAIRequest.doRequest(config.getApiUrl(),"POST",config.getApiKey(),request)) ;
+
+        prompt.remove("prompt");
+        return new JSONObject(OpenAIRequest.doRequest(config.getApiUrl(),"POST",config.getApiKey(),prompt));
     }
 }
