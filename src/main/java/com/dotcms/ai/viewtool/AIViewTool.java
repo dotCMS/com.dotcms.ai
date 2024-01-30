@@ -39,6 +39,11 @@ public class AIViewTool implements ViewTool {
         return service.sendTextPrompt(prompt);
     }
 
+    public JSONObject generateText(final Map<String, Object> prompt) throws IOException {
+        OpenAIChatService service = new OpenAIChatServiceImpl(config);
+        return service.sendRawRequest(new JSONObject(prompt));
+    }
+
     /**
      * Processes image request by calling ImageService. If response is OK creates temp file and adds its name in
      * response
@@ -46,7 +51,7 @@ public class AIViewTool implements ViewTool {
      * @param prompt
      * @return
      */
-    private JSONObject generateImage(String prompt) {
+    public JSONObject generateImage(String prompt) {
         User user = PortalUtil.getUser(context.getRequest());
         OpenAIImageService service = new OpenAIImageServiceImpl(config, user);
         try {
@@ -60,7 +65,7 @@ public class AIViewTool implements ViewTool {
         }
     }
 
-    private JSONObject generateImage(Map prompt) {
+    public JSONObject generateImage(final Map<String, Object> prompt) {
         User user = PortalUtil.getUser(context.getRequest());
         OpenAIImageService service = new OpenAIImageServiceImpl(config, user);
         try {

@@ -70,9 +70,14 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
             responseString = OpenAIRequest.doRequest(config.getApiImageUrl(), "POST", config.getApiKey(),
                     jsonObject);
 
-            JSONObject returnObject = new JSONObject(responseString).getJSONArray("data").getJSONObject(0);
-            returnObject.put("originalPrompt", jsonObject.getString("prompt"));
+            JSONObject returnObject = new JSONObject(responseString);
 
+            if(returnObject.containsKey("error")) {
+                throw new DotRuntimeException("Error generating image: " + returnObject.get("error"));
+            } else {
+                returnObject = returnObject.getJSONArray("data").getJSONObject(0);
+                returnObject.put("originalPrompt", jsonObject.getString("prompt"));
+            }
 
             return createTempFile(returnObject);
 
