@@ -13,7 +13,13 @@ public interface OpenAIChatService {
 
     /**
      * Returns a JSONObject with the results of the text generation given the provided prompt
-     * @param prompt the provided prompt, as JSON, to generate text
+     * @param prompt the provided prompt, as JSON, to generate text. The available properties
+     *               for the JSON are:
+     * <ul>
+     * <li>{@code "prompt"}: the actual prompt text
+     * <li>{@code "model"}: the model used for the generation
+     * <li>{@code "temperature"}: Temperature ranges from 0 to 1. Low temperature (0 to 0.3): More focused, coherent, and conservative outputs. Medium temperature (0.3 to 0.7): Balanced creativity and coherence. High temperature (0.7 to 1): Highly creative and diverse, but potentially less coherent.
+     * </ul>
      * @return a JSONObject including the generated text and metadata
      * <p>
      * Example of usage:
