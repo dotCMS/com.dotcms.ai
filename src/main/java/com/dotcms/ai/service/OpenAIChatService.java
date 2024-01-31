@@ -18,7 +18,7 @@ public interface OpenAIChatService {
      * <ul>
      * <li>{@code "prompt"}: the actual prompt text
      * <li>{@code "model"}: the model used for the generation
-     * <li>{@code "temperature"}: Temperature ranges from 0 to 1. Low temperature (0 to 0.3): More focused, coherent, and conservative outputs. Medium temperature (0.3 to 0.7): Balanced creativity and coherence. High temperature (0.7 to 1): Highly creative and diverse, but potentially less coherent.
+     * <li>{@code "temperature"}: determines the randomness of the response. 0 = deterministic, 2 = most random
      * </ul>
      * @return a JSONObject including the generated text and metadata
      * <p>
