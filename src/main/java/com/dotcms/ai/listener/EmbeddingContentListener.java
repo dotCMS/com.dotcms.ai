@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static com.dotcms.ai.db.EmbeddingsDTO.ALL_INDICES;
+
 
 public class EmbeddingContentListener implements ContentletListener<Contentlet> {
 
@@ -137,6 +139,7 @@ public class EmbeddingContentListener implements ContentletListener<Contentlet> 
         EmbeddingsDTO dto = new EmbeddingsDTO.Builder()
                 .withIdentifier(contentlet.getIdentifier())
                 .withLanguage(contentlet.getLanguageId())
+                .withIndexName(ALL_INDICES)
                 .build();
         EmbeddingsAPI.impl().deleteEmbedding(dto);
 

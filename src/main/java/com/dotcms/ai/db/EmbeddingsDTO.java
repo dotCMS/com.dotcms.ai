@@ -46,6 +46,8 @@ public class EmbeddingsDTO implements Serializable {
     public final float temperature;
     private final String[] operators = {"<->", "<=>", "<#>"};
 
+    public static final String ALL_INDICES = "all";
+
     private EmbeddingsDTO(Builder builder) {
         this.embeddings = (builder.embeddings == null) ? new Float[0] : builder.embeddings.toArray(new Float[0]);
         this.identifier = builder.identifier;

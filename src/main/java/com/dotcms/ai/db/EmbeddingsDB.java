@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static com.dotcms.ai.db.EmbeddingsDTO.ALL_INDICES;
+
 public class EmbeddingsDB {
 
 
@@ -285,7 +287,7 @@ public class EmbeddingsDB {
             sql.append(" and host=? ");
             params.add(dto.host);
         }
-        if (UtilMethods.isSet(dto.indexName)) {
+        if (UtilMethods.isSet(dto.indexName) && !ALL_INDICES.equals(dto.indexName)) {
             sql.append(" and lower(index_name)=lower(?) ");
             params.add(dto.indexName);
         }

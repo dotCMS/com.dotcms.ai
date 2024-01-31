@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 
 public class SearchTool implements ViewTool {
-
     final private HttpServletRequest request;
     final private Host host;
     final private AppConfig app;
@@ -39,17 +38,14 @@ public class SearchTool implements ViewTool {
         this.app = ConfigService.INSTANCE.config(this.host);
     }
 
-
     @Override
     public void init(Object initData) {
         /* unneeded because of constructor */
     }
 
-
     public Object query(Map<String, Object> mapIn) {
         User user = PortalUtil.getUser(request);
         EmbeddingsDTO searcher = EmbeddingsDTO.from(mapIn).withUser(user).build();
-
 
         try {
             return EmbeddingsAPI.impl(host).searchForContent(searcher);
@@ -59,36 +55,28 @@ public class SearchTool implements ViewTool {
     }
 
     public Object query(String query) {
-
         return query(query, "default");
     }
 
     public Object query(String query, String indexName) {
         User user = PortalUtil.getUser(request);
-
         EmbeddingsDTO searcher = new EmbeddingsDTO.Builder().withQuery(query).withIndexName(indexName).withUser(user).withLimit(50).withThreshold(.25f).build();
-
 
         try {
             return EmbeddingsAPI.impl(host).searchForContent(searcher);
         } catch (Exception e) {
             return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
         }
-
-
     }
 
     public Object related(ContentMap contentMap, String indexName) {
-
         return related(contentMap.getContentObject(), indexName);
-
     }
 
     public Object related(Contentlet contentlet, String indexName) {
         try {
             User user = PortalUtil.getUser(request);
             List<Field> fields = ContentToStringUtil.impl.get().guessWhatFieldsToIndex(contentlet);
-
 
             Optional<String> contentToRelate = ContentToStringUtil.impl.get().parseFields(contentlet, fields);
             if (contentToRelate.isEmpty()) {
@@ -99,8 +87,6 @@ public class SearchTool implements ViewTool {
         } catch (Exception e) {
             return Map.of("error", e.getMessage(), "stackTrace", Arrays.asList(e.getStackTrace()));
         }
-
-
     }
 
 }
