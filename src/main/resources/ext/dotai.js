@@ -94,13 +94,13 @@ const reinitializeDatabase = async () => {
 
 const writeIndexesToDropdowns = async () => {
     const indexName = document.getElementById("indexNameChat");
-    let options = indexName.getElementsByTagName('option');
 
-    //console.log("options", options)
-    for (i = 1; i < options.length; i++) {
-        indexName.removeChild(options[i]);
-    }
+    // Clear all existing options
+    indexName.innerHTML = '';
 
+    let optionsAdded = 0; // Add a counter to track the number of options added
+
+    // Add a new option for each index in dotAiState.indexes
     for (i = 0; i < dotAiState.indexes.length; i++) {
         if (dotAiState.indexes[i].name === "cache") {
             continue;
@@ -108,8 +108,16 @@ const writeIndexesToDropdowns = async () => {
         const newOption = document.createElement("option");
         newOption.value = dotAiState.indexes[i].name;
         newOption.text = `${dotAiState.indexes[i].name}   - (contents:${dotAiState.indexes[i].contents})`
-
         indexName.appendChild(newOption);
+        optionsAdded++;
+    }
+
+    // If no options were added, add a "Select an Index" option
+    if (optionsAdded === 0) {
+        const defaultOption = document.createElement("option");
+        defaultOption.text = 'Select an Index';
+        defaultOption.disabled = true;
+        indexName.appendChild(defaultOption);
     }
 };
 
@@ -674,7 +682,16 @@ const doDeleteIndex = async (indexName) => {
 }
 
 
-const doBuildIndex = async () => {
+const doBuildIndexWithDebounceBtn = () => {
+
+    document.getElementById("submitBuildIndexBtn").style.display = "none";
+    document.getElementById("loaderIndex").style.display = "block";
+    setTimeout(function () {
+        doBuildIndexWithDebounce();
+    }, 500);
+}
+
+const doBuildIndexWithDebounce = async () => {
 
     const formDataRaw = new FormData(document.getElementById("createUpdateIndex"))
     const formData = Object.fromEntries(Array.from(formDataRaw.keys()).map(key => [key, formDataRaw.getAll(key).length > 1 ? formDataRaw.getAll(key) : formDataRaw.get(key)]))
@@ -694,7 +711,6 @@ const doBuildIndex = async () => {
     prefs.velocityTemplate = formData.velocityTemplate.trim()
     savePreferences(prefs);
 
-    //console.log("formData", formData)
     const response = await fetch('/api/v1/ai/embeddings', {
         method: "POST", body: JSON.stringify(formData), headers: {
             "Content-Type": "application/json"
@@ -704,6 +720,8 @@ const doBuildIndex = async () => {
             document.getElementById("indexingMessages").innerHTML = `Building index ${data.indexName} with ${data.totalToEmbed} to embed`
             setTimeout(clearIndexMessage, 5000);
         });
+
+    resetBuildIndexLoader();
 }
 
 
@@ -874,4 +892,9 @@ const doSearch = async (formData) => {
 const resetLoader = () => {
     document.getElementById("submitChat").style.display = "";
     document.getElementById("loaderChat").style.display = "none";
+}
+
+const resetBuildIndexLoader = () => {
+    document.getElementById("submitBuildIndexBtn").style.display = "";
+    document.getElementById("loaderIndex").style.display = "none";
 }

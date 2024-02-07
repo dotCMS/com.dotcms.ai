@@ -248,10 +248,12 @@
                     <table style="width:100%">
                         <tr>
                             <td colspan="2" style="text-align: center">
-                                <button onclick="doBuildIndex()"
-                                        class="button dijit dijitReset dijitInline dijitButton">Build Index
-                                    &nbsp; &nbsp; <i>&rarr;</i>
-                                </button>
+                                <div class="loader" style="display:none;height:40px;padding:10px;"id="loaderIndex"></div>
+                                     <button id="submitBuildIndexBtn" class="button dijit dijitReset dijitInline dijitButton"
+                                             onclick="doBuildIndexWithDebounceBtn()">
+                                             Build Index&nbsp; &nbsp <i>&rarr;</i>
+                                     </button>
+                                </div>
                             </td>
                         </tr>
                     </table>
