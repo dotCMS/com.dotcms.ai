@@ -69,8 +69,8 @@ public class Activator extends GenericBundleActivator {
 
 
     public void start(BundleContext context) throws Exception {
-
-
+        //Initializing services...
+        initializeServices(context);
         //Registering the ViewTool service
         registerViewToolService(context, new AIToolInfo());
 
@@ -83,10 +83,6 @@ public class Activator extends GenericBundleActivator {
 
         // Register Embedding Actionlet
         actionlets.forEach(a -> this.registerActionlet(context, a));
-
-
-        //Initializing services...
-        initializeServices(context);
 
         // Add the Embedding Listener (this does nothing right now)
         subscribeEmbeddingsListener();
@@ -112,7 +108,7 @@ public class Activator extends GenericBundleActivator {
         OpenAIThreadPool.shutdown();
 
         //Unregister all the bundle services
-        //unregisterServices(context);
+//        unregisterServices(context);
 
         unregisterViewToolServices();
 
