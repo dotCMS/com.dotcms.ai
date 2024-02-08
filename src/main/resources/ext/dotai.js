@@ -705,11 +705,19 @@ const doBuildIndexWithDebounce = async () => {
         alert("Query is required");
         return;
     }
+    delete formData["indexAddOrDelete"];
     const prefs = preferences();
     prefs.lastIndex = formData.indexName.trim();
     prefs.contentQuery = formData.query.trim()
     prefs.velocityTemplate = formData.velocityTemplate.trim()
     savePreferences(prefs);
+
+    if(document.getElementById("indexDelCheckbox").checked){
+        return deleteFromIndex(formData);
+    }
+
+
+
 
     const response = await fetch('/api/v1/ai/embeddings', {
         method: "POST", body: JSON.stringify(formData), headers: {
@@ -723,6 +731,36 @@ const doBuildIndexWithDebounce = async () => {
 
     resetBuildIndexLoader();
 }
+
+const deleteFromIndex = async (formData) => {
+
+    let newData = {};
+    newData.indexName = formData.indexName.trim();
+    newData.deleteQuery=formData.query.trim();
+
+
+    const response = await fetch('/api/v1/ai/embeddings', {
+        method: "DELETE", body: JSON.stringify(newData), headers: {
+            "Content-Type": "application/json"
+        }
+    }).then(response => response.json())
+    .then(data => {
+        document.getElementById("indexingMessages").innerHTML = `Deleting ${data.deleted} from index ${newData.indexName} `
+        setTimeout(clearIndexMessage, 5000);
+    });
+    resetBuildIndexLoader();
+}
+
+const changeBuildIndexName = () =>{
+
+    if(document.getElementById("indexDelCheckbox").checked){
+        document.getElementById("submitBuildIndexBtn").innerHTML = document.getElementById("submitBuildIndexBtn").innerHTML.replace("Build", "Delete from");
+    }else{
+        document.getElementById("submitBuildIndexBtn").innerHTML = document.getElementById("submitBuildIndexBtn").innerHTML.replace("Delete from", "Build");
+    }
+
+}
+
 
 
 const clearIndexMessage = async () => {

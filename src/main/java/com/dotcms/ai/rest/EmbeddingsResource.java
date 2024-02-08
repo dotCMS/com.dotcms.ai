@@ -15,6 +15,7 @@ import com.dotmarketing.common.model.ContentletSearch;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONObject;
 import com.liferay.portal.model.User;
+import java.util.Optional;
 import org.glassfish.jersey.server.JSONP;
 
 import javax.servlet.http.HttpServletRequest;
@@ -109,7 +110,20 @@ public class EmbeddingsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public final Response delete(@Context final HttpServletRequest request, @Context final HttpServletResponse response,
                                  JSONObject json) {
-        new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+        final User user = new WebResource.InitBuilder(request, response).requiredBackendUser(true).init().getUser();
+
+
+
+        if(UtilMethods.isSet(()->json.optString("deleteQuery"))){
+
+            int numberDeleted =
+                    EmbeddingsAPI.impl().deleteByQuery(json.optString("deleteQuery"),
+                            Optional.ofNullable(json.optString("indexName")), user);
+
+            return Response.ok(Map.of("deleted", numberDeleted)).build();
+
+        }
+
 
         EmbeddingsDTO dto = new EmbeddingsDTO.Builder()
                 .withIndexName(json.optString("indexName"))

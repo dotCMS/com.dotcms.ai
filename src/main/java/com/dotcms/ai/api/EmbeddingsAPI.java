@@ -5,9 +5,11 @@ import com.dotcms.contenttype.model.field.Field;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.json.JSONObject;
+import com.liferay.portal.model.User;
 import io.vavr.Tuple2;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.validation.constraints.NotNull;
 
 public interface EmbeddingsAPI {
@@ -49,6 +51,15 @@ public interface EmbeddingsAPI {
      * @return
      */
     boolean generateEmbeddingsforContent(@NotNull Contentlet contentlet, String velocityTemplate, String indexName);
+
+    /**
+     * this method takes a lucene query and
+     * @param deleteQuery
+     * @param indexName
+     * @param user
+     * @return
+     */
+    int deleteByQuery(@NotNull String deleteQuery, Optional<String> indexName, User user);
 
     /**
      * Takes a DTO object and based on its properties deletes from the embeddings index.
