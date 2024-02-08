@@ -243,6 +243,18 @@
                                           placeholder="e.g. +contentType:blog"></textarea>
                             </td>
                         </tr>
+                        <tr>
+                            <th style="width:30%">
+
+                            </th>
+                            <td>
+                                <input type="radio" name="indexAddOrDelete" id="indexAddCheckbox" checked onclick="changeBuildIndexName()"> <label for="indexAddCheckbox" >Add to Index</label>
+                                &nbsp; &nbsp;
+                                <input type="radio" name="indexAddOrDelete" id="indexDelCheckbox" onclick="changeBuildIndexName()"> <label for="indexDelCheckbox">Delete from Index</label>
+                            </td>
+                        </tr>
+
+
                     </table>
 
                     <table style="width:100%">

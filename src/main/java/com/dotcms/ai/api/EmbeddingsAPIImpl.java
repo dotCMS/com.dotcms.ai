@@ -5,6 +5,7 @@ import com.dotcms.ai.app.AppKeys;
 import com.dotcms.ai.app.ConfigService;
 import com.dotcms.ai.db.EmbeddingsDB;
 import com.dotcms.ai.db.EmbeddingsDTO;
+import com.dotcms.ai.db.EmbeddingsDTO.Builder;
 import com.dotcms.ai.util.ContentToStringUtil;
 import com.dotcms.ai.util.EncodingUtil;
 import com.dotcms.ai.util.OpenAIRequest;
@@ -18,6 +19,8 @@ import com.dotcms.rendering.velocity.util.VelocityUtil;
 import com.dotcms.rest.ContentResource;
 import com.dotmarketing.beans.Host;
 import com.dotmarketing.business.APILocator;
+import com.dotmarketing.common.model.ContentletSearch;
+import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
@@ -67,6 +70,48 @@ class EmbeddingsAPIImpl implements EmbeddingsAPI {
         Try.run(OpenAIThreadPool::shutdown);
     }
 
+    @Override
+    public int deleteByQuery(@NotNull String deleteQuery, Optional<String> indexName, User user) {
+
+        int total=0;
+        int limit = 1000;
+        int newOffset = 0;
+        try {
+
+            for (int i = 0; i < 10000; i++) {
+
+                // searchIndex(String luceneQuery, int limit, int offset, String sortBy, User user, boolean respectFrontendRoles)
+                List<ContentletSearch> searchResults = APILocator.getContentletAPI().searchIndex(deleteQuery, 100, newOffset, "moddate", user, false);
+                if (searchResults.isEmpty()) {
+                    break;
+                }
+                newOffset += limit;
+                for(ContentletSearch row : searchResults){
+                    Builder dto = new EmbeddingsDTO.Builder()
+                            .withIdentifier(row.getIdentifier())
+                            .withInode(row.getInode());
+
+                    if(indexName.isPresent()){
+                        dto.withIndexName(indexName.get());
+                    }
+
+                    total+=(EmbeddingsAPI.impl().deleteEmbedding(dto.build())>0) ? 1 : 0;
+
+                }
+
+
+
+            }
+            return total;
+
+
+
+
+        } catch (Exception e) {
+            com.dotcms.ai.util.Logger.error(this.getClass(), e.getMessage(), e);
+            throw new DotRuntimeException(e);
+        }
+    }
 
 
     @Override

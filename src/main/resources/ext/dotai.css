@@ -375,6 +375,11 @@ select:focus {
     border: 1px solid #9D9D9D;
     border-radius: .25em;
 }
+#submitBuildIndexBtn{
+    min-width: 230px;
+
+
+}
 
 .button:hover {
     border-color: var(--color-palette-primary-400);
