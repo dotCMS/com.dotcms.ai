@@ -112,7 +112,7 @@ public class EmbeddingsDB {
      * @throws SQLException
      */
     private Connection getPGVectorConnection() throws SQLException {
-        Connection conn = DbConnectionFactory.getDataSource().getConnection();
+        Connection conn = PgVectorDataSource.datasource.get().getConnection();
         PGvector.addVectorType(conn);
         return conn;
     }

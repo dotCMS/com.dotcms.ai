@@ -87,9 +87,17 @@ class EmbeddingsAPIImpl implements EmbeddingsAPI {
                 }
                 newOffset += limit;
                 for(ContentletSearch row : searchResults){
+
+                    String esId = row.getId();
+                    long languageId = Try.of(()->esId.split("_")[1]).map(Long::parseLong).getOrElse(-1L);
+
                     Builder dto = new EmbeddingsDTO.Builder()
-                            .withIdentifier(row.getIdentifier())
-                            .withInode(row.getInode());
+                            .withIdentifier(row.getIdentifier());
+                    if(languageId>0){
+                        dto.withLanguage((int)languageId);
+                    }else{
+                        dto.withInode(row.getInode());
+                    }
 
                     if(indexName.isPresent()){
                         dto.withIndexName(indexName.get());
