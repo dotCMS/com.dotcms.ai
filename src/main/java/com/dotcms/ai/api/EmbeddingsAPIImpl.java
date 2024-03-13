@@ -74,14 +74,14 @@ class EmbeddingsAPIImpl implements EmbeddingsAPI {
     public int deleteByQuery(@NotNull String deleteQuery, Optional<String> indexName, User user) {
 
         int total=0;
-        int limit = 1000;
+        final int limit = 100;
         int newOffset = 0;
         try {
 
             for (int i = 0; i < 10000; i++) {
 
                 // searchIndex(String luceneQuery, int limit, int offset, String sortBy, User user, boolean respectFrontendRoles)
-                List<ContentletSearch> searchResults = APILocator.getContentletAPI().searchIndex(deleteQuery, 100, newOffset, "moddate", user, false);
+                List<ContentletSearch> searchResults = APILocator.getContentletAPI().searchIndex(deleteQuery, limit, newOffset, "moddate", user, false);
                 if (searchResults.isEmpty()) {
                     break;
                 }
