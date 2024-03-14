@@ -176,7 +176,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
     }
 
     private int countTokens(String testString) {
-        Optional<Encoding> encoderOpt = EncodingUtil.registry.getEncodingForModel(config.get().getConfig(AppKeys.COMPLETION_MODEL));
+        Optional<Encoding> encoderOpt = EncodingUtil.registry.getEncodingForModel(config.get().getConfig(AppKeys.MODEL));
         if (encoderOpt.isEmpty()) {
             throw new DotRuntimeException("Encoder not found");
         }
@@ -271,7 +271,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
     private JSONObject buildRequestJson(CompletionsForm form) {
 
 
-        int maxTokenSize = OpenAIModel.resolveModel(config.get().getConfig(AppKeys.COMPLETION_MODEL)).maxTokens;
+        int maxTokenSize = OpenAIModel.resolveModel(config.get().getConfig(AppKeys.MODEL)).maxTokens;
 
 
         int promptTokens = countTokens(form.prompt);
@@ -283,7 +283,7 @@ public class CompletionsAPIImpl implements CompletionsAPI {
 
         JSONObject json = new JSONObject();
         json.put("messages", messages);
-        json.putIfAbsent("model", config.get().getConfig(AppKeys.COMPLETION_MODEL));
+        json.putIfAbsent("model", config.get().getConfig(AppKeys.MODEL));
 
         json.put("temperature", form.temperature);
         if (form.responseLengthTokens > 0) {

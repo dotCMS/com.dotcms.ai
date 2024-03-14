@@ -12,7 +12,6 @@ public enum AppKeys {
     MODEL("model", "gpt-3.5-turbo-16k"),
     IMAGE_MODEL("imageModel", "dall-e-3"),
     DEBUG_LOGGING("com.dotcms.ai.debug.logging", "false"),
-    COMPLETION_MODEL("com.dotcms.ai.completion.model", "gpt-3.5-turbo-16k"),
     COMPLETION_TEMPERATURE("com.dotcms.ai.completion.default.temperature", "1"),
     COMPLETION_ROLE_PROMPT("com.dotcms.ai.completion.role.prompt",
             "You are a helpful assistant with a descriptive writing style."),

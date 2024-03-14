@@ -117,7 +117,7 @@ public class CompletionsForm {
                 : builder.temperature >= 2
                     ? 2
                     : builder.temperature;
-        this.model = UtilMethods.isSet(builder.model) ? builder.model : ConfigService.INSTANCE.config().getConfig(AppKeys.COMPLETION_MODEL);
+        this.model = UtilMethods.isSet(builder.model) ? builder.model : ConfigService.INSTANCE.config().getConfig(AppKeys.MODEL);
     }
 
     String validateBuilderQuery(String query) {

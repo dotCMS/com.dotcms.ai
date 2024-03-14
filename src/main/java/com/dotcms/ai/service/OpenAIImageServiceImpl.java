@@ -78,8 +78,7 @@ public class OpenAIImageServiceImpl implements OpenAIImageService {
                 returnObject = returnObject.getJSONArray("data").getJSONObject(0);
                 returnObject.put("originalPrompt", jsonObject.getString("prompt"));
             }
-
-            return createTempFile(returnObject);
+            return returnObject;
 
         } catch (Exception e) {
             Logger.warn(this.getClass(), "image request failed:" + e.getMessage(),e);

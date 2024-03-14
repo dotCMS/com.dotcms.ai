@@ -30,7 +30,7 @@ public class BulkEmbeddingsRunner implements Runnable {
             try {
 
                 Contentlet contentlet = APILocator.getContentletAPI().find(inode, user, false);
-                if (UtilMethods.isEmpty(contentlet::getContentType)) {
+                if (UtilMethods.isEmpty(contentlet::getContentType) || !contentlet.isLive()) {
                     continue;
                 }
 

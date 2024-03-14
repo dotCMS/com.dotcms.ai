@@ -74,7 +74,7 @@ public class EmbeddingsResource {
             for (int i = 0; i < 10000; i++) {
 
                 // searchIndex(String luceneQuery, int limit, int offset, String sortBy, User user, boolean respectFrontendRoles)
-                List<ContentletSearch> searchResults = APILocator.getContentletAPI().searchIndex(embeddingsForm.query, embeddingsForm.limit, newOffset, "moddate", user, false);
+                List<ContentletSearch> searchResults = APILocator.getContentletAPI().searchIndex(embeddingsForm.query + " +live:true", embeddingsForm.limit, newOffset, "moddate", user, false);
                 if (searchResults.isEmpty()) {
                     break;
                 }
