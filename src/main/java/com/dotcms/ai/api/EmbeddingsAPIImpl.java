@@ -22,6 +22,7 @@ import com.dotmarketing.business.APILocator;
 import com.dotmarketing.common.model.ContentletSearch;
 import com.dotmarketing.exception.DotRuntimeException;
 import com.dotmarketing.portlets.contentlet.model.Contentlet;
+import com.dotmarketing.portlets.contentlet.model.ContentletVersionInfo;
 import com.dotmarketing.util.Logger;
 import com.dotmarketing.util.UtilMethods;
 import com.dotmarketing.util.json.JSONArray;
@@ -213,7 +214,11 @@ class EmbeddingsAPIImpl implements EmbeddingsAPI {
                 : Set.of();
 
         for (EmbeddingsDTO result : searchResults) {
-            JSONObject contentObject = reducedResults.getOrDefault(result.inode, dtoToContentJson(result, searcher.user));
+            Optional<JSONObject> opContent = dtoToContentJson(result, searcher.user);
+            if(opContent.isEmpty()){
+                continue;
+            }
+            JSONObject contentObject = reducedResults.getOrDefault(result.inode, opContent.get());
 
             contentObject.getAsMap().computeIfAbsent("title", k -> result.title);
 
@@ -270,26 +275,28 @@ class EmbeddingsAPIImpl implements EmbeddingsAPI {
 
     }
 
-    private JSONObject dtoToContentJson(EmbeddingsDTO dto, User user) {
-        return Try.of(() ->
-                ContentResource.contentletToJSON(
-                        APILocator.getContentletAPI().find(dto.inode, user, true),
+    private Optional<JSONObject> dtoToContentJson(EmbeddingsDTO dto, User user) {
+
+        Optional<ContentletVersionInfo> cvi = APILocator.getVersionableAPI()
+                .getContentletVersionInfo(dto.identifier, dto.language);
+
+        if (UtilMethods.isEmpty(() -> cvi.get().getLiveInode())) {
+            return Optional.empty();
+        }
+
+        return Try.of(() -> ContentResource.contentletToJSON(APILocator.getContentletAPI()
+                                .find(cvi.get().getLiveInode(), user, true),
                         HttpServletRequestThreadLocal.INSTANCE.getRequest(),
                         HttpServletResponseThreadLocal.INSTANCE.getResponse(),
                         "false",
                         user,
                         false)
-        ).andThenTry(() ->
-                new JSONObject(APILocator.getContentletAPI().find(dto.inode, user, true).getMap())
-        ).andThenTry(() ->
-                new JSONObject(Map.of("inode", dto.inode,
-                        "identifier", dto.identifier,
-                        "title", dto.title,
-                        "language", dto.language,
-                        "index", dto.indexName,
-                        "contentType", new JSONArray(dto.contentType)))
 
-        ).getOrElse(JSONObject::new);
+                ).onFailure(e ->
+                        Logger.error(this.getClass(),
+                                "Error getting contentlet identifier: " + dto.identifier + " error: " + e.getMessage(), e)
+                )
+                .toJavaOptional();
 
 
     }
