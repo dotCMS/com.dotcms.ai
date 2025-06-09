@@ -1,4 +1,4 @@
-This plugin as been archived as the functionality has moved to the core.
+***This plugin as been archived as the functionality has moved to the core.***
 
 # README
 
