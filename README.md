@@ -1,3 +1,5 @@
+This plugin as been archived as the functionality has moved to the core.
+
 # README
 
 This is plugin that a number of dotCMS specific tools that leverage AI tooling (Open AI specifically) for use in dotCMS.  
